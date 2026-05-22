@@ -1,12 +1,13 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import './globals.css';
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import Providers from "@/components/providers";
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: ' ClickIn 360 CRM Dashboard',
-  description: 'Lightweight CRM for managing contacts, opportunities, and tickets',
+  title: "ClickIn 360 CRM Dashboard",
+  description: "ClickIn 360 CRM Dashboard",
 };
 
 export default function RootLayout({
@@ -17,7 +18,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
