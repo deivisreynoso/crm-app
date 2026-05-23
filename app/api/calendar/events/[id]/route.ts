@@ -4,6 +4,10 @@ import { createServerSideClient } from "@/lib/supabase";
 import { calendarEventPatchSchema } from "@/lib/validators";
 import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
 import { updateWithColumnFallback } from "@/lib/api/strip-update";
+import {
+  deleteGoogleCalendarEvent,
+  updateGoogleCalendarEvent,
+} from "@/lib/google/calendar";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -113,6 +117,21 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       );
     }
 
+    const eventRow = data as Record<string, unknown>;
+    if (eventRow.google_event_id) {
+      try {
+        await updateGoogleCalendarEvent(userId!, String(eventRow.google_event_id), {
+          title: String(eventRow.title),
+          description: (eventRow.description as string | null) ?? null,
+          location: (eventRow.location as string | null) ?? null,
+          start_time: String(eventRow.start_time),
+          end_time: String(eventRow.end_time),
+        });
+      } catch (syncErr) {
+        console.error("Google Calendar sync on update:", syncErr);
+      }
+    }
+
     return NextResponse.json(data);
   } catch (err) {
     console.error("PATCH /api/calendar/events/[id]:", err);
@@ -127,6 +146,25 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
 
     const { id } = await context.params;
     const supabase = createServerSideClient();
+
+    const { data: existing } = await supabase
+      .from("calendar_events")
+      .select("google_event_id")
+      .eq("id", id)
+      .eq("user_id", userId!)
+      .maybeSingle();
+
+    if (existing?.google_event_id) {
+      try {
+        await deleteGoogleCalendarEvent(
+          userId!,
+          existing.google_event_id as string
+        );
+      } catch (syncErr) {
+        console.error("Google Calendar sync on delete:", syncErr);
+      }
+    }
+
     const { error: dbError } = await supabase
       .from("calendar_events")
       .delete()

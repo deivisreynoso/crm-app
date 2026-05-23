@@ -5,9 +5,11 @@ import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { PageHeader } from "@/components/ui/page-shell";
+import { PageHeader, DataTableShell } from "@/components/ui/page-shell";
 import { Card } from "@/components/ui/card";
 import { PipelineBoard } from "@/components/opportunities/pipeline-board";
+import { OpportunityListView } from "@/components/opportunities/opportunity-list-view";
+import { SavedFiltersBar } from "@/components/filters/saved-filters-bar";
 import { PipelineSettings } from "@/components/opportunities/pipeline-settings";
 import { OpportunityForm } from "@/components/opportunities/opportunity-form";
 import { NewPipelineForm } from "@/components/opportunities/new-pipeline-form";
@@ -29,6 +31,7 @@ import { formatTagsForInput } from "@/lib/tags";
 import type { OpportunityFormInput, OpportunityWithContact } from "@/types";
 
 type Panel = "none" | "create" | "edit" | "pipeline" | "newPipeline";
+type ViewMode = "board" | "list";
 
 function apiErrorMessage(err: unknown): string {
   if (axios.isAxiosError(err)) {
@@ -49,11 +52,23 @@ export default function OpportunitiesPage() {
     useState<OpportunityWithContact | null>(null);
   const [deletingPipeline, setDeletingPipeline] = useState(false);
   const [pipelineError, setPipelineError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("board");
+  const [stageFilter, setStageFilter] = useState("");
+  const [searchFilter, setSearchFilter] = useState("");
+  const [createdFrom, setCreatedFrom] = useState("");
+  const [createdTo, setCreatedTo] = useState("");
 
   const selectedPipeline = pipelines.find((p) => p.id === selectedPipelineId);
 
   const { data: opportunities = [], isLoading: oppsLoading } = useOpportunities(
-    selectedPipelineId || undefined
+    selectedPipelineId || undefined,
+    undefined,
+    {
+      ...(stageFilter ? { stage: stageFilter } : {}),
+      ...(searchFilter ? { search: searchFilter } : {}),
+      ...(createdFrom ? { createdFrom } : {}),
+      ...(createdTo ? { createdTo } : {}),
+    }
   );
 
   const createPipeline = useCreatePipeline();
@@ -216,22 +231,96 @@ export default function OpportunitiesPage() {
         }
       />
 
-      <Card padding="sm" className="flex flex-wrap items-center gap-3">
-        <label className="text-sm text-body-muted">Pipeline:</label>
-        <select
-          value={selectedPipelineId}
-          onChange={(e) => setSelectedPipelineId(e.target.value)}
-          className="input-field min-w-[180px]"
-        >
-          {pipelines.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-        <span className="text-sm text-body-muted">
-          {opportunities.length} opportunities · ${totalValue.toLocaleString()}
-        </span>
+      <Card padding="sm" className="space-y-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="text-sm text-body-muted">Pipeline:</label>
+          <select
+            value={selectedPipelineId}
+            onChange={(e) => setSelectedPipelineId(e.target.value)}
+            className="input-field min-w-[180px]"
+          >
+            {pipelines.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <div className="flex rounded-lg border border-[var(--card-border)] overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setViewMode("board")}
+              className={`px-3 py-1.5 text-sm ${viewMode === "board" ? "bg-[var(--primary)] text-[var(--primary-foreground)]" : "text-body-muted hover:bg-[var(--sidebar-hover)]"}`}
+            >
+              Board
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              className={`px-3 py-1.5 text-sm ${viewMode === "list" ? "bg-[var(--primary)] text-[var(--primary-foreground)]" : "text-body-muted hover:bg-[var(--sidebar-hover)]"}`}
+            >
+              List
+            </button>
+          </div>
+          <span className="text-sm text-body-muted">
+            {opportunities.length} opportunities · ${totalValue.toLocaleString()}
+          </span>
+        </div>
+        {viewMode === "list" && selectedPipeline && (
+          <div className="flex flex-wrap gap-2 items-center pt-1 border-t border-[var(--card-border)]">
+            <SavedFiltersBar
+              entityType="opportunity"
+              currentConfig={{
+                ...(stageFilter ? { stage: stageFilter } : {}),
+                ...(searchFilter ? { search: searchFilter } : {}),
+                ...(createdFrom ? { created_from: createdFrom } : {}),
+                ...(createdTo ? { created_to: createdTo } : {}),
+              }}
+              onApply={(config) => {
+                setStageFilter(typeof config.stage === "string" ? config.stage : "");
+                setSearchFilter(typeof config.search === "string" ? config.search : "");
+                setCreatedFrom(
+                  typeof config.created_from === "string" ? config.created_from : ""
+                );
+                setCreatedTo(
+                  typeof config.created_to === "string" ? config.created_to : ""
+                );
+              }}
+            />
+            <input
+              type="search"
+              placeholder="Search title…"
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              className="input-field min-w-[160px]"
+            />
+            <select
+              value={stageFilter}
+              onChange={(e) => setStageFilter(e.target.value)}
+              className="input-field min-w-[140px]"
+            >
+              <option value="">All stages</option>
+              {selectedPipeline.stages.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <input
+              type="date"
+              value={createdFrom}
+              onChange={(e) => setCreatedFrom(e.target.value)}
+              className="input-field"
+              title="Created from"
+            />
+            <input
+              type="date"
+              value={createdTo}
+              onChange={(e) => setCreatedTo(e.target.value)}
+              className="input-field"
+              title="Created to"
+            />
+          </div>
+        )}
       </Card>
 
       <Modal
@@ -360,18 +449,31 @@ export default function OpportunitiesPage() {
       {pipelinesLoading || oppsLoading ? (
         <p className="text-body-muted">Loading…</p>
       ) : selectedPipeline ? (
-        <div className="surface-card p-4 overflow-x-auto">
-          <PipelineBoard
-            pipeline={selectedPipeline}
-            opportunities={opportunities}
-            onMoveStage={handleMoveStage}
-            onEdit={openEdit}
-            onDelete={requestDelete}
-            deletingId={
-              deleteOpportunity.isPending ? deletingOpportunity?.id ?? null : null
-            }
-          />
-        </div>
+        viewMode === "board" ? (
+          <div className="surface-card p-4 overflow-x-auto">
+            <PipelineBoard
+              pipeline={selectedPipeline}
+              opportunities={opportunities}
+              onMoveStage={handleMoveStage}
+              onEdit={openEdit}
+              onDelete={requestDelete}
+              deletingId={
+                deleteOpportunity.isPending ? deletingOpportunity?.id ?? null : null
+              }
+            />
+          </div>
+        ) : (
+          <DataTableShell>
+            <OpportunityListView
+              opportunities={opportunities}
+              onEdit={openEdit}
+              onDelete={requestDelete}
+              deletingId={
+                deleteOpportunity.isPending ? deletingOpportunity?.id ?? null : null
+              }
+            />
+          </DataTableShell>
+        )
       ) : (
         <p className="text-body-muted">No pipeline selected.</p>
       )}

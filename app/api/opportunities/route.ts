@@ -6,15 +6,22 @@ import { buildOpportunityRecord } from "@/lib/opportunity-payload";
 import { attachContactToOpportunity, listOpportunitiesWithContacts } from "@/lib/opportunity-queries";
 import { triggerN8NWebhook } from "@/lib/n8n";
 import { createNotification } from "@/lib/notifications/create-notification";
+import { logContactActivity } from "@/lib/activities/log-contact-activity";
 
 export async function GET(req: NextRequest) {
   try {
     const { userId, error } = await requireAuth();
     if (error) return error;
 
-    const pipelineId = new URL(req.url).searchParams.get("pipeline_id") ?? undefined;
-    const contactId = new URL(req.url).searchParams.get("contact_id") ?? undefined;
-    const data = await listOpportunitiesWithContacts(userId!, pipelineId, contactId);
+    const params = new URL(req.url).searchParams;
+    const data = await listOpportunitiesWithContacts(userId!, {
+      pipelineId: params.get("pipeline_id") ?? undefined,
+      contactId: params.get("contact_id") ?? undefined,
+      stage: params.get("stage") ?? undefined,
+      search: params.get("search") ?? undefined,
+      createdFrom: params.get("created_from") ?? undefined,
+      createdTo: params.get("created_to") ?? undefined,
+    });
 
     return NextResponse.json({ data });
   } catch (err) {
@@ -80,6 +87,16 @@ export async function POST(req: NextRequest) {
       related_entity_type: "opportunity",
       related_entity_id: data.id as string,
     });
+
+    if (parsed.data.contact_id) {
+      await logContactActivity(supabase, {
+        userId: userId!,
+        contactId: parsed.data.contact_id,
+        type: "created",
+        description: `Opportunity created: ${parsed.data.title}`,
+        metadata: { opportunity_id: data.id },
+      });
+    }
 
     return NextResponse.json(enriched, { status: 201 });
   } catch (err) {

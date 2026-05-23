@@ -2,11 +2,21 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import type { Company, CompanyRelated } from "@/types";
 
-export function useCompanies() {
+export interface CompanyListFilters {
+  search?: string;
+  industry?: string;
+}
+
+export function useCompanies(filters: CompanyListFilters = {}) {
   return useQuery({
-    queryKey: ["companies"],
+    queryKey: ["companies", filters],
     queryFn: async () => {
-      const { data } = await axios.get<{ data: Company[] }>("/api/companies");
+      const { data } = await axios.get<{ data: Company[] }>("/api/companies", {
+        params: {
+          ...(filters.search ? { search: filters.search } : {}),
+          ...(filters.industry ? { industry: filters.industry } : {}),
+        },
+      });
       return data.data;
     },
   });

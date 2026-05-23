@@ -20,9 +20,15 @@ import { ListActions } from "@/components/ui/list-actions";
 import { INDUSTRIES } from "@/lib/constants/industries";
 import { useCompanies, useCreateCompany, useDeleteCompany } from "@/hooks/useCompanies";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { SavedFiltersBar } from "@/components/filters/saved-filters-bar";
 
 export default function AccountsPage() {
-  const { data: companies = [], isLoading } = useCompanies();
+  const [search, setSearch] = useState("");
+  const [industryFilter, setIndustryFilter] = useState("");
+  const { data: companies = [], isLoading } = useCompanies({
+    search: search || undefined,
+    industry: industryFilter || undefined,
+  });
   const createCompany = useCreateCompany();
   const deleteCompany = useDeleteCompany();
   const { confirm, dialogProps } = useConfirmDialog();
@@ -57,6 +63,41 @@ export default function AccountsPage() {
           </Button>
         }
       />
+
+      <div className="flex flex-wrap gap-2 items-center">
+        <SavedFiltersBar
+          entityType="account"
+          currentConfig={{
+            ...(search ? { search } : {}),
+            ...(industryFilter ? { industry: industryFilter } : {}),
+          }}
+          onApply={(config) => {
+            setSearch(typeof config.search === "string" ? config.search : "");
+            setIndustryFilter(
+              typeof config.industry === "string" ? config.industry : ""
+            );
+          }}
+        />
+        <input
+          type="search"
+          placeholder="Search accounts…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="input-field min-w-[200px]"
+        />
+        <select
+          value={industryFilter}
+          onChange={(e) => setIndustryFilter(e.target.value)}
+          className="input-field min-w-[160px]"
+        >
+          <option value="">All industries</option>
+          {INDUSTRIES.map((ind) => (
+            <option key={ind} value={ind}>
+              {ind}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <DataTableShell
         isLoading={isLoading}

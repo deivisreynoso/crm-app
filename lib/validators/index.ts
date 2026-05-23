@@ -101,6 +101,8 @@ export const taskSchema = z.object({
   status: z.enum(['open', 'in_progress', 'completed']).default('open'),
   priority: z.enum(['low', 'medium', 'high']).default('medium'),
   due_date: z.string().optional().or(z.literal('')),
+  due_at: z.string().optional().or(z.literal('')),
+  assigned_to: z.string().uuid().optional().or(z.literal('')),
 });
 
 export type TaskFormData = z.infer<typeof taskSchema>;
@@ -374,6 +376,25 @@ export const emailTemplateSchema = z.object({
 });
 
 export type EmailTemplateFormData = z.infer<typeof emailTemplateSchema>;
+
+export const gmailSendSchema = z
+  .object({
+    to: z.string().email("Enter a valid recipient email"),
+    subject: z.string().max(998).optional().or(z.literal("")),
+    body: z.string().max(100_000).optional().or(z.literal("")),
+    template_id: z.string().uuid().optional(),
+  })
+  .refine(
+    (data) =>
+      data.template_id ||
+      (Boolean(data.subject?.trim()) && Boolean(data.body?.trim())),
+    {
+      message: "Subject and message are required (or choose a template)",
+      path: ["body"],
+    }
+  );
+
+export type GmailSendInput = z.infer<typeof gmailSendSchema>;
 
 export const notificationPreferencesSchema = z.object({
   task_reminders: z.boolean().optional(),

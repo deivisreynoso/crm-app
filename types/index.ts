@@ -97,9 +97,23 @@ export interface User {
     status: 'open' | 'in_progress' | 'completed';
     priority: 'low' | 'medium' | 'high';
     due_date?: string;
+    due_at?: string;
+    assigned_to?: string;
     completed_at?: string;
     created_at: string;
     updated_at: string;
+  }
+
+  export interface ActivityFeedItem {
+    id: string;
+    source: 'note' | 'activity';
+    type: string;
+    content: string;
+    created_at: string;
+    is_system: boolean;
+    email_subject?: string;
+    email_body?: string;
+    email_direction?: 'outbound' | 'inbound';
   }
   
   // Opportunity related types

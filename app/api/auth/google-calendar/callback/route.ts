@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { createServerSideClient } from "@/lib/supabase";
+import { getGoogleCalendarRedirectUri } from "@/lib/google/oauth-config";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -12,15 +13,19 @@ export async function GET(req: NextRequest) {
 
   const code = new URL(req.url).searchParams.get("code");
   if (!code) {
-    return NextResponse.redirect(new URL("/calendar?error=missing_code", req.url));
+    return NextResponse.redirect(
+      new URL("/settings?google_calendar=error", req.url)
+    );
   }
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_CALENDAR_REDIRECT_URI;
+  const redirectUri = getGoogleCalendarRedirectUri(req.url);
 
-  if (!clientId || !clientSecret || !redirectUri) {
-    return NextResponse.redirect(new URL("/calendar?error=not_configured", req.url));
+  if (!clientId || !clientSecret) {
+    return NextResponse.redirect(
+      new URL("/settings?google_calendar=error", req.url)
+    );
   }
 
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
@@ -36,7 +41,9 @@ export async function GET(req: NextRequest) {
   });
 
   if (!tokenRes.ok) {
-    return NextResponse.redirect(new URL("/calendar?error=token_exchange", req.url));
+    return NextResponse.redirect(
+      new URL("/settings?google_calendar=error", req.url)
+    );
   }
 
   const tokens = (await tokenRes.json()) as {
@@ -59,5 +66,7 @@ export async function GET(req: NextRequest) {
     { onConflict: "user_id" }
   );
 
-  return NextResponse.redirect(new URL("/calendar?connected=1", req.url));
+  return NextResponse.redirect(
+    new URL("/settings?google_calendar=connected", req.url)
+  );
 }

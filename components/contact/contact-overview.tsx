@@ -11,7 +11,7 @@ import {
   COUNTRIES,
   getCountryByCode,
   getStatesForCountry,
-  getTimezoneForCountry,
+  getTimezoneForLocation,
 } from "@/lib/constants/countries";
 import { formatTimezone } from "@/lib/constants/contact-fields";
 import { formatApiError } from "@/lib/validation-errors";
@@ -28,6 +28,7 @@ interface ContactOverviewProps {
 export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) {
   const { data: companies = [], isLoading: companiesLoading } = useCompanies();
   const [country, setCountry] = useState(contact.country ?? "");
+  const [showAddress, setShowAddress] = useState(false);
   const states = getStatesForCountry(country);
 
   useEffect(() => {
@@ -55,172 +56,195 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
 
   async function handleCountryChange(code: string) {
     setCountry(code);
-    const patch: Partial<ContactFormInput> = { country: code };
-    const tz = getTimezoneForCountry(code);
-    if (tz) patch.timezone = tz;
-    await saveField(patch);
+    const statesForCountry = getStatesForCountry(code);
+    const stateStillValid = statesForCountry.some((s) => s.name === contact.state);
+    const nextState = stateStillValid ? contact.state : "";
+    const tz = getTimezoneForLocation(code, nextState);
+    await saveField({
+      country: code,
+      state: nextState ?? "",
+      timezone: tz,
+    });
+  }
+
+  async function handleStateChange(stateName: string) {
+    const tz = getTimezoneForLocation(country, stateName);
+    await saveField({ state: stateName, timezone: tz });
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
-      <InlineEditableField label="Email" value={contact.email} onSave={save("email")} />
-      <div>
-        <label className="text-[11px] font-semibold uppercase tracking-wide text-body-muted mb-1 block">
-          Phone
-        </label>
-        <PhoneInputInline value={contact.phone} onSave={save("phone")} />
-      </div>
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+        <InlineEditableField label="Email" value={contact.email} onSave={save("email")} />
+        <div>
+          <label className="text-[11px] font-semibold uppercase tracking-wide text-body-muted mb-1 block">
+            Phone
+          </label>
+          <PhoneInputInline value={contact.phone} onSave={save("phone")} />
+        </div>
 
-      <AssociationSelect
-        label="Account"
-        value={contact.company_id ?? ""}
-        options={accountOptions}
-        placeholder={companiesLoading ? "Loading accounts…" : "Link to account"}
-        onChange={async (id) => saveField({ company_id: id })}
-      />
+        <AssociationSelect
+          label="Account"
+          value={contact.company_id ?? ""}
+          options={accountOptions}
+          placeholder={companiesLoading ? "Loading accounts…" : "Link to account"}
+          onChange={async (id) => saveField({ company_id: id })}
+        />
 
-      <InlineSelectField
-        label="Job title"
-        value={contact.title}
-        options={JOB_TITLE_OPTIONS}
-        allowEmpty
-        emptyLabel="— Select —"
-        onSave={save("title")}
-      />
-
-      <InlineSelectField
-        label="Status"
-        value={contact.status}
-        options={[
-          { value: "lead", label: "Lead" },
-          { value: "prospect", label: "Prospect" },
-          { value: "active", label: "Active" },
-          { value: "inactive", label: "Inactive" },
-        ]}
-        onSave={async (v) =>
-          saveField({ status: v as Contact["status"] })
-        }
-      />
-
-      <InlineEditableField label="Source" value={contact.source} onSave={save("source")} />
-
-      <InlineSelectField
-        label="Country"
-        value={country}
-        options={COUNTRIES.map((c) => ({ value: c.code, label: c.name }))}
-        allowEmpty
-        emptyLabel="— Select —"
-        onSave={handleCountryChange}
-      />
-
-      {states.length > 0 ? (
         <InlineSelectField
-          label="State / Province"
-          value={contact.state}
-          options={states.map((s) => ({ value: s.name, label: s.name }))}
+          label="Job title"
+          value={contact.title}
+          options={JOB_TITLE_OPTIONS}
           allowEmpty
           emptyLabel="— Select —"
-          onSave={save("state")}
+          onSave={save("title")}
         />
-      ) : (
-        <InlineEditableField
-          label="State / Province"
-          value={contact.state}
-          onSave={save("state")}
-        />
-      )}
 
-      <InlineEditableField label="City" value={contact.city} onSave={save("city")} />
-      <InlineEditableField
-        label="Postal code"
-        value={contact.postal_code}
-        onSave={save("postal_code")}
+        <InlineSelectField
+          label="Status"
+          value={contact.status}
+          options={[
+            { value: "lead", label: "Lead" },
+            { value: "prospect", label: "Prospect" },
+            { value: "active", label: "Active" },
+            { value: "inactive", label: "Inactive" },
+          ]}
+          onSave={async (v) =>
+            saveField({ status: v as Contact["status"] })
+          }
+        />
+
+        <div>
+          <label className="text-[11px] font-semibold uppercase tracking-wide text-body-muted block mb-1">
+            Tags
+          </label>
+          <TagsChips
+            tags={contact.tags ?? []}
+            onChange={(next) => void saveField({ tags: next.join(", ") })}
+          />
+        </div>
+
+        <InlineEditableField
+          label="About"
+          value={contact.notes}
+          multiline
+          className="sm:col-span-2"
+          onSave={save("notes")}
+        />
+      </div>
+
+      <div className="rounded-lg border border-[var(--card-border)] bg-[var(--surface-subtle)] p-4 space-y-4">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-body-muted">
+            Contact insights
+          </p>
+          <p className="text-xs text-body-muted mt-0.5">
+            Populated by workflows and automation. Edit when needed.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+          <InlineEditableField
+            label="Friction area"
+            value={contact.friction_area}
+            placeholder="Not set yet"
+            multiline
+            onSave={save("friction_area")}
+          />
+          <InlineEditableField
+            label="Communication channels"
+            value={contact.communication_channels}
+            placeholder="e.g. email, WhatsApp"
+            onSave={save("communication_channels")}
+          />
+          <InlineEditableField
+            label="Signals"
+            value={contact.signals}
+            placeholder="Intent, engagement"
+            multiline
+            onSave={save("signals")}
+          />
+          <InlineEditableField
+            label="AI summary"
+            value={contact.ai_summary}
+            placeholder="Summary from automation"
+            multiline
+            onSave={save("ai_summary")}
+          />
+        </div>
+      </div>
+
+      <RecordDates
+        createdAt={contact.created_at}
+        updatedAt={contact.updated_at}
       />
 
       <div>
-        <label className="text-[11px] font-semibold uppercase tracking-wide text-body-muted mb-1 block">
-          Time zone
-        </label>
-        <p className="text-sm text-heading">
-          {contact.timezone
-            ? formatTimezone(contact.timezone)
-            : country
-              ? formatTimezone(getTimezoneForCountry(country))
-              : "Not set"}
-        </p>
-        {country && (
-          <p className="text-xs text-body-muted mt-0.5">
-            {getCountryByCode(country)?.name}
-          </p>
+        <button
+          type="button"
+          onClick={() => setShowAddress((v) => !v)}
+          className="text-xs font-medium text-[var(--secondary)] hover:underline"
+        >
+          {showAddress ? "Hide" : "Show"} address & additional details
+        </button>
+        {showAddress && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5 mt-4 pt-4 border-t border-[var(--card-border)]">
+            <InlineEditableField label="Source" value={contact.source} onSave={save("source")} />
+            <InlineSelectField
+              label="Country"
+              value={country}
+              options={COUNTRIES.map((c) => ({ value: c.code, label: c.name }))}
+              allowEmpty
+              emptyLabel="— Select —"
+              onSave={handleCountryChange}
+            />
+            {states.length > 0 ? (
+              <InlineSelectField
+                label="State / Province"
+                value={contact.state}
+                options={states.map((s) => ({ value: s.name, label: s.name }))}
+                allowEmpty
+                emptyLabel="— Select —"
+                onSave={handleStateChange}
+              />
+            ) : (
+              <InlineEditableField
+                label="State / Province"
+                value={contact.state}
+                onSave={handleStateChange}
+              />
+            )}
+            <InlineEditableField label="City" value={contact.city} onSave={save("city")} />
+            <InlineEditableField
+              label="Postal code"
+              value={contact.postal_code}
+              onSave={save("postal_code")}
+            />
+            <div>
+              <label className="text-[11px] font-semibold uppercase tracking-wide text-body-muted mb-1 block">
+                Time zone
+              </label>
+              <p className="text-sm text-heading">
+                {(() => {
+                  const tz =
+                    contact.timezone ||
+                    getTimezoneForLocation(country, contact.state);
+                  return tz ? formatTimezone(tz) : "Not set";
+                })()}
+              </p>
+              {country && (
+                <p className="text-xs text-body-muted mt-0.5">
+                  {getCountryByCode(country)?.name}
+                </p>
+              )}
+            </div>
+          </div>
         )}
-      </div>
-
-      <div className="sm:col-span-2">
-        <label className="text-[11px] font-semibold uppercase tracking-wide text-body-muted block mb-1">
-          Tags
-        </label>
-        <TagsChips
-          tags={contact.tags ?? []}
-          onChange={(next) => void saveField({ tags: next.join(", ") })}
-        />
-      </div>
-
-      <InlineEditableField
-        label="About"
-        value={contact.notes}
-        multiline
-        className="sm:col-span-2"
-        onSave={save("notes")}
-      />
-
-      <div className="sm:col-span-2 automation-panel rounded-lg border border-[var(--card-border)] bg-[var(--surface-subtle)] p-4 space-y-4">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-body-muted">
-            Automation insights
-          </p>
-          <p className="text-xs text-body-muted mt-0.5">
-            Populated by workflows (n8n). You can edit values here when needed.
-          </p>
-        </div>
-        <InlineEditableField
-          label="Friction area"
-          value={contact.friction_area}
-          placeholder="Not set by automation yet"
-          multiline
-          onSave={save("friction_area")}
-        />
-        <InlineEditableField
-          label="Communication channels"
-          value={contact.communication_channels}
-          placeholder="e.g. email, WhatsApp, phone"
-          onSave={save("communication_channels")}
-        />
-        <InlineEditableField
-          label="Signals"
-          value={contact.signals}
-          placeholder="Buying signals, intent, engagement"
-          multiline
-          onSave={save("signals")}
-        />
-        <InlineEditableField
-          label="AI summary"
-          value={contact.ai_summary}
-          placeholder="Summary will appear when automation runs"
-          multiline
-          onSave={save("ai_summary")}
-        />
       </div>
 
       <EntityCustomFieldsOverview
         entityType="contact"
         values={contact.custom_fields}
         onSave={async (custom_fields) => saveField({ custom_fields })}
-      />
-
-      <RecordDates
-        createdAt={contact.created_at}
-        updatedAt={contact.updated_at}
-        className="sm:col-span-2"
       />
     </div>
   );

@@ -4,6 +4,7 @@ import { createServerSideClient } from "@/lib/supabase";
 import { contactPatchSchema } from "@/lib/validators";
 import { buildContactUpdate } from "@/lib/contact-payload";
 import { triggerN8NWebhook } from "@/lib/n8n";
+import { logContactActivity } from "@/lib/activities/log-contact-activity";
 import {
   duplicateContactMessage,
   findDuplicateContact,
@@ -134,6 +135,19 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     await triggerN8NWebhook("contact.updated", data);
+
+    const changedKeys = Object.keys(parsed.data).filter(
+      (k) => parsed.data[k as keyof typeof parsed.data] !== undefined
+    );
+    if (changedKeys.length > 0) {
+      await logContactActivity(supabase, {
+        userId: userId!,
+        contactId: id,
+        type: "update",
+        description: `Contact updated: ${changedKeys.slice(0, 5).join(", ")}${changedKeys.length > 5 ? "…" : ""}`,
+        metadata: { fields: changedKeys },
+      });
+    }
 
     return NextResponse.json(data);
   } catch (err) {

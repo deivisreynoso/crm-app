@@ -5,14 +5,29 @@ import { Copy, ListTodo, Mail, Phone, StickyNote } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { useCopyToast } from "@/components/ui/copy-toast";
+import {
+  EMPTY_QUICK_TASK,
+  QuickTaskFormFields,
+  type QuickTaskFormValues,
+} from "@/components/forms/quick-task-form-fields";
 import { cn } from "@/lib/utils";
+
+export interface QuickTaskInput {
+  title: string;
+  due_at?: string;
+  priority?: string;
+  assigned_to?: string;
+}
 
 interface QuickActionBarProps {
   email?: string | null;
   phone?: string | null;
   className?: string;
+  /** Opens in-app Gmail compose instead of mailto: */
+  onSendEmail?: () => void;
   onAddNote?: (content: string) => Promise<void>;
-  onAddTask?: (input: { title: string; due_date?: string }) => Promise<void>;
+  onAddTask?: (input: QuickTaskInput) => Promise<void>;
+  onTaskCreated?: () => void;
   noteLoading?: boolean;
   taskLoading?: boolean;
 }
@@ -21,16 +36,17 @@ export function QuickActionBar({
   email,
   phone,
   className,
+  onSendEmail,
   onAddNote,
   onAddTask,
+  onTaskCreated,
   noteLoading,
   taskLoading,
 }: QuickActionBarProps) {
   const [noteOpen, setNoteOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
-  const [taskTitle, setTaskTitle] = useState("");
-  const [taskDue, setTaskDue] = useState("");
+  const [taskForm, setTaskForm] = useState<QuickTaskFormValues>(EMPTY_QUICK_TASK);
   const { showCopied, toast: copyToast } = useCopyToast();
 
   async function copyText(value: string) {
@@ -55,12 +71,20 @@ export function QuickActionBar({
       icon: Phone,
       href: `tel:${phone.replace(/\s/g, "")}`,
     },
-    email?.trim() && {
-      key: "email",
-      label: "Email",
-      icon: Mail,
-      href: `mailto:${email}`,
-    },
+    email?.trim() &&
+      (onSendEmail
+        ? {
+            key: "email",
+            label: "Email",
+            icon: Mail,
+            onClick: onSendEmail,
+          }
+        : {
+            key: "email",
+            label: "Email",
+            icon: Mail,
+            href: `mailto:${email}`,
+          }),
     email?.trim() && {
       key: "copy-email",
       label: "Copy email",
@@ -77,7 +101,10 @@ export function QuickActionBar({
       key: "task",
       label: "Task",
       icon: ListTodo,
-      onClick: () => setTaskOpen(true),
+      onClick: () => {
+        setTaskForm(EMPTY_QUICK_TASK);
+        setTaskOpen(true);
+      },
     },
   ].filter(Boolean) as Array<{
     key: string;
@@ -141,35 +168,32 @@ export function QuickActionBar({
         </form>
       </Modal>
 
-      <Modal open={taskOpen} onClose={() => setTaskOpen(false)} title="Add task">
+      <Modal
+        open={taskOpen}
+        onClose={() => setTaskOpen(false)}
+        title="Add task"
+      >
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            if (!onAddTask || !taskTitle.trim()) return;
+            if (!onAddTask || !taskForm.title.trim()) return;
+            const due_at = taskForm.due_at
+              ? new Date(taskForm.due_at).toISOString()
+              : undefined;
             await onAddTask({
-              title: taskTitle.trim(),
-              due_date: taskDue || undefined,
+              title: taskForm.title.trim(),
+              due_at,
+              priority: taskForm.priority,
+              assigned_to: taskForm.assigned_to || undefined,
             });
-            setTaskTitle("");
-            setTaskDue("");
+            setTaskForm(EMPTY_QUICK_TASK);
             setTaskOpen(false);
+            onTaskCreated?.();
           }}
           className="space-y-3"
         >
-          <input
-            className="input-field w-full"
-            value={taskTitle}
-            onChange={(e) => setTaskTitle(e.target.value)}
-            placeholder="Task title"
-            required
-          />
-          <input
-            type="date"
-            className="input-field w-full"
-            value={taskDue}
-            onChange={(e) => setTaskDue(e.target.value)}
-          />
-          <div className="flex justify-end gap-2">
+          <QuickTaskFormFields values={taskForm} onChange={setTaskForm} />
+          <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setTaskOpen(false)}>
               Cancel
             </Button>

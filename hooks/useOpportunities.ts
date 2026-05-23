@@ -6,9 +6,20 @@ function pipelineQueryKey(pipelineId?: string) {
   return ["opportunities", pipelineId, undefined] as const;
 }
 
-export function useOpportunities(pipelineId?: string, contactId?: string) {
+export interface OpportunityListFilters {
+  stage?: string;
+  search?: string;
+  createdFrom?: string;
+  createdTo?: string;
+}
+
+export function useOpportunities(
+  pipelineId?: string,
+  contactId?: string,
+  filters: OpportunityListFilters = {}
+) {
   return useQuery({
-    queryKey: ["opportunities", pipelineId, contactId],
+    queryKey: ["opportunities", pipelineId, contactId, filters],
     queryFn: async () => {
       const { data } = await axios.get<{ data: OpportunityWithContact[] }>(
         "/api/opportunities",
@@ -16,6 +27,10 @@ export function useOpportunities(pipelineId?: string, contactId?: string) {
           params: {
             ...(pipelineId ? { pipeline_id: pipelineId } : {}),
             ...(contactId ? { contact_id: contactId } : {}),
+            ...(filters.stage ? { stage: filters.stage } : {}),
+            ...(filters.search ? { search: filters.search } : {}),
+            ...(filters.createdFrom ? { created_from: filters.createdFrom } : {}),
+            ...(filters.createdTo ? { created_to: filters.createdTo } : {}),
           },
         }
       );

@@ -8,7 +8,7 @@ import { JOB_TITLE_OPTIONS } from "@/lib/constants/job-titles";
 import {
   COUNTRIES,
   getStatesForCountry,
-  getTimezoneForCountry,
+  getTimezoneForLocation,
 } from "@/lib/constants/countries";
 import { formatTimezone } from "@/lib/constants/contact-fields";
 import { Button } from "@/components/ui/button";
@@ -65,17 +65,18 @@ export function ContactForm({
     useCustomFields("contact");
 
   const country = useWatch({ control, name: "country" });
+  const state = useWatch({ control, name: "state" });
+  const timezone = useWatch({ control, name: "timezone" });
   const states = getStatesForCountry(country);
   const { data: companies = [] } = useCompanies();
   const createCompany = useCreateCompany();
   const [newCompanyName, setNewCompanyName] = useState("");
 
   useEffect(() => {
-    if (country) {
-      const tz = getTimezoneForCountry(country);
-      if (tz) setValue("timezone", tz);
-    }
-  }, [country, setValue]);
+    if (!country) return;
+    const tz = getTimezoneForLocation(country, state);
+    if (tz) setValue("timezone", tz);
+  }, [country, state, setValue]);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
@@ -227,9 +228,11 @@ export function ContactForm({
             className="input-field bg-[var(--background)]"
             placeholder="Set by country"
           />
-          {country && (
+          {(timezone || country) && (
             <p className="text-xs text-body-muted mt-1">
-              {formatTimezone(getTimezoneForCountry(country))}
+              {formatTimezone(
+                timezone || getTimezoneForLocation(country, state) || ""
+              )}
             </p>
           )}
         </div>

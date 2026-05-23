@@ -69,8 +69,14 @@ export async function attachContactToOpportunity(
 
 export async function listOpportunitiesWithContacts(
   userId: string,
-  pipelineId?: string,
-  contactId?: string
+  options?: {
+    pipelineId?: string;
+    contactId?: string;
+    stage?: string;
+    search?: string;
+    createdFrom?: string;
+    createdTo?: string;
+  }
 ) {
   const supabase = createServerSideClient();
   let query = supabase
@@ -79,18 +85,37 @@ export async function listOpportunitiesWithContacts(
     .eq("user_id", userId)
     .order("updated_at", { ascending: false });
 
+  const pipelineId = options?.pipelineId;
+  const contactId = options?.contactId;
+
   if (pipelineId) {
     query = query.eq("pipeline_id", pipelineId);
   }
   if (contactId) {
     query = query.eq("contact_id", contactId);
   }
+  if (options?.stage) {
+    query = query.eq("stage", options.stage);
+  }
+  if (options?.createdFrom) {
+    query = query.gte("created_at", `${options.createdFrom}T00:00:00.000Z`);
+  }
+  if (options?.createdTo) {
+    query = query.lte("created_at", `${options.createdTo}T23:59:59.999Z`);
+  }
 
   const { data: opps, error } = await query;
   if (error) throw error;
   if (!opps?.length) return [];
 
-  const contactIds = [...new Set(opps.map((o) => o.contact_id))];
+  let filtered = opps;
+  if (options?.search?.trim()) {
+    const q = options.search.trim().toLowerCase();
+    filtered = opps.filter((o) => o.title?.toLowerCase().includes(q));
+  }
+  if (!filtered.length) return [];
+
+  const contactIds = [...new Set(filtered.map((o) => o.contact_id))];
   const { data: contacts, error: contactsError } = await supabase
     .from("contacts")
     .select(CONTACT_FIELDS)
@@ -98,7 +123,7 @@ export async function listOpportunitiesWithContacts(
 
   if (contactsError) {
     console.error("listOpportunities contacts fetch:", contactsError.message);
-    return opps.map((o) => ({ ...o, contact: null }));
+    return filtered.map((o) => ({ ...o, contact: null }));
   }
 
   const companyIds = [
@@ -135,7 +160,7 @@ export async function listOpportunitiesWithContacts(
     ])
   );
 
-  return opps.map((o) => ({
+  return filtered.map((o) => ({
     ...o,
     contact: contactMap.get(o.contact_id) ?? null,
   }));

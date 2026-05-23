@@ -10,6 +10,7 @@ import {
   ticketDisplayLabel,
 } from "@/lib/service-ticket-number";
 import { createNotification } from "@/lib/notifications/create-notification";
+import { logContactActivity } from "@/lib/activities/log-contact-activity";
 import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
 
 export async function GET(req: NextRequest) {
@@ -113,6 +114,16 @@ export async function POST(req: NextRequest) {
       related_entity_type: "ticket",
       related_entity_id: data.id as string,
     });
+
+    if (parsed.data.contact_id) {
+      await logContactActivity(supabase, {
+        userId: userId!,
+        contactId: parsed.data.contact_id,
+        type: "created",
+        description: `Service ticket created: ${label}`,
+        metadata: { ticket_id: data.id },
+      });
+    }
 
     return NextResponse.json(enriched, { status: 201 });
   } catch (err) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { User } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,15 +11,16 @@ import { ContactForm } from "@/components/forms/ContactForm";
 import { ContactOverview } from "@/components/contact/contact-overview";
 import { ActivityPanel } from "@/components/contact/activity-panel";
 import { TasksPanel } from "@/components/contact/tasks-panel";
+import { TaskDetailModal } from "@/components/contact/task-detail-modal";
 import { RecordSectionTabs } from "@/components/crm/record-section-tabs";
 import { EntityRelatedPanel } from "@/components/crm/entity-related-panel";
 import {
   useContact,
   useUpdateContact,
-  useContactNotes,
   useCreateContactNote,
   useContactTasks,
   useCreateContactTask,
+  useContactActivityFeed,
 } from "@/hooks/useContacts";
 import { useOpportunities } from "@/hooks/useOpportunities";
 import { useTickets, useCreateTicket } from "@/hooks/useTickets";
@@ -26,23 +28,32 @@ import { useDocuments, useUploadDocument } from "@/hooks/useDocuments";
 import { useCalendarEvents } from "@/hooks/useCalendar";
 import { useCompany } from "@/hooks/useCompanies";
 import { contactToFormDefaults } from "@/lib/contact-payload";
-import type { ContactFormInput } from "@/types";
+import type { ContactFormInput, Task } from "@/types";
 import { QuickActionBar } from "@/components/quick-actions/quick-action-bar";
+import { SendEmailModal } from "@/components/contact/send-email-modal";
+import { ContactEmailPanel } from "@/components/contact/contact-email-panel";
+import { useContactEmails } from "@/hooks/useGmail";
 import { getInitials } from "@/lib/utils";
 
 type PageProps = { params: Promise<{ id: string }> };
-type WorkTab = "related" | "activity" | "tasks";
+type WorkTab = "related" | "emails" | "activity" | "tasks";
 type MobileTab = "overview" | WorkTab;
 
 export default function ContactDetailPage({ params }: PageProps) {
   const { id } = use(params);
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [workTab, setWorkTab] = useState<WorkTab>("related");
   const [mobileTab, setMobileTab] = useState<MobileTab>("overview");
+  const [openTask, setOpenTask] = useState<Task | null>(null);
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
 
   const { data: contact, isLoading, error } = useContact(id);
   const updateContact = useUpdateContact(id);
-  const { data: notes = [] } = useContactNotes(id);
+  const { data: activityItems = [], isLoading: activityLoading } =
+    useContactActivityFeed(id);
+  const { data: contactEmails = [] } = useContactEmails(id);
   const createNote = useCreateContactNote(id);
   const { data: tasks = [] } = useContactTasks(id);
   const createTask = useCreateContactTask(id);
@@ -56,6 +67,11 @@ export default function ContactDetailPage({ params }: PageProps) {
 
   const relatedCount =
     contactOpportunities.length + contactTickets.length + contactDocuments.length;
+
+  function handleOpenTask(task: Task) {
+    setOpenTask(task);
+    setTaskModalOpen(true);
+  }
 
   async function handleUpdate(data: ContactFormInput) {
     await updateContact.mutateAsync(data);
@@ -116,52 +132,82 @@ export default function ContactDetailPage({ params }: PageProps) {
     />
   );
 
+  const activityPanel = (
+    <ActivityPanel
+      items={activityItems}
+      isLoading={activityLoading}
+      isAdding={createNote.isPending}
+      onAdd={async (input) => {
+        await createNote.mutateAsync(input);
+      }}
+    />
+  );
+
+  const tasksPanel = (
+    <TasksPanel
+      tasks={tasks}
+      isAdding={createTask.isPending}
+      onAdd={async (input) => createTask.mutateAsync(input)}
+      onOpenTask={handleOpenTask}
+    />
+  );
+
+  const emailsPanel = (
+    <ContactEmailPanel
+      contact={contact}
+      onOpenFullCompose={() => setEmailModalOpen(true)}
+    />
+  );
+
   const workPanelContent =
-    workTab === "related" ? (
-      relatedPanel
-    ) : workTab === "activity" ? (
-      <ActivityPanel
-        notes={notes}
-        isAdding={createNote.isPending}
-        onAdd={async (input) => {
-          await createNote.mutateAsync(input);
-        }}
-      />
-    ) : (
-      <TasksPanel
-        tasks={tasks}
-        isAdding={createTask.isPending}
-        onAdd={async (input) => {
-          await createTask.mutateAsync(input);
-        }}
-      />
-    );
+    workTab === "related"
+      ? relatedPanel
+      : workTab === "emails"
+        ? emailsPanel
+        : workTab === "activity"
+          ? activityPanel
+          : tasksPanel;
 
   const mobileContent =
     mobileTab === "overview" ? (
       <ContactOverview contact={contact} onSaveField={handleSaveField} />
     ) : mobileTab === "related" ? (
       relatedPanel
+    ) : mobileTab === "emails" ? (
+      emailsPanel
     ) : mobileTab === "activity" ? (
-      <ActivityPanel
-        notes={notes}
-        isAdding={createNote.isPending}
-        onAdd={async (input) => {
-          await createNote.mutateAsync(input);
-        }}
-      />
+      activityPanel
     ) : (
-      <TasksPanel
-        tasks={tasks}
-        isAdding={createTask.isPending}
-        onAdd={async (input) => {
-          await createTask.mutateAsync(input);
-        }}
-      />
+      tasksPanel
     );
 
   return (
     <div className="space-y-6 w-full">
+      <TaskDetailModal
+        contactId={id}
+        task={openTask}
+        open={taskModalOpen}
+        onClose={() => {
+          setTaskModalOpen(false);
+          setOpenTask(null);
+        }}
+        onUpdated={() => {
+          void queryClient.invalidateQueries({ queryKey: ["contact-tasks", id] });
+          void queryClient.invalidateQueries({ queryKey: ["contact-activity-feed", id] });
+        }}
+      />
+
+      <SendEmailModal
+        contact={contact}
+        companyName={linkedAccount?.name}
+        open={emailModalOpen}
+        onClose={() => setEmailModalOpen(false)}
+        onSent={() => {
+          void queryClient.invalidateQueries({ queryKey: ["contact-activity-feed", id] });
+          void queryClient.invalidateQueries({ queryKey: ["contact-emails", id] });
+        }}
+      />
+
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div className="flex items-start gap-4 min-w-0">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-semibold">
@@ -181,16 +227,24 @@ export default function ContactDetailPage({ params }: PageProps) {
               email={contact.email}
               phone={contact.phone}
               className="mt-3"
+              onSendEmail={
+                contact.email?.trim()
+                  ? () => setEmailModalOpen(true)
+                  : undefined
+              }
               noteLoading={createNote.isPending}
               taskLoading={createTask.isPending}
               onAddNote={async (content) => {
                 await createNote.mutateAsync({ content, activity_type: "note" });
               }}
               onAddTask={async (input) => {
-                await createTask.mutateAsync({
+                const task = await createTask.mutateAsync({
                   title: input.title,
-                  due_date: input.due_date,
+                  due_at: input.due_at,
+                  priority: input.priority,
+                  assigned_to: input.assigned_to,
                 });
+                handleOpenTask(task);
               }}
             />
             <p className="text-sm text-body-muted mt-3">
@@ -244,7 +298,8 @@ export default function ContactDetailPage({ params }: PageProps) {
                 <RecordSectionTabs
                   tabs={[
                     { id: "related", label: "Related", count: relatedCount },
-                    { id: "activity", label: "Activity", count: notes.length },
+                    { id: "emails", label: "Emails", count: contactEmails.length },
+                    { id: "activity", label: "Activity", count: activityItems.length },
                     { id: "tasks", label: "Tasks", count: tasks.length },
                   ]}
                   activeTab={workTab}
@@ -261,7 +316,8 @@ export default function ContactDetailPage({ params }: PageProps) {
                 tabs={[
                   { id: "overview", label: "Overview" },
                   { id: "related", label: "Related", count: relatedCount },
-                  { id: "activity", label: "Activity", count: notes.length },
+                  { id: "emails", label: "Emails", count: contactEmails.length },
+                  { id: "activity", label: "Activity", count: activityItems.length },
                   { id: "tasks", label: "Tasks", count: tasks.length },
                 ]}
                 activeTab={mobileTab}

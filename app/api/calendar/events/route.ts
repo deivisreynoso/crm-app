@@ -4,6 +4,7 @@ import { createServerSideClient } from "@/lib/supabase";
 import { calendarEventSchema } from "@/lib/validators";
 import { formatValidationDetails } from "@/lib/validation-errors";
 import { insertWithColumnFallback } from "@/lib/api/strip-insert";
+import { createGoogleCalendarEvent } from "@/lib/google/calendar";
 
 function emptyToNull(value: string | undefined): string | null {
   return value?.trim() ? value.trim() : null;
@@ -98,6 +99,36 @@ export async function POST(req: NextRequest) {
         ? "Run migration 012_relax_parent_checks.sql to allow events without a linked contact."
         : "Run migration 011_calendar_location_custom_field_meta.sql in Supabase.";
       return NextResponse.json({ error: dbError.message, hint }, { status: 500 });
+    }
+
+    let googleEventId: string | null = null;
+    try {
+      googleEventId = await createGoogleCalendarEvent(userId!, {
+        title: row.title,
+        description: row.description,
+        location: row.location,
+        start_time: row.start_time,
+        end_time: row.end_time,
+      });
+    } catch (syncErr) {
+      console.error("Google Calendar sync on create:", syncErr);
+    }
+
+    const created = data as { id?: string } | null;
+    if (googleEventId && created?.id) {
+      const { data: synced } = await supabase
+        .from("calendar_events")
+        .update({
+          google_event_id: googleEventId,
+          is_synced: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", created.id)
+        .eq("user_id", userId!)
+        .select()
+        .single();
+
+      return NextResponse.json(synced ?? data, { status: 201 });
     }
 
     return NextResponse.json(data, { status: 201 });

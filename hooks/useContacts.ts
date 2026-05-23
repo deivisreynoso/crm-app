@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import type { Contact, ContactFormInput, Note, Task } from "@/types";
+import type { ActivityFeedItem, Contact, ContactFormInput, Note, Task } from "@/types";
 
 interface ContactsResponse {
   data: Contact[];
@@ -141,6 +141,7 @@ export function useCreateContactNote(contactId: string) {
       axios.post(`/api/contacts/${contactId}/notes`, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contact-notes", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["contact-activity-feed", contactId] });
     },
   });
 }
@@ -162,14 +163,33 @@ export function useCreateContactTask(contactId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (task: {
+    mutationFn: async (task: {
       title: string;
       description?: string;
       priority?: string;
       due_date?: string;
-    }) => axios.post(`/api/contacts/${contactId}/tasks`, task),
+      due_at?: string;
+      assigned_to?: string;
+    }) => {
+      const { data } = await axios.post<Task>(`/api/contacts/${contactId}/tasks`, task);
+      return data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contact-tasks", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["contact-activity-feed", contactId] });
     },
+  });
+}
+
+export function useContactActivityFeed(contactId: string) {
+  return useQuery({
+    queryKey: ["contact-activity-feed", contactId],
+    queryFn: async () => {
+      const { data } = await axios.get<{ data: ActivityFeedItem[] }>(
+        `/api/contacts/${contactId}/activity-feed`
+      );
+      return data.data;
+    },
+    enabled: !!contactId,
   });
 }

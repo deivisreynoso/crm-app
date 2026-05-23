@@ -15,6 +15,7 @@ import {
   useUpdateCalendarEvent,
 } from "@/hooks/useCalendarEvents";
 import { shiftMonth } from "@/lib/calendar/utils";
+import { GoogleCalendarBanner } from "@/components/calendar/google-calendar-banner";
 import { useContacts } from "@/hooks/useContacts";
 import type { CalendarEvent } from "@/types";
 
@@ -63,6 +64,8 @@ export function CalendarPage() {
           </Button>
         }
       />
+
+      <GoogleCalendarBanner />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">

@@ -17,21 +17,40 @@ function emptyToNull(value: string | undefined): string | null {
   return value?.trim() ? value.trim() : null;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const { userId, error } = await requireAuth();
     if (error) return error;
 
+    const params = new URL(req.url).searchParams;
+    const search = params.get("search")?.trim().toLowerCase();
+    const industry = params.get("industry")?.trim();
+
     const supabase = createServerSideClient();
-    const { data, error: dbError } = await supabase
+    let query = supabase
       .from("companies")
       .select("*")
       .eq("user_id", userId!)
       .order("name", { ascending: true });
 
+    if (industry) {
+      query = query.eq("industry", industry);
+    }
+
+    const { data, error: dbError } = await query;
+
     if (dbError) throw dbError;
 
-    return NextResponse.json({ data: data ?? [] });
+    let rows = data ?? [];
+    if (search) {
+      rows = rows.filter(
+        (c) =>
+          c.name?.toLowerCase().includes(search) ||
+          c.website?.toLowerCase().includes(search)
+      );
+    }
+
+    return NextResponse.json({ data: rows });
   } catch (err) {
     console.error("GET /api/companies error:", err);
     return NextResponse.json(
