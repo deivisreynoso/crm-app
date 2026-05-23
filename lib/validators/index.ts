@@ -1,6 +1,19 @@
 import { z } from 'zod';
+import { isValidEmail, isValidPhone } from '@/lib/identity/normalize';
 
 const optionalString = z.string().optional().or(z.literal(''));
+
+const emailField = z
+  .string()
+  .optional()
+  .or(z.literal(''))
+  .refine((v) => isValidEmail(v), {
+    message: 'Enter a valid email address (e.g. name@company.com)',
+  });
+
+const phoneField = optionalString.refine((v) => isValidPhone(v), {
+  message: 'Enter a valid phone number with at least 10 digits',
+});
 
 const customFieldValuesSchema = z
   .record(
@@ -13,8 +26,8 @@ export const contactSchema = z
   .object({
     first_name: z.string().min(2, 'First name must be at least 2 characters'),
     last_name: z.string().min(2, 'Last name must be at least 2 characters'),
-    email: z.string().email().optional().or(z.literal('')),
-    phone: optionalString,
+    email: emailField,
+    phone: phoneField,
     company: optionalString,
     title: optionalString,
     source: optionalString,
@@ -47,8 +60,8 @@ export const contactSchema = z
 export const contactPatchSchema = z.object({
   first_name: z.string().min(2).optional(),
   last_name: z.string().min(2).optional(),
-  email: z.string().email().optional().or(z.literal('')),
-  phone: optionalString,
+  email: emailField,
+  phone: phoneField,
   company: optionalString,
   title: optionalString,
   source: optionalString,
@@ -331,3 +344,43 @@ export const registerSchema = z
   });
 
 export type RegisterFormData = z.infer<typeof registerSchema>;
+
+export const savedFilterSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  entity_type: z.enum(["contact", "opportunity", "ticket", "account"]),
+  filter_config: z.record(z.string(), z.unknown()).default({}),
+});
+
+export type SavedFilterFormData = z.infer<typeof savedFilterSchema>;
+
+export const contactTagSchema = z.object({
+  name: z.string().min(1).max(48),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, "Use a hex color like #1b318b")
+    .optional(),
+});
+
+export type ContactTagFormData = z.infer<typeof contactTagSchema>;
+
+export const emailTemplateSchema = z.object({
+  name: z.string().min(1),
+  subject: z.string().min(1),
+  body: z.string().min(1),
+  category: z.string().optional().or(z.literal("")),
+  is_default: z.boolean().optional(),
+});
+
+export type EmailTemplateFormData = z.infer<typeof emailTemplateSchema>;
+
+export const notificationPreferencesSchema = z.object({
+  task_reminders: z.boolean().optional(),
+  opportunity_reminders: z.boolean().optional(),
+  ticket_notifications: z.boolean().optional(),
+  email_frequency: z.enum(["instant", "daily", "weekly", "off"]).optional(),
+  timezone: z.string().optional().or(z.literal("")),
+});
+
+export type NotificationPreferencesFormData = z.infer<
+  typeof notificationPreferencesSchema
+>;

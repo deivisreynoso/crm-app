@@ -14,9 +14,9 @@ export function TagsInput({ value, onChange, placeholder }: TagsInputProps) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder ?? "e.g. whatsapp, hot-lead"}
-        className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+        className="input-field w-full"
       />
-      <p className="text-xs text-slate-500 mt-1">Separate tags with commas</p>
+      <p className="text-xs text-body-muted mt-1">Separate tags with commas</p>
     </div>
   );
 }

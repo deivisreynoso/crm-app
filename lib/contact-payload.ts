@@ -1,17 +1,30 @@
 import type { ContactFormData } from "@/lib/validators";
 import type { Contact } from "@/types";
 import { parseTagsInput } from "@/lib/tags";
+import { canonicalEmail } from "@/lib/identity/normalize";
+import { formatPhone, parsePhoneParts } from "@/lib/phone";
 
 function emptyToNull(value: string | undefined): string | null {
   return value?.trim() ? value.trim() : null;
+}
+
+function normalizePhoneField(phone: string | undefined): string | null {
+  const raw = phone?.trim();
+  if (!raw) return null;
+  const { dialCode, number } = parsePhoneParts(raw);
+  return formatPhone(dialCode, number) || null;
+}
+
+function normalizeEmailField(email: string | undefined): string | null {
+  return canonicalEmail(email) ?? emptyToNull(email);
 }
 
 export function buildContactRecord(data: ContactFormData, userId?: string) {
   return {
     first_name: data.first_name,
     last_name: data.last_name,
-    email: emptyToNull(data.email),
-    phone: emptyToNull(data.phone),
+    email: normalizeEmailField(data.email),
+    phone: normalizePhoneField(data.phone),
     company: emptyToNull(data.company),
     title: emptyToNull(data.title),
     source: emptyToNull(data.source),
@@ -39,8 +52,6 @@ export function buildContactRecord(data: ContactFormData, userId?: string) {
 }
 
 const STRING_FIELDS = [
-  "email",
-  "phone",
   "company",
   "title",
   "source",
@@ -72,6 +83,13 @@ export function buildContactUpdate(data: Partial<ContactFormData>) {
     if (data[key] !== undefined) {
       record[key] = emptyToNull(data[key]);
     }
+  }
+
+  if (data.email !== undefined) {
+    record.email = normalizeEmailField(data.email);
+  }
+  if (data.phone !== undefined) {
+    record.phone = normalizePhoneField(data.phone);
   }
 
   if (data.tags !== undefined) {

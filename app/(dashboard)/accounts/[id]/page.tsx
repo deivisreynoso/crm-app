@@ -69,6 +69,7 @@ export default function AccountDetailPage({ params }: PageProps) {
       documentLoading={uploadDocument.isPending}
       onContactCreated={() => refetchRelated()}
       onOpportunityCreated={() => refetchRelated()}
+      onCalendarEventCreated={() => refetchRelated()}
     />
   ) : (
     <p className="text-body-muted text-sm">Loading related records…</p>

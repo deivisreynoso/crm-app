@@ -26,7 +26,9 @@ import {
 import { useCompanies } from "@/hooks/useCompanies";
 import type { ContactFormInput } from "@/types";
 import { formatDate } from "@/lib/utils";
+import { formatApiError } from "@/lib/validation-errors";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { SavedFiltersBar } from "@/components/filters/saved-filters-bar";
 
 function ContactsPageContent() {
   const router = useRouter();
@@ -38,8 +40,11 @@ function ContactsPageContent() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState(presetSearch);
   const [statusFilter, setStatusFilter] = useState("");
+  const [createdFrom, setCreatedFrom] = useState("");
+  const [createdTo, setCreatedTo] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [searchInput, setSearchInput] = useState(presetSearch);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     if (searchParams.get("new") === "1") {
@@ -52,27 +57,33 @@ function ContactsPageContent() {
     }
   }, [searchParams]);
 
-  const { data, isLoading, error } = useContacts(
-    page,
-    20,
-    search || undefined,
-    statusFilter || undefined
-  );
+  const { data, isLoading, error } = useContacts(page, 20, {
+    search: search || undefined,
+    status: statusFilter || undefined,
+    createdFrom: createdFrom || undefined,
+    createdTo: createdTo || undefined,
+  });
   const { data: companies = [] } = useCompanies();
   const companyMap = Object.fromEntries(companies.map((c) => [c.id, c.name]));
   const createContact = useCreateContact();
   const deleteContact = useDeleteContact();
 
   async function handleCreate(contact: ContactFormInput) {
-    const payload = presetCompanyId
-      ? { ...contact, company_id: presetCompanyId }
-      : contact;
-    const result = await createContact.mutateAsync(payload);
-    setShowForm(false);
-    router.refresh();
-    const created = result.data;
-    if (created?.id) {
-      router.push(`/contacts/${created.id}`);
+    setCreateError(null);
+    try {
+      const payload = presetCompanyId
+        ? { ...contact, company_id: presetCompanyId }
+        : contact;
+      const result = await createContact.mutateAsync(payload);
+      setShowForm(false);
+      router.refresh();
+      const created = result.data;
+      if (created?.id) {
+        router.push(`/contacts/${created.id}`);
+      }
+    } catch (err) {
+      setCreateError(formatApiError(err, "We could not create this contact. Please try again."));
+      throw err;
     }
   }
 
@@ -112,15 +123,41 @@ function ContactsPageContent() {
             isLoading={createContact.isPending}
             submitLabel="Create Contact"
           />
-          {createContact.isError && (
-            <p className="text-sm text-red-600 mt-4">
-              Failed to create contact. Please try again.
+          {createError && (
+            <p className="text-sm text-red-600 mt-4 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+              {createError}
             </p>
           )}
         </div>
       )}
 
-      <div className="surface-card p-4">
+      <div className="surface-card p-4 space-y-3">
+        <SavedFiltersBar
+          entityType="contact"
+          currentConfig={{
+            ...(search ? { search } : {}),
+            ...(statusFilter ? { status: statusFilter } : {}),
+            ...(createdFrom ? { created_from: createdFrom } : {}),
+            ...(createdTo ? { created_to: createdTo } : {}),
+          }}
+          onApply={(config) => {
+            if (typeof config.search === "string") {
+              setSearch(config.search);
+              setSearchInput(config.search);
+            } else {
+              setSearch("");
+              setSearchInput("");
+            }
+            setStatusFilter(typeof config.status === "string" ? config.status : "");
+            setCreatedFrom(
+              typeof config.created_from === "string" ? config.created_from : ""
+            );
+            setCreatedTo(
+              typeof config.created_to === "string" ? config.created_to : ""
+            );
+            setPage(1);
+          }}
+        />
         <form
           onSubmit={handleSearch}
           className="flex flex-col sm:flex-row gap-3"
@@ -146,6 +183,28 @@ function ContactsPageContent() {
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </select>
+          <input
+            type="date"
+            value={createdFrom}
+            onChange={(e) => {
+              setCreatedFrom(e.target.value);
+              setPage(1);
+            }}
+            className="px-4 py-2 border border-[var(--card-border)] rounded-md bg-[var(--card)] text-[var(--foreground)]"
+            aria-label="Created from"
+            title="Created from"
+          />
+          <input
+            type="date"
+            value={createdTo}
+            onChange={(e) => {
+              setCreatedTo(e.target.value);
+              setPage(1);
+            }}
+            className="px-4 py-2 border border-[var(--card-border)] rounded-md bg-[var(--card)] text-[var(--foreground)]"
+            aria-label="Created to"
+            title="Created to"
+          />
           <Button type="submit" variant="outline">
             Search
           </Button>
@@ -171,6 +230,7 @@ function ContactsPageContent() {
                 <DataTableHeadCell>Phone</DataTableHeadCell>
                 <DataTableHeadCell>Account</DataTableHeadCell>
                 <DataTableHeadCell>Title</DataTableHeadCell>
+                <DataTableHeadCell>Created</DataTableHeadCell>
                 <DataTableHeadCell>Status</DataTableHeadCell>
                 <DataTableHeadCell align="right">Actions</DataTableHeadCell>
               </tr>
@@ -201,6 +261,11 @@ function ContactsPageContent() {
                   </DataTableCell>
                   <DataTableCell>
                     <span className="text-body-muted">{contact.title || "—"}</span>
+                  </DataTableCell>
+                  <DataTableCell>
+                    <span className="text-body-muted">
+                      {contact.created_at ? formatDate(contact.created_at) : "—"}
+                    </span>
                   </DataTableCell>
                   <DataTableCell>
                     <Badge variant="info">{contact.status}</Badge>

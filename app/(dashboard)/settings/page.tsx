@@ -2,6 +2,9 @@ import { PageHeader } from "@/components/ui/page-shell";
 import { Card } from "@/components/ui/card";
 import { CustomFieldManager } from "@/components/custom-fields/custom-field-manager";
 import { CurrencySettings } from "@/components/settings/currency-settings";
+import { NotificationPreferencesSettings } from "@/components/settings/notification-preferences-settings";
+import { EmailTemplatesManager } from "@/components/settings/email-templates-manager";
+import { DuplicateReviewsPanel } from "@/components/settings/duplicate-reviews-panel";
 
 export default function SettingsPage() {
   return (
@@ -21,10 +24,22 @@ export default function SettingsPage() {
         <CurrencySettings />
       </Card>
       <Card padding="lg">
+        <h2 className="text-sm font-semibold text-heading mb-4">Notifications</h2>
+        <NotificationPreferencesSettings />
+      </Card>
+      <Card padding="lg">
+        <h2 className="text-sm font-semibold text-heading mb-4">Email templates</h2>
+        <EmailTemplatesManager />
+      </Card>
+      <Card padding="lg">
+        <h2 className="text-sm font-semibold text-heading mb-4">Duplicate contacts</h2>
+        <DuplicateReviewsPanel />
+      </Card>
+      <Card padding="lg">
         <h2 className="text-sm font-semibold text-heading mb-4">Custom fields</h2>
         <p className="text-sm text-body-muted mb-4">
           Define extra fields for contacts, opportunities, and tickets. Values are stored on
-          each record&apos;s <code className="text-xs">custom_fields</code> JSON.
+          each record&apos;s custom fields.
         </p>
         <CustomFieldManager />
       </Card>

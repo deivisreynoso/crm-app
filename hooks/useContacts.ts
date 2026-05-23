@@ -11,17 +11,31 @@ interface ContactsResponse {
   };
 }
 
+export interface ContactsListFilters {
+  search?: string;
+  status?: string;
+  createdFrom?: string;
+  createdTo?: string;
+}
+
 export function useContacts(
   page = 1,
   limit = 20,
-  search?: string,
-  status?: string
+  filters: ContactsListFilters = {}
 ) {
+  const { search, status, createdFrom, createdTo } = filters;
   return useQuery({
-    queryKey: ["contacts", page, limit, search, status],
+    queryKey: ["contacts", page, limit, search, status, createdFrom, createdTo],
     queryFn: async () => {
       const { data } = await axios.get<ContactsResponse>("/api/contacts", {
-        params: { page, limit, search, status },
+        params: {
+          page,
+          limit,
+          search,
+          status,
+          created_from: createdFrom,
+          created_to: createdTo,
+        },
       });
       return data;
     },

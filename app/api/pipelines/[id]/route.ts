@@ -91,7 +91,22 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
 
     if ((count ?? 0) <= 1) {
       return NextResponse.json(
-        { error: "Cannot delete your only pipeline" },
+        { error: "You must keep at least one pipeline. Create another pipeline before deleting this one." },
+        { status: 400 }
+      );
+    }
+
+    const { count: oppCount } = await supabase
+      .from("opportunities")
+      .select("*", { count: "exact", head: true })
+      .eq("pipeline_id", id)
+      .eq("user_id", userId!);
+
+    if ((oppCount ?? 0) > 0) {
+      return NextResponse.json(
+        {
+          error: `This pipeline has ${oppCount} opportunit${oppCount === 1 ? "y" : "ies"}. Move or delete them before removing the pipeline.`,
+        },
         { status: 400 }
       );
     }

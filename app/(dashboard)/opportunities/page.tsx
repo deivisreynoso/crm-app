@@ -15,6 +15,7 @@ import {
   usePipelines,
   useCreatePipeline,
   useUpdatePipeline,
+  useDeletePipeline,
 } from "@/hooks/usePipelines";
 import {
   useOpportunities,
@@ -46,6 +47,8 @@ export default function OpportunitiesPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deletingOpportunity, setDeletingOpportunity] =
     useState<OpportunityWithContact | null>(null);
+  const [deletingPipeline, setDeletingPipeline] = useState(false);
+  const [pipelineError, setPipelineError] = useState<string | null>(null);
 
   const selectedPipeline = pipelines.find((p) => p.id === selectedPipelineId);
 
@@ -59,6 +62,7 @@ export default function OpportunitiesPage() {
   const updateOpportunity = useUpdateOpportunity(selectedPipelineId);
   const moveStage = useMoveOpportunityStage(selectedPipelineId);
   const deleteOpportunity = useDeleteOpportunity(selectedPipelineId);
+  const deletePipeline = useDeletePipeline();
 
   useEffect(() => {
     if (pipelines.length && !selectedPipelineId) {
@@ -70,6 +74,7 @@ export default function OpportunitiesPage() {
     setPanel("none");
     setEditingOpportunity(null);
     setSaveError(null);
+    setDeletingPipeline(false);
   }
 
   function openPanel(next: Panel) {
@@ -90,8 +95,24 @@ export default function OpportunitiesPage() {
     name: string;
     stages: typeof DEFAULT_PIPELINE_STAGES;
   }) {
+    setPipelineError(null);
     await updatePipeline.mutateAsync(input);
     closePanel();
+  }
+
+  async function handleDeletePipeline() {
+    if (!selectedPipelineId) return;
+    setPipelineError(null);
+    try {
+      await deletePipeline.mutateAsync(selectedPipelineId);
+      const remaining = pipelines.filter((p) => p.id !== selectedPipelineId);
+      setSelectedPipelineId(remaining[0]?.id ?? "");
+      setDeletingPipeline(false);
+      closePanel();
+    } catch (err) {
+      setPipelineError(apiErrorMessage(err));
+      setDeletingPipeline(false);
+    }
   }
 
   async function handleCreateOpportunity(data: OpportunityFormInput) {
@@ -219,13 +240,32 @@ export default function OpportunitiesPage() {
         title="Pipeline settings"
       >
         {selectedPipeline && (
-          <PipelineSettings
-            pipelineName={selectedPipeline.name}
-            stages={selectedPipeline.stages}
-            onSave={handleSavePipeline}
-            onCancel={closePanel}
-            isLoading={updatePipeline.isPending}
-          />
+          <>
+            {pipelineError && (
+              <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+                {pipelineError}
+              </p>
+            )}
+            <PipelineSettings
+              pipelineName={selectedPipeline.name}
+              stages={selectedPipeline.stages}
+              onSave={handleSavePipeline}
+              onDelete={async () => {
+                setDeletingPipeline(true);
+              }}
+              onCancel={closePanel}
+              isLoading={updatePipeline.isPending}
+              isDeleting={deletePipeline.isPending}
+              canDelete={pipelines.length > 1 && opportunities.length === 0}
+              deleteBlockedReason={
+                pipelines.length <= 1
+                  ? "You must keep at least one pipeline."
+                  : opportunities.length > 0
+                    ? `Move or delete ${opportunities.length} opportunit${opportunities.length === 1 ? "y" : "ies"} on this pipeline first.`
+                    : undefined
+              }
+            />
+          </>
         )}
       </Modal>
 
@@ -286,6 +326,21 @@ export default function OpportunitiesPage() {
           </>
         )}
       </Modal>
+
+      <ConfirmDialog
+        open={deletingPipeline}
+        title="Delete pipeline?"
+        description={
+          selectedPipeline
+            ? `"${selectedPipeline.name}" will be permanently removed. This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete pipeline"
+        destructive
+        loading={deletePipeline.isPending}
+        onConfirm={handleDeletePipeline}
+        onCancel={() => setDeletingPipeline(false)}
+      />
 
       <ConfirmDialog
         open={!!deletingOpportunity}

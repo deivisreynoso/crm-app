@@ -4,7 +4,12 @@ import { createServerSideClient } from "@/lib/supabase";
 import { contactPatchSchema } from "@/lib/validators";
 import { buildContactUpdate } from "@/lib/contact-payload";
 import { triggerN8NWebhook } from "@/lib/n8n";
-import { formatValidationDetails } from "@/lib/validation-errors";
+import {
+  duplicateContactMessage,
+  findDuplicateContact,
+} from "@/lib/identity/contact-duplicate";
+import { contactWriteErrorMessage } from "@/lib/identity/duplicate-errors";
+import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -70,6 +75,21 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     const supabase = createServerSideClient();
+
+    if (parsed.data.email !== undefined || parsed.data.phone !== undefined) {
+      const duplicate = await findDuplicateContact(supabase, userId!, {
+        email: parsed.data.email,
+        phone: parsed.data.phone,
+        excludeId: id,
+      });
+      if (duplicate) {
+        return NextResponse.json(
+          { error: duplicateContactMessage(duplicate) },
+          { status: 409 }
+        );
+      }
+    }
+
     const baseUpdates = {
       ...buildContactUpdate(parsed.data),
       updated_at: new Date().toISOString(),
@@ -100,8 +120,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       console.error("PATCH /api/contacts/[id] db:", dbError);
       return NextResponse.json(
         {
-          error: dbError.message,
-          hint: "Run migrations/009_contact_country.sql in Supabase if updating country.",
+          error: humanizeDbError(contactWriteErrorMessage(dbError)),
+          hint: /country/i.test(dbError.message)
+            ? "Run migrations/009_contact_country.sql in Supabase if updating country."
+            : undefined,
         },
         { status: 500 }
       );

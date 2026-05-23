@@ -24,7 +24,16 @@ export function humanizeDbError(message: string): string {
     return "This document could not be saved. Try linking a contact or run the latest database migration.";
   }
   if (lower.includes("duplicate key") && lower.includes("email")) {
-    return "An account with this email already exists.";
+    return "A contact with this email address already exists. Use the existing record or enter a different email.";
+  }
+  if (lower.includes("duplicate key") && lower.includes("phone")) {
+    return "A contact with this phone number already exists. Use the existing record or enter a different number.";
+  }
+  if (lower.includes("updated_at") && lower.includes("notification_preferences")) {
+    return "Notification settings could not be saved. Run migration 010 in Supabase, then try again.";
+  }
+  if (lower.includes("schema cache") || lower.includes("could not find")) {
+    return "A required database update is missing. Please run the latest migrations in Supabase.";
   }
   if (lower.includes("violates foreign key")) {
     return "A linked record was removed or is invalid. Refresh the page and try again.";

@@ -25,6 +25,7 @@ import {
 } from "@/hooks/useTickets";
 import { SERVICE_TICKET_OBJECT } from "@/lib/constants/service-tickets";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { SavedFiltersBar } from "@/components/filters/saved-filters-bar";
 
 export default function ServiceTicketsPage() {
   const [statusFilter, setStatusFilter] = useState("");
@@ -51,6 +52,13 @@ export default function ServiceTicketsPage() {
       />
 
       <div className="flex flex-wrap gap-3 items-center">
+        <SavedFiltersBar
+          entityType="ticket"
+          currentConfig={statusFilter ? { status: statusFilter } : {}}
+          onApply={(config) => {
+            setStatusFilter(typeof config.status === "string" ? config.status : "");
+          }}
+        />
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}

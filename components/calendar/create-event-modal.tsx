@@ -22,6 +22,8 @@ interface CreateEventModalProps {
   onClose: () => void;
   initialDate?: Date;
   initial?: CalendarEvent | null;
+  defaultContactId?: string;
+  defaultCompanyId?: string;
   onSubmit: (data: CalendarEventFormInput) => Promise<void>;
   isLoading?: boolean;
 }
@@ -31,6 +33,8 @@ export function CreateEventModal({
   onClose,
   initialDate,
   initial,
+  defaultContactId,
+  defaultCompanyId,
   onSubmit,
   isLoading,
 }: CreateEventModalProps) {
@@ -82,14 +86,14 @@ export function CreateEventModal({
     endDt.setHours(10, 0, 0, 0);
     setTitle("");
     setDescription("");
-    setCompanyId("");
-    setContactId("");
+    setCompanyId(defaultCompanyId ?? "");
+    setContactId(defaultContactId ?? "");
     setOpportunityId("");
     setStart(toLocalInput(startDt.toISOString()));
     setEnd(toLocalInput(endDt.toISOString()));
     setLocationType("zoom");
     setLocation("");
-  }, [open, initial, initialDate]);
+  }, [open, initial, initialDate, defaultContactId, defaultCompanyId]);
 
   function validate(): boolean {
     const next: Record<string, string> = {};

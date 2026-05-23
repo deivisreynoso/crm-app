@@ -6,6 +6,7 @@ import { FileDown, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DocumentStatusBadge } from "@/components/ui/document-status-badge";
 import { VariablePalette } from "@/components/documents/variable-palette";
+import { DocumentVersionHistory } from "@/components/documents/document-version-history";
 import { insertAtTextareaCursor } from "@/lib/documents/insert-at-cursor";
 import {
   useDocument,
@@ -201,6 +202,18 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
                 </option>
               ))}
             </select>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-body-muted mb-2">
+              Version history
+            </p>
+            <DocumentVersionHistory
+              documentId={documentId}
+              onRestore={(text) => {
+                setContent(text);
+                void save({ content: text });
+              }}
+            />
           </div>
         </aside>
 

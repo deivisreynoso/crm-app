@@ -9,8 +9,12 @@ interface PipelineSettingsProps {
   pipelineName: string;
   stages: PipelineStage[];
   onSave: (input: { name: string; stages: PipelineStage[] }) => Promise<void>;
+  onDelete?: () => Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
+  isDeleting?: boolean;
+  canDelete?: boolean;
+  deleteBlockedReason?: string;
 }
 
 function slugify(name: string): string {
@@ -24,8 +28,12 @@ export function PipelineSettings({
   pipelineName,
   stages,
   onSave,
+  onDelete,
   onCancel,
   isLoading,
+  isDeleting,
+  canDelete = true,
+  deleteBlockedReason,
 }: PipelineSettingsProps) {
   const [name, setName] = useState(pipelineName);
   const [localStages, setLocalStages] = useState<PipelineStage[]>(
@@ -114,11 +122,29 @@ export function PipelineSettings({
         </div>
       </div>
 
+      {onDelete && (
+        <div className="border-t border-slate-200 pt-4 space-y-2">
+          <p className="text-sm font-medium text-slate-700">Danger zone</p>
+          {deleteBlockedReason && (
+            <p className="text-xs text-slate-500">{deleteBlockedReason}</p>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            className="text-red-600 border-red-200 hover:bg-red-50"
+            disabled={!canDelete || isDeleting || isLoading}
+            onClick={() => void onDelete()}
+          >
+            {isDeleting ? "Deleting…" : "Delete pipeline"}
+          </Button>
+        </div>
+      )}
+
       <div className="flex gap-2 justify-end pt-2">
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" disabled={isLoading}>
+        <Button type="submit" disabled={isLoading || isDeleting}>
           {isLoading ? "Saving..." : "Save pipeline"}
         </Button>
       </div>

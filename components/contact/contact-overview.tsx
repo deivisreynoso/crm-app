@@ -15,6 +15,7 @@ import {
 } from "@/lib/constants/countries";
 import { formatTimezone } from "@/lib/constants/contact-fields";
 import { formatApiError } from "@/lib/validation-errors";
+import { TagsInput } from "@/components/forms/tags-input";
 import { formatTagsForInput } from "@/lib/tags";
 import { useCompanies } from "@/hooks/useCompanies";
 import { EntityCustomFieldsOverview } from "@/components/custom-fields/entity-custom-fields-overview";
@@ -155,11 +156,15 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
         )}
       </div>
 
-      <InlineEditableField
-        label="Tags"
-        value={formatTagsForInput(contact.tags)}
-        onSave={async (v) => saveField({ tags: v })}
-      />
+      <div className="sm:col-span-2">
+        <label className="text-[11px] font-semibold uppercase tracking-wide text-body-muted block mb-1">
+          Tags
+        </label>
+        <TagsInput
+          value={formatTagsForInput(contact.tags)}
+          onChange={(v) => void saveField({ tags: v })}
+        />
+      </div>
 
       <InlineEditableField
         label="About"

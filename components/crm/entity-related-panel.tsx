@@ -16,6 +16,8 @@ import { useCreateContact } from "@/hooks/useContacts";
 import { usePipelines } from "@/hooks/usePipelines";
 import { useCreateOpportunity } from "@/hooks/useOpportunities";
 import { uploadErrorMessage } from "@/hooks/useDocuments";
+import { CreateEventModal } from "@/components/calendar/create-event-modal";
+import { useCreateCalendarEvent } from "@/hooks/useCalendar";
 import type {
   CalendarEvent,
   CompanyRelated,
@@ -44,6 +46,7 @@ interface EntityRelatedPanelProps {
   onCreateDocument?: (meta: DocumentFormInput, file?: File | null) => Promise<void>;
   onContactCreated?: () => void;
   onOpportunityCreated?: () => void;
+  onCalendarEventCreated?: () => void;
   ticketLoading?: boolean;
   documentLoading?: boolean;
 }
@@ -60,6 +63,7 @@ export function EntityRelatedPanel({
   onCreateDocument,
   onContactCreated,
   onOpportunityCreated,
+  onCalendarEventCreated,
   ticketLoading,
   documentLoading,
 }: EntityRelatedPanelProps) {
@@ -67,9 +71,11 @@ export function EntityRelatedPanel({
   const [docModal, setDocModal] = useState(false);
   const [contactModal, setContactModal] = useState(false);
   const [oppModal, setOppModal] = useState(false);
+  const [calendarModal, setCalendarModal] = useState(false);
   const [docError, setDocError] = useState<string | null>(null);
 
   const createContact = useCreateContact();
+  const createCalendarEvent = useCreateCalendarEvent();
   const { data: pipelines = [] } = usePipelines();
   const defaultPipeline = pipelines[0];
   const createOpportunity = useCreateOpportunity(defaultPipeline?.id ?? "");
@@ -248,12 +254,7 @@ export function EntityRelatedPanel({
               ? `/calendar?company_id=${context.companyId}&new=1`
               : "/calendar"
         }
-        onNew={() => {
-          const q = new URLSearchParams({ new: "1" });
-          if (context.contactId) q.set("contact_id", context.contactId);
-          if (context.companyId) q.set("company_id", context.companyId);
-          window.location.href = `/calendar?${q.toString()}`;
-        }}
+        onNew={() => setCalendarModal(true)}
         newLabel="Schedule"
       >
         {calendarEvents.length === 0 ? (
@@ -329,6 +330,23 @@ export function EntityRelatedPanel({
           />
         )}
       </Modal>
+
+      <CreateEventModal
+        open={calendarModal}
+        onClose={() => setCalendarModal(false)}
+        defaultContactId={context.contactId}
+        defaultCompanyId={context.companyId}
+        onSubmit={async (data) => {
+          await createCalendarEvent.mutateAsync({
+            ...data,
+            contact_id: data.contact_id ?? context.contactId,
+            company_id: data.company_id ?? context.companyId,
+          });
+          setCalendarModal(false);
+          onCalendarEventCreated?.();
+        }}
+        isLoading={createCalendarEvent.isPending}
+      />
 
       <Modal open={docModal} onClose={() => setDocModal(false)} title="Upload document">
         {onCreateDocument && (
