@@ -13,10 +13,10 @@ export function AuthMarketingPanel() {
       <div className="relative">
         <Image
           src="/brand/logo-dark.png"
-          alt="ClickIn"
-          width={220}
-          height={56}
-          className="h-11 w-auto"
+          alt="ClickIn 360"
+          width={320}
+          height={80}
+          className="h-16 xl:h-[4.5rem] w-auto"
           priority
         />
       </div>
@@ -30,7 +30,7 @@ export function AuthMarketingPanel() {
         </p>
       </div>
       <p className="relative text-sm text-white/60">
-        © {new Date().getFullYear()} ClickIn. All rights reserved.
+        © {new Date().getFullYear()} ClickIn 360 LLC. All rights reserved.
       </p>
     </div>
   );

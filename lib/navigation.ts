@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  BarChart3,
   Building2,
   Calendar,
   FileText,
@@ -46,6 +47,12 @@ export const MAIN_NAV: NavItem[] = [
     label: "Service Tickets",
     icon: Ticket,
     description: "Customer support",
+  },
+  {
+    href: "/analytics",
+    label: "Analytics",
+    icon: BarChart3,
+    description: "Pipeline metrics and charts",
   },
 ];
 

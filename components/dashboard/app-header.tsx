@@ -1,4 +1,5 @@
 import { GlobalSearch } from "@/components/dashboard/global-search";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { ThemeToggle } from "@/components/dashboard/theme-toggle";
 import { UserMenu } from "@/components/dashboard/user-menu";
 
@@ -16,6 +17,7 @@ export function AppHeader({ user }: AppHeaderProps) {
         <GlobalSearch />
       </div>
       <div className="flex items-center gap-3 shrink-0 ml-auto">
+        <NotificationBell />
         <ThemeToggle />
         <UserMenu user={user} />
       </div>

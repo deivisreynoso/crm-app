@@ -22,6 +22,7 @@ export function buildOpportunityRecord(
     notes: emptyToNull(data.notes),
     tags: data.tags ? parseTagsInput(data.tags) : [],
     company_id: data.company_id?.trim() ? data.company_id : null,
+    custom_fields: data.custom_fields ?? {},
   };
 }
 
@@ -44,6 +45,9 @@ export function buildOpportunityUpdate(data: Partial<OpportunityFormData>) {
   }
   if (data.company_id !== undefined) {
     record.company_id = data.company_id?.trim() ? data.company_id : null;
+  }
+  if (data.custom_fields !== undefined) {
+    record.custom_fields = data.custom_fields ?? {};
   }
 
   return record;

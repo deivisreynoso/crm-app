@@ -17,6 +17,7 @@ import { formatTimezone } from "@/lib/constants/contact-fields";
 import { formatApiError } from "@/lib/validation-errors";
 import { formatTagsForInput } from "@/lib/tags";
 import { useCompanies } from "@/hooks/useCompanies";
+import { EntityCustomFieldsOverview } from "@/components/custom-fields/entity-custom-fields-overview";
 import type { Contact, ContactFormInput } from "@/types";
 
 interface ContactOverviewProps {
@@ -166,6 +167,12 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
         multiline
         className="sm:col-span-2"
         onSave={save("notes")}
+      />
+
+      <EntityCustomFieldsOverview
+        entityType="contact"
+        values={contact.custom_fields}
+        onSave={async (custom_fields) => saveField({ custom_fields })}
       />
 
       <RecordDates

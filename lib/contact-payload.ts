@@ -33,6 +33,7 @@ export function buildContactRecord(data: ContactFormData, userId?: string) {
     timezone: emptyToNull(data.timezone),
     tags: data.tags ? parseTagsInput(data.tags) : [],
     company_id: data.company_id?.trim() ? data.company_id : null,
+    custom_fields: data.custom_fields ?? {},
     ...(userId ? { user_id: userId } : {}),
   };
 }
@@ -79,6 +80,9 @@ export function buildContactUpdate(data: Partial<ContactFormData>) {
   if (data.company_id !== undefined) {
     record.company_id = data.company_id?.trim() ? data.company_id : null;
   }
+  if (data.custom_fields !== undefined) {
+    record.custom_fields = data.custom_fields ?? {};
+  }
 
   return record;
 }
@@ -110,5 +114,6 @@ export function contactToFormDefaults(contact: Contact): Partial<ContactFormData
     timezone: contact.timezone ?? "",
     tags: contact.tags?.join(", ") ?? "",
     company_id: contact.company_id ?? "",
+    custom_fields: (contact.custom_fields as ContactFormData["custom_fields"]) ?? {},
   };
 }

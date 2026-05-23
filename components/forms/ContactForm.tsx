@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { contactSchema, type ContactFormData } from "@/lib/validators";
@@ -16,6 +16,11 @@ import { FormLabel, RequiredHint } from "@/components/ui/form-label";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { TagsInput } from "@/components/forms/tags-input";
 import { useCompanies, useCreateCompany } from "@/hooks/useCompanies";
+import { useCustomFields } from "@/hooks/useCustomFields";
+import {
+  EntityCustomFieldsForm,
+  type CustomFieldValues,
+} from "@/components/custom-fields/entity-custom-fields-form";
 import type { ContactFormInput } from "@/types";
 
 interface ContactFormProps {
@@ -31,16 +36,33 @@ export function ContactForm({
   isLoading,
   submitLabel = "Save Contact",
 }: ContactFormProps) {
+  const formDefaults = useMemo(
+    () => ({
+      status: "lead" as const,
+      custom_fields: {},
+      ...defaultValues,
+    }),
+    [defaultValues]
+  );
+
   const {
     register,
     handleSubmit,
     control,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<ContactFormData>({
     resolver: zodResolver(contactSchema),
-    defaultValues: { status: "lead", ...defaultValues },
+    defaultValues: formDefaults,
   });
+
+  useEffect(() => {
+    reset(formDefaults);
+  }, [formDefaults, reset]);
+
+  const { data: customFieldDefs = [], isLoading: customFieldsLoading } =
+    useCustomFields("contact");
 
   const country = useWatch({ control, name: "country" });
   const states = getStatesForCountry(country);
@@ -227,6 +249,19 @@ export function ContactForm({
         <FormLabel htmlFor="notes">About</FormLabel>
         <textarea id="notes" {...register("notes")} rows={3} className="input-field" />
       </div>
+
+      <Controller
+        name="custom_fields"
+        control={control}
+        render={({ field }) => (
+          <EntityCustomFieldsForm
+            fields={customFieldDefs}
+            isLoading={customFieldsLoading}
+            values={(field.value as CustomFieldValues) ?? {}}
+            onChange={field.onChange}
+          />
+        )}
+      />
 
       <Button type="submit" disabled={isLoading}>
         {isLoading ? "Saving…" : submitLabel}

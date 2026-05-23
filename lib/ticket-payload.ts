@@ -19,6 +19,7 @@ export function buildTicketRecord(data: TicketFormData, userId: string) {
     assigned_to: emptyToNull(data.assigned_to) as string | null,
     category: emptyToNull(data.category),
     tags: data.tags ? parseTagsInput(data.tags) : [],
+    custom_fields: data.custom_fields ?? {},
   };
 }
 
@@ -53,6 +54,9 @@ export function buildTicketUpdate(data: Partial<TicketFormData>) {
   if (data.category !== undefined) record.category = emptyToNull(data.category);
   if (data.tags !== undefined) {
     record.tags = data.tags ? parseTagsInput(data.tags) : [];
+  }
+  if (data.custom_fields !== undefined) {
+    record.custom_fields = data.custom_fields ?? {};
   }
 
   return record;

@@ -268,6 +268,8 @@ export default function OpportunitiesPage() {
                       probability: editingOpportunity.probability,
                       notes: editingOpportunity.notes,
                       tags: formatTagsForInput(editingOpportunity.tags),
+                      custom_fields: editingOpportunity.custom_fields,
+                      currency: editingOpportunity.currency,
                     }
                   : undefined
               }

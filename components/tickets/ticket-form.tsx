@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FormLabel, RequiredHint } from "@/components/ui/form-label";
 import {
@@ -11,6 +11,12 @@ import {
 } from "@/lib/constants/ticket-fields";
 import { useContacts } from "@/hooks/useContacts";
 import { useCompanies } from "@/hooks/useCompanies";
+import { useCustomFields } from "@/hooks/useCustomFields";
+import {
+  EntityCustomFieldsForm,
+  type CustomFieldValues,
+} from "@/components/custom-fields/entity-custom-fields-form";
+import { normalizeCustomFieldValues } from "@/lib/custom-fields/normalize";
 import type { TicketFormInput } from "@/types";
 
 interface TicketFormProps {
@@ -49,6 +55,29 @@ export function TicketForm({
   const [status, setStatus] = useState(initial?.status ?? "open");
   const [priority, setPriority] = useState(initial?.priority ?? "medium");
   const [category, setCategory] = useState(initial?.category ?? "");
+  const [customFields, setCustomFields] = useState<CustomFieldValues>(
+    (initial?.custom_fields as CustomFieldValues) ?? {}
+  );
+
+  const { data: customFieldDefs = [], isLoading: customFieldsLoading } =
+    useCustomFields("ticket");
+
+  useEffect(() => {
+    setCustomFields(normalizeCustomFieldValues(initial?.custom_fields));
+    if (initial?.contact_id !== undefined) {
+      setContactId(initial.contact_id ?? defaultContactId ?? "");
+    }
+    if (initial?.company_id !== undefined) {
+      setCompanyId(initial.company_id ?? defaultCompanyId ?? "");
+    }
+    if (initial?.subject !== undefined || initial?.title !== undefined) {
+      setSubject(initial.subject ?? initial.title ?? "");
+    }
+    if (initial?.description !== undefined) setDescription(initial.description ?? "");
+    if (initial?.status !== undefined) setStatus(initial.status);
+    if (initial?.priority !== undefined) setPriority(initial.priority);
+    if (initial?.category !== undefined) setCategory(initial.category ?? "");
+  }, [initial?.id, initial, defaultContactId, defaultCompanyId]);
 
   const sessionUser = session?.user as { id?: string; name?: string | null; email?: string | null } | undefined;
   const assigneeId = sessionUser?.id ?? "";
@@ -68,6 +97,7 @@ export function TicketForm({
       status,
       priority,
       category: category || undefined,
+      custom_fields: customFields,
     });
   }
 
@@ -198,6 +228,13 @@ export function TicketForm({
           </select>
         </div>
       </div>
+
+      <EntityCustomFieldsForm
+        fields={customFieldDefs}
+        isLoading={customFieldsLoading}
+        values={customFields}
+        onChange={setCustomFields}
+      />
 
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="outline" onClick={onCancel}>

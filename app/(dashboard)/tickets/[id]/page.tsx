@@ -119,6 +119,7 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
               status: ticket.status,
               priority: ticket.priority,
               category: ticket.category,
+              custom_fields: ticket.custom_fields,
             }}
             onSubmit={handleUpdate}
             onCancel={() => setEditing(false)}

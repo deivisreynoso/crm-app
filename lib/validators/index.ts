@@ -2,6 +2,13 @@ import { z } from 'zod';
 
 const optionalString = z.string().optional().or(z.literal(''));
 
+const customFieldValuesSchema = z
+  .record(
+    z.string(),
+    z.union([z.string(), z.number(), z.boolean(), z.array(z.string())])
+  )
+  .optional();
+
 export const contactSchema = z
   .object({
     first_name: z.string().min(2, 'First name must be at least 2 characters'),
@@ -29,6 +36,7 @@ export const contactSchema = z
     timezone: optionalString,
     tags: optionalString,
     company_id: z.string().uuid().optional().or(z.literal('')),
+    custom_fields: customFieldValuesSchema,
   })
   .refine((data) => !!(data.email?.trim() || data.phone?.trim()), {
     message: 'Email or phone is required',
@@ -62,6 +70,7 @@ export const contactPatchSchema = z.object({
   timezone: optionalString,
   tags: optionalString,
   company_id: z.string().uuid().optional().or(z.literal('')),
+  custom_fields: customFieldValuesSchema,
 });
 
 export const noteSchema = z.object({
@@ -99,6 +108,7 @@ export const opportunitySchema = z.object({
   notes: z.string().optional().or(z.literal('')),
   tags: z.string().optional().or(z.literal('')),
   company_id: z.string().uuid().optional().or(z.literal('')),
+  custom_fields: customFieldValuesSchema,
 });
 
 export type OpportunityFormData = z.infer<typeof opportunitySchema>;
@@ -138,6 +148,7 @@ export const ticketSchema = z
     assigned_to: z.string().uuid().optional().or(z.literal("")),
     category: z.string().optional().or(z.literal("")),
     tags: z.string().optional().or(z.literal("")),
+    custom_fields: customFieldValuesSchema,
   })
   .refine(
     (data) => !!(data.contact_id?.trim() || data.company_id?.trim()),
@@ -162,6 +173,7 @@ export const ticketPatchSchema = z.object({
   assigned_to: z.string().uuid().optional().or(z.literal("")),
   category: z.string().optional().or(z.literal("")),
   tags: z.string().optional().or(z.literal("")),
+  custom_fields: customFieldValuesSchema,
 });
 
 export type TicketPatchData = z.infer<typeof ticketPatchSchema>;
@@ -190,6 +202,60 @@ export const documentSchema = z
 
 export type DocumentFormData = z.infer<typeof documentSchema>;
 
+/** Create without requiring a linked record (draft workspace). */
+export const documentCreateSchema = z.object({
+  contact_id: z.string().uuid().optional().or(z.literal("")),
+  company_id: z.string().uuid().optional().or(z.literal("")),
+  opportunity_id: z.string().uuid().optional().or(z.literal("")),
+  type: z.enum(["contract", "estimate", "proposal", "attachment"]).default("estimate"),
+  title: z.string().min(1, "Title is required"),
+  content: z.string().optional().or(z.literal("")),
+  status: z
+    .enum(["draft", "sent", "signed", "accepted", "rejected"])
+    .optional(),
+});
+
+export const documentPatchSchema = z.object({
+  contact_id: z.string().uuid().optional().or(z.literal("")),
+  company_id: z.string().uuid().optional().or(z.literal("")),
+  opportunity_id: z.string().uuid().optional().or(z.literal("")),
+  type: z.enum(["contract", "estimate", "proposal", "attachment"]).optional(),
+  title: z.string().min(1).optional(),
+  content: z.string().optional().or(z.literal("")),
+  status: z
+    .enum(["draft", "sent", "signed", "accepted", "rejected"])
+    .optional(),
+  valid_until: z.string().optional().or(z.literal("")),
+});
+
+export const documentTemplateSchema = z.object({
+  name: z.string().min(1, "Template name is required"),
+  type: z.enum(["contract", "estimate", "proposal", "attachment"]).optional(),
+  content: z.string().optional().or(z.literal("")),
+});
+
+export const customFieldSchema = z.object({
+  entity_type: z.enum(["contact", "opportunity", "ticket"]),
+  field_name: z.string().min(1).max(64),
+  field_type: z.enum([
+    "text",
+    "number",
+    "date",
+    "select",
+    "multiselect",
+    "checkbox",
+    "currency",
+  ]),
+  is_required: z.boolean().optional(),
+  options: z.array(z.string()).optional(),
+  validation: z.record(z.string(), z.unknown()).optional(),
+  display_order: z.number().int().min(0).optional(),
+  placeholder: optionalString,
+  description: z.string().max(200).optional().or(z.literal("")),
+});
+
+export type CustomFieldFormData = z.infer<typeof customFieldSchema>;
+
 export const calendarEventSchema = z
   .object({
     contact_id: z.string().uuid().optional().or(z.literal("")),
@@ -200,18 +266,50 @@ export const calendarEventSchema = z
     start_time: z.string().min(1),
     end_time: z.string().min(1),
     location: z.string().optional().or(z.literal("")),
+    location_type: z
+      .enum(["physical", "zoom", "google_meet", "teams", "other"])
+      .optional(),
+  })
+  .refine((data) => new Date(data.end_time) > new Date(data.start_time), {
+    message: "End time must be after start time",
+    path: ["end_time"],
   })
   .refine(
-    (data) =>
-      !!(
-        data.contact_id?.trim() ||
-        data.company_id?.trim() ||
-        data.opportunity_id?.trim()
-      ),
-    { message: "Link the event to an account, contact, or opportunity", path: ["contact_id"] }
+    (data) => !!(data.contact_id?.trim() || data.company_id?.trim()),
+    {
+      message: "Select an account or contact for this event.",
+      path: ["contact_id"],
+    }
   );
 
 export type CalendarEventFormData = z.infer<typeof calendarEventSchema>;
+
+export const calendarEventPatchSchema = z
+  .object({
+    contact_id: z.string().uuid().optional().or(z.literal("")),
+    company_id: z.string().uuid().optional().or(z.literal("")),
+    opportunity_id: z.string().uuid().optional().or(z.literal("")),
+    title: z.string().min(1).optional(),
+    description: z.string().optional().or(z.literal("")),
+    start_time: z.string().min(1).optional(),
+    end_time: z.string().min(1).optional(),
+    location: z.string().optional().or(z.literal("")),
+    location_type: z
+      .enum(["physical", "zoom", "google_meet", "teams", "other"])
+      .optional(),
+  })
+  .refine(
+    (data) => {
+      const touched =
+        data.contact_id !== undefined || data.company_id !== undefined;
+      if (!touched) return true;
+      return !!(data.contact_id?.trim() || data.company_id?.trim());
+    },
+    {
+      message: "Select an account or contact for this event.",
+      path: ["contact_id"],
+    }
+  );
 
 // Login/Register validators
 export const loginSchema = z.object({

@@ -27,6 +27,7 @@ import { useCalendarEvents } from "@/hooks/useCalendar";
 import { useCompany } from "@/hooks/useCompanies";
 import { contactToFormDefaults } from "@/lib/contact-payload";
 import type { ContactFormInput } from "@/types";
+import { QuickActionBar } from "@/components/quick-actions/quick-action-bar";
 import { getInitials } from "@/lib/utils";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -176,7 +177,23 @@ export default function ContactDetailPage({ params }: PageProps) {
             <h1 className="text-2xl font-bold text-heading tracking-tight mt-0.5">
               {contact.first_name} {contact.last_name}
             </h1>
-            <p className="text-sm text-body-muted mt-1">
+            <QuickActionBar
+              email={contact.email}
+              phone={contact.phone}
+              className="mt-3"
+              noteLoading={createNote.isPending}
+              taskLoading={createTask.isPending}
+              onAddNote={async (content) => {
+                await createNote.mutateAsync({ content, activity_type: "note" });
+              }}
+              onAddTask={async (input) => {
+                await createTask.mutateAsync({
+                  title: input.title,
+                  due_date: input.due_date,
+                });
+              }}
+            />
+            <p className="text-sm text-body-muted mt-3">
               {contact.title && <span>{contact.title} · </span>}
               {contact.company_id && linkedAccount ? (
                 <Link
@@ -205,6 +222,7 @@ export default function ContactDetailPage({ params }: PageProps) {
       {isEditing ? (
         <Card padding="lg">
           <ContactForm
+            key={contact.id}
             defaultValues={contactToFormDefaults(contact)}
             onSubmit={handleUpdate}
             isLoading={updateContact.isPending}

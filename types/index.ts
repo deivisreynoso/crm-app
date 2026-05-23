@@ -68,6 +68,7 @@ export interface User {
     country?: string;
     timezone?: string;
     tags?: string;
+    custom_fields?: Record<string, unknown>;
   }
 
   export type ActivityType = 'call' | 'email' | 'meeting' | 'note';
@@ -132,6 +133,7 @@ export interface User {
     notes?: string;
     tags?: string;
     company_id?: string;
+    custom_fields?: Record<string, unknown>;
   }
 
   export interface Company {
@@ -191,6 +193,7 @@ export interface User {
     assigned_to?: string;
     category?: string;
     tags?: string[];
+    custom_fields?: Record<string, unknown>;
     resolution_notes?: string;
     ticket_number?: string;
     created_at: string;
@@ -211,6 +214,7 @@ export interface User {
     assigned_to?: string;
     category?: string;
     tags?: string;
+    custom_fields?: Record<string, unknown>;
   }
 
   export interface CrmDocument {
@@ -242,6 +246,65 @@ export interface User {
     title: string;
     content?: string;
     status?: "draft" | "sent" | "signed" | "accepted" | "rejected";
+    valid_until?: string;
+  }
+
+  export interface DocumentTemplate {
+    id: string;
+    user_id: string;
+    name: string;
+    type?: "contract" | "estimate" | "proposal" | "attachment" | null;
+    content?: string | null;
+    created_at: string;
+    updated_at: string;
+  }
+
+  export interface CustomFieldDefinition {
+    id: string;
+    user_id: string;
+    entity_type: "contact" | "opportunity" | "ticket";
+    field_name: string;
+    field_type:
+      | "text"
+      | "number"
+      | "date"
+      | "select"
+      | "multiselect"
+      | "checkbox"
+      | "currency";
+    is_required: boolean;
+    options?: string[] | null;
+    validation?: Record<string, unknown> | null;
+    display_order: number;
+    folder_name?: string | null;
+    placeholder?: string | null;
+    description?: string | null;
+    created_at: string;
+  }
+
+  export interface AppNotification {
+    id: string;
+    user_id: string;
+    type: string;
+    title: string;
+    message?: string | null;
+    related_entity_type?: string | null;
+    related_entity_id?: string | null;
+    is_read: boolean;
+    created_at: string;
+  }
+
+  export interface PipelineAnalytics {
+    totalValue: number;
+    opportunityCount: number;
+    wonCount: number;
+    lostCount: number;
+    openCount: number;
+    conversionRate: number;
+    averageDealSize: number;
+    byStage: Array<{ stageId: string; stageName: string; count: number; value: number }>;
+    funnel: Array<{ stageName: string; count: number }>;
+    revenueByMonth: Array<{ month: string; value: number }>;
   }
 
   export interface CalendarEvent {
@@ -255,6 +318,7 @@ export interface User {
     start_time: string;
     end_time: string;
     location?: string;
+    location_type?: "physical" | "zoom" | "google_meet" | "teams" | "other" | null;
     google_event_id?: string;
     is_synced?: boolean;
     created_at: string;
@@ -270,6 +334,22 @@ export interface User {
     start_time: string;
     end_time: string;
     location?: string;
+    location_type?: "physical" | "zoom" | "google_meet" | "teams" | "other";
+  }
+
+  export interface OperationsMetrics {
+    leads: number;
+    prospects: number;
+    activeContacts: number;
+    totalContacts: number;
+    openTickets: number;
+    ticketsInProgress: number;
+    ticketsClosedInRange: number;
+    urgentTickets: number;
+    upcomingAppointments: number;
+    appointmentsInRange: number;
+    ticketsByStatus: Array<{ status: string; count: number }>;
+    ticketsByPriority: Array<{ priority: string; count: number }>;
   }
 
   export interface CompanyRelated {

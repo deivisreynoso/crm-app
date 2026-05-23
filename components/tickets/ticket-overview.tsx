@@ -12,6 +12,7 @@ import {
 import { useContacts } from "@/hooks/useContacts";
 import { useCompanies } from "@/hooks/useCompanies";
 import { formatDateTime } from "@/lib/utils";
+import { EntityCustomFieldsOverview } from "@/components/custom-fields/entity-custom-fields-overview";
 import type { Ticket, TicketFormInput } from "@/types";
 
 interface TicketOverviewProps {
@@ -39,6 +40,7 @@ export function TicketOverview({ ticket, onSaveField }: TicketOverviewProps) {
   }));
 
   return (
+    <div className="space-y-5">
     <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
       <div>
         <dt className="text-[11px] font-semibold uppercase tracking-wide text-body-muted mb-1">
@@ -133,5 +135,12 @@ export function TicketOverview({ ticket, onSaveField }: TicketOverviewProps) {
         className="sm:col-span-2"
       />
     </dl>
+
+    <EntityCustomFieldsOverview
+      entityType="ticket"
+      values={ticket.custom_fields}
+      onSave={async (custom_fields) => onSaveField({ custom_fields })}
+    />
+    </div>
   );
 }

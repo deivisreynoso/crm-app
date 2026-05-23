@@ -1,3 +1,41 @@
+const FRIENDLY_FIELD_LABELS: Record<string, string> = {
+  contact_id: "Contact",
+  company_id: "Account",
+  opportunity_id: "Opportunity",
+  field_name: "Field name",
+  title: "Title",
+  end_time: "End time",
+};
+
+/** Turn raw Postgres / API messages into plain language. */
+export function humanizeDbError(message: string): string {
+  const lower = message.toLowerCase();
+
+  if (lower.includes("custom_fields_user_id_entity_type_field_name")) {
+    return (
+      "A field with this name already exists on this object type. " +
+      "The same name can be used on Contacts and Opportunities separately — only duplicate names on the same object are blocked."
+    );
+  }
+  if (lower.includes("calendar_events_parent_check")) {
+    return "Link this event to an account or a contact.";
+  }
+  if (lower.includes("documents_parent_check")) {
+    return "This document could not be saved. Try linking a contact or run the latest database migration.";
+  }
+  if (lower.includes("duplicate key") && lower.includes("email")) {
+    return "An account with this email already exists.";
+  }
+  if (lower.includes("violates foreign key")) {
+    return "A linked record was removed or is invalid. Refresh the page and try again.";
+  }
+  if (lower.includes("invalid input syntax for type uuid")) {
+    return "A selected record is invalid. Refresh and try again.";
+  }
+
+  return message;
+}
+
 export function formatValidationDetails(details: unknown): string {
   if (!details || typeof details !== "object") return "";
 
@@ -9,9 +47,20 @@ export function formatValidationDetails(details: unknown): string {
   const messages: string[] = [...(flat.formErrors ?? [])];
 
   for (const [field, errors] of Object.entries(flat.fieldErrors ?? {})) {
-    if (errors?.length) {
-      messages.push(`${field}: ${errors.join(", ")}`);
+    if (!errors?.length) continue;
+    const msg = errors.join(", ");
+    if (
+      msg.startsWith("Select ") ||
+      msg.startsWith("Link ") ||
+      msg.startsWith("End time") ||
+      msg.startsWith("Add at least") ||
+      !field.includes("_")
+    ) {
+      messages.push(msg);
+      continue;
     }
+    const label = FRIENDLY_FIELD_LABELS[field] ?? field.replace(/_/g, " ");
+    messages.push(`${label}: ${msg}`);
   }
 
   return messages.filter(Boolean).join(". ");
@@ -23,11 +72,16 @@ export function formatApiError(err: unknown, fallback = "Something went wrong"):
       response?: { data?: { error?: string; details?: unknown; hint?: string } };
     };
     const body = axiosErr.response?.data;
+    const rawError = body?.error ?? "";
+    const friendlyError = rawError ? humanizeDbError(rawError) : "";
     const detailStr = formatValidationDetails(body?.details);
+    const hint = body?.hint?.includes("migration")
+      ? "A database update may be required — ask your admin to run the latest migrations."
+      : undefined;
     return (
-      [body?.error, detailStr, body?.hint].filter(Boolean).join(" — ") || fallback
+      [friendlyError, detailStr, hint].filter(Boolean).join(" ") || fallback
     );
   }
-  if (err instanceof Error) return err.message;
+  if (err instanceof Error) return humanizeDbError(err.message);
   return fallback;
 }

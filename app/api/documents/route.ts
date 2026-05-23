@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
-import { documentSchema } from "@/lib/validators";
+import { documentCreateSchema, documentSchema } from "@/lib/validators";
 import { buildDocumentRecord } from "@/lib/document-payload";
 import {
   resolveDocumentFileUrl,
@@ -65,14 +65,24 @@ export async function POST(req: NextRequest) {
     const { userId, error } = await requireAuth();
     if (error) return error;
 
-    const formData = await req.formData();
-    const metaRaw = formData.get("metadata");
-    if (!metaRaw || typeof metaRaw !== "string") {
-      return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
+    const contentType = req.headers.get("content-type") ?? "";
+    let meta: unknown;
+    let file: File | null = null;
+
+    if (contentType.includes("application/json")) {
+      meta = await req.json();
+    } else {
+      const formData = await req.formData();
+      const metaRaw = formData.get("metadata");
+      if (!metaRaw || typeof metaRaw !== "string") {
+        return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
+      }
+      meta = JSON.parse(metaRaw);
+      const f = formData.get("file");
+      file = f instanceof File && f.size > 0 ? f : null;
     }
 
-    const meta = JSON.parse(metaRaw);
-    const parsed = documentSchema.safeParse(meta);
+    const parsed = documentCreateSchema.safeParse(meta);
     if (!parsed.success) {
       const detailStr = formatValidationDetails(parsed.error.flatten());
       return NextResponse.json(
@@ -84,7 +94,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const file = formData.get("file");
     const supabase = createServerSideClient();
     const docId = crypto.randomUUID();
 
@@ -142,9 +151,10 @@ export async function POST(req: NextRequest) {
 
     if (dbError) {
       console.error("POST document db:", dbError);
-      const hint =
-        dbError.message.includes("attachment") ||
-        dbError.message.includes("documents_type")
+      const hint = dbError.message.includes("documents_parent_check")
+        ? "Run migration 012_relax_parent_checks.sql to allow standalone documents."
+        : dbError.message.includes("attachment") ||
+            dbError.message.includes("documents_type")
           ? "Run migration 005_object_associations.sql (attachment type)."
           : dbError.message.includes("storage_path")
             ? "Run migration 007_document_storage_path.sql."

@@ -12,18 +12,18 @@ export function AuthBrandHeader({ title, subtitle }: AuthBrandHeaderProps) {
       <div className="flex justify-center lg:justify-start mb-5">
         <Image
           src="/brand/logo-light.png"
-          alt="ClickIn"
-          width={200}
-          height={48}
-          className="h-10 w-auto dark:hidden"
+          alt="ClickIn 360"
+          width={280}
+          height={72}
+          className="h-14 w-auto dark:hidden"
           priority
         />
         <Image
           src="/brand/logo-dark.png"
-          alt="ClickIn"
-          width={200}
-          height={48}
-          className="h-10 w-auto hidden dark:block"
+          alt="ClickIn 360"
+          width={280}
+          height={72}
+          className="h-14 w-auto hidden dark:block"
           priority
         />
       </div>

@@ -25,6 +25,22 @@ export function useOpportunities(pipelineId?: string, contactId?: string) {
   });
 }
 
+/** List opportunities for calendar linking (optional contact filter). */
+export function useOpportunityPicker(contactId?: string) {
+  return useQuery({
+    queryKey: ["opportunities", "picker", contactId ?? "all"],
+    queryFn: async () => {
+      const { data } = await axios.get<{ data: OpportunityWithContact[] }>(
+        "/api/opportunities",
+        {
+          params: contactId ? { contact_id: contactId } : {},
+        }
+      );
+      return data.data;
+    },
+  });
+}
+
 export function useCreateOpportunity(pipelineId?: string) {
   const queryClient = useQueryClient();
 

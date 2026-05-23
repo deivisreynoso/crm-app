@@ -1,11 +1,14 @@
-import type { DocumentFormData } from "@/lib/validators";
+import type { z } from "zod";
+import type { documentCreateSchema } from "@/lib/validators";
+
+type DocumentCreateData = z.infer<typeof documentCreateSchema>;
 
 function emptyToNull(value: string | undefined): string | null {
   return value?.trim() ? value.trim() : null;
 }
 
 export function buildDocumentRecord(
-  data: DocumentFormData,
+  data: DocumentCreateData,
   userId: string,
   fileMeta?: {
     file_url: string;

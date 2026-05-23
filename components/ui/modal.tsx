@@ -7,9 +7,16 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  size?: "md" | "lg" | "xl";
 }
 
-export function Modal({ open, onClose, title, children }: ModalProps) {
+const sizeClass = {
+  md: "max-w-lg",
+  lg: "max-w-3xl",
+  xl: "max-w-5xl",
+};
+
+export function Modal({ open, onClose, title, children, size = "md" }: ModalProps) {
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
@@ -36,7 +43,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         role="dialog"
         aria-modal
         aria-labelledby="modal-title"
-        className="relative bg-[var(--card)] border border-[var(--card-border)] rounded-xl shadow-[var(--shadow-md)] w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        className={`relative bg-[var(--card)] border border-[var(--card-border)] rounded-xl shadow-[var(--shadow-md)] w-full ${sizeClass[size]} max-h-[90vh] overflow-y-auto`}
       >
         <div className="sticky top-0 bg-[var(--card)] border-b border-[var(--card-border)] px-6 py-4 flex items-center justify-between">
           <h2 id="modal-title" className="text-lg font-semibold text-heading">

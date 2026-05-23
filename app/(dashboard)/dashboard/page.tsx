@@ -6,10 +6,12 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/dashboard/stat-card";
 import {
+  Calendar,
   CheckCircle2,
   Circle,
   Target,
   Ticket,
+  UserPlus,
   Users,
   ListTodo,
 } from "lucide-react";
@@ -19,7 +21,16 @@ export default async function DashboardPage() {
   const userId = (session?.user as { id?: string } | undefined)?.id;
   const stats = userId
     ? await getDashboardStats(userId)
-    : { contacts: 0, opportunities: 0, openTickets: 0, pendingTasks: 0 };
+    : {
+        contacts: 0,
+        opportunities: 0,
+        openTickets: 0,
+        pendingTasks: 0,
+        leads: 0,
+        prospects: 0,
+        activeContacts: 0,
+        upcomingAppointments: 0,
+      };
 
   const { firstName } = getUserDisplayName(session?.user ?? {});
   const greeting = getGreeting();
@@ -43,30 +54,62 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
         <StatCard
-          label="Total Contacts"
-          value={stats.contacts}
-          icon={Users}
+          label="Leads"
+          value={stats.leads}
+          icon={UserPlus}
           href="/contacts"
           accent="navy"
         />
         <StatCard
-          label="Active Opportunities"
-          value={stats.opportunities}
-          icon={Target}
-          href="/opportunities"
+          label="Prospects"
+          value={stats.prospects}
+          icon={Users}
+          href="/contacts"
           accent="sky"
         />
         <StatCard
-          label="Open Service Tickets"
+          label="Active contacts"
+          value={stats.activeContacts}
+          icon={Users}
+          href="/contacts"
+          accent="success"
+        />
+        <StatCard
+          label="Open service tickets"
           value={stats.openTickets}
           icon={Ticket}
           href="/tickets"
           accent="magenta"
         />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
         <StatCard
-          label="Pending Tasks"
+          label="Upcoming meetings"
+          value={stats.upcomingAppointments}
+          icon={Calendar}
+          href="/calendar"
+          accent="sky"
+        />
+        <StatCard
+          label="Opportunities"
+          value={stats.opportunities}
+          icon={Target}
+          href="/opportunities"
+          accent="navy"
+        />
+        <StatCard
+          label="Pending tasks"
           value={stats.pendingTasks}
           icon={ListTodo}
+          href="/contacts"
+          accent="magenta"
+        />
+        <StatCard
+          label="Total contacts"
+          value={stats.contacts}
+          icon={Users}
+          href="/analytics"
           accent="success"
         />
       </div>

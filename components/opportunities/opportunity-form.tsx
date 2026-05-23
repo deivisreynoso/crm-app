@@ -1,11 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FormLabel } from "@/components/ui/form-label";
 import { TagsInput } from "@/components/forms/tags-input";
 import { useContacts } from "@/hooks/useContacts";
 import { useCompanies } from "@/hooks/useCompanies";
+import { useCustomFields } from "@/hooks/useCustomFields";
+import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import { normalizeCustomFieldValues } from "@/lib/custom-fields/normalize";
+import {
+  EntityCustomFieldsForm,
+  type CustomFieldValues,
+} from "@/components/custom-fields/entity-custom-fields-form";
 import type { OpportunityFormInput, PipelineStage } from "@/types";
 
 interface OpportunityFormProps {
@@ -51,6 +58,34 @@ export function OpportunityForm({
   const [probability, setProbability] = useState(
     initial?.probability?.toString() ?? "50"
   );
+  const [customFields, setCustomFields] = useState<CustomFieldValues>(
+    (initial?.custom_fields as CustomFieldValues) ?? {}
+  );
+
+  const { data: customFieldDefs = [], isLoading: customFieldsLoading } =
+    useCustomFields("opportunity");
+  const { data: workspaceSettings } = useWorkspaceSettings();
+  const defaultCurrency = workspaceSettings?.default_currency ?? "USD";
+
+  useEffect(() => {
+    setCustomFields(normalizeCustomFieldValues(initial?.custom_fields));
+    if (initial?.company_id !== undefined) {
+      setCompanyId(initial.company_id ?? defaultCompanyId ?? "");
+    }
+    if (initial?.contact_id !== undefined) {
+      setContactId(initial.contact_id ?? defaultContactId ?? "");
+    }
+    if (initial?.title !== undefined) setTitle(initial.title);
+    if (initial?.value !== undefined) setValue(initial.value?.toString() ?? "");
+    if (initial?.stage !== undefined) {
+      setStage(initial.stage ?? defaultStage ?? stages[0]?.id ?? "");
+    }
+    if (initial?.notes !== undefined) setNotes(initial.notes ?? "");
+    if (initial?.tags !== undefined) setTags(initial.tags ?? "");
+    if (initial?.probability !== undefined) {
+      setProbability(initial.probability?.toString() ?? "50");
+    }
+  }, [initial?.id, initial, defaultCompanyId, defaultContactId, defaultStage, stages]);
 
   const contacts = useMemo(() => {
     if (!companyId) return allContacts;
@@ -67,11 +102,12 @@ export function OpportunityForm({
       pipeline_id: pipelineId,
       title: title.trim(),
       value: value ? Number(value) : undefined,
-      currency: "USD",
+      currency: initial?.currency ?? defaultCurrency,
       stage,
       probability: Number(probability) || 50,
       notes: notes || undefined,
       tags: tags || undefined,
+      custom_fields: customFields,
     });
   }
 
@@ -127,7 +163,7 @@ export function OpportunityForm({
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <FormLabel>Value (USD)</FormLabel>
+          <FormLabel>Value ({defaultCurrency})</FormLabel>
           <input
             type="number"
             min="0"
@@ -181,6 +217,13 @@ export function OpportunityForm({
           className="input-field"
         />
       </div>
+
+      <EntityCustomFieldsForm
+        fields={customFieldDefs}
+        isLoading={customFieldsLoading}
+        values={customFields}
+        onChange={setCustomFields}
+      />
 
       <div className="flex gap-2 justify-end pt-2">
         <Button type="button" variant="outline" onClick={onCancel}>
