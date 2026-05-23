@@ -5,6 +5,7 @@ import { CurrencySettings } from "@/components/settings/currency-settings";
 import { NotificationPreferencesSettings } from "@/components/settings/notification-preferences-settings";
 import { EmailTemplatesManager } from "@/components/settings/email-templates-manager";
 import { DuplicateReviewsPanel } from "@/components/settings/duplicate-reviews-panel";
+import { GoogleCalendarSettings } from "@/components/settings/google-calendar-settings";
 
 export default function SettingsPage() {
   return (
@@ -22,6 +23,10 @@ export default function SettingsPage() {
       <Card padding="lg">
         <h2 className="text-sm font-semibold text-heading mb-4">Currency</h2>
         <CurrencySettings />
+      </Card>
+      <Card padding="lg">
+        <h2 className="text-sm font-semibold text-heading mb-4">Integrations</h2>
+        <GoogleCalendarSettings />
       </Card>
       <Card padding="lg">
         <h2 className="text-sm font-semibold text-heading mb-4">Notifications</h2>

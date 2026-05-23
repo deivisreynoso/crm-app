@@ -16,6 +16,7 @@ import { useCreateContact } from "@/hooks/useContacts";
 import { usePipelines } from "@/hooks/usePipelines";
 import { useCreateOpportunity } from "@/hooks/useOpportunities";
 import { uploadErrorMessage } from "@/hooks/useDocuments";
+import { formatApiError } from "@/lib/validation-errors";
 import { CreateEventModal } from "@/components/calendar/create-event-modal";
 import { useCreateCalendarEvent } from "@/hooks/useCalendar";
 import type {
@@ -73,6 +74,7 @@ export function EntityRelatedPanel({
   const [oppModal, setOppModal] = useState(false);
   const [calendarModal, setCalendarModal] = useState(false);
   const [docError, setDocError] = useState<string | null>(null);
+  const [ticketError, setTicketError] = useState<string | null>(null);
 
   const createContact = useCreateContact();
   const createCalendarEvent = useCreateCalendarEvent();
@@ -316,18 +318,47 @@ export function EntityRelatedPanel({
         )}
       </Modal>
 
-      <Modal open={ticketModal} onClose={() => setTicketModal(false)} title="New service ticket">
+      <Modal
+        open={ticketModal}
+        onClose={() => {
+          setTicketModal(false);
+          setTicketError(null);
+        }}
+        title="New service ticket"
+        size="xl"
+      >
         {onCreateTicket && (
-          <TicketForm
-            defaultContactId={context.contactId}
-            defaultCompanyId={context.companyId}
-            onSubmit={async (data) => {
-              await onCreateTicket(data);
-              setTicketModal(false);
-            }}
-            onCancel={() => setTicketModal(false)}
-            isLoading={ticketLoading}
-          />
+          <>
+            {ticketError && (
+              <p className="mb-4 text-sm text-[var(--error)] bg-red-500/10 border border-red-200 rounded-lg px-3 py-2">
+                {ticketError}
+              </p>
+            )}
+            <TicketForm
+              defaultContactId={context.contactId}
+              defaultCompanyId={context.companyId}
+              onSubmit={async (data) => {
+                setTicketError(null);
+                try {
+                  await onCreateTicket(data);
+                  setTicketModal(false);
+                } catch (err) {
+                  setTicketError(
+                    formatApiError(
+                      err,
+                      "We could not create this ticket. Please try again."
+                    )
+                  );
+                  throw err;
+                }
+              }}
+              onCancel={() => {
+                setTicketModal(false);
+                setTicketError(null);
+              }}
+              isLoading={ticketLoading}
+            />
+          </>
         )}
       </Modal>
 

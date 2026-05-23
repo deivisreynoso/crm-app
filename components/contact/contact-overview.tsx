@@ -15,8 +15,7 @@ import {
 } from "@/lib/constants/countries";
 import { formatTimezone } from "@/lib/constants/contact-fields";
 import { formatApiError } from "@/lib/validation-errors";
-import { TagsInput } from "@/components/forms/tags-input";
-import { formatTagsForInput } from "@/lib/tags";
+import { TagsChips } from "@/components/forms/tags-chips";
 import { useCompanies } from "@/hooks/useCompanies";
 import { EntityCustomFieldsOverview } from "@/components/custom-fields/entity-custom-fields-overview";
 import type { Contact, ContactFormInput } from "@/types";
@@ -160,9 +159,9 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
         <label className="text-[11px] font-semibold uppercase tracking-wide text-body-muted block mb-1">
           Tags
         </label>
-        <TagsInput
-          value={formatTagsForInput(contact.tags)}
-          onChange={(v) => void saveField({ tags: v })}
+        <TagsChips
+          tags={contact.tags ?? []}
+          onChange={(next) => void saveField({ tags: next.join(", ") })}
         />
       </div>
 
@@ -173,6 +172,44 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
         className="sm:col-span-2"
         onSave={save("notes")}
       />
+
+      <div className="sm:col-span-2 automation-panel rounded-lg border border-[var(--card-border)] bg-[var(--surface-subtle)] p-4 space-y-4">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-body-muted">
+            Automation insights
+          </p>
+          <p className="text-xs text-body-muted mt-0.5">
+            Populated by workflows (n8n). You can edit values here when needed.
+          </p>
+        </div>
+        <InlineEditableField
+          label="Friction area"
+          value={contact.friction_area}
+          placeholder="Not set by automation yet"
+          multiline
+          onSave={save("friction_area")}
+        />
+        <InlineEditableField
+          label="Communication channels"
+          value={contact.communication_channels}
+          placeholder="e.g. email, WhatsApp, phone"
+          onSave={save("communication_channels")}
+        />
+        <InlineEditableField
+          label="Signals"
+          value={contact.signals}
+          placeholder="Buying signals, intent, engagement"
+          multiline
+          onSave={save("signals")}
+        />
+        <InlineEditableField
+          label="AI summary"
+          value={contact.ai_summary}
+          placeholder="Summary will appear when automation runs"
+          multiline
+          onSave={save("ai_summary")}
+        />
+      </div>
 
       <EntityCustomFieldsOverview
         entityType="contact"

@@ -4,7 +4,9 @@ import { createServerSideClient } from "@/lib/supabase";
 import { ticketPatchSchema } from "@/lib/validators";
 import { buildTicketUpdate } from "@/lib/ticket-payload";
 import { enrichTicket } from "@/lib/ticket-queries";
-import { formatValidationDetails } from "@/lib/validation-errors";
+import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
+import { ticketDisplayLabel } from "@/lib/service-ticket-number";
+import { createNotification } from "@/lib/notifications/create-notification";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -62,7 +64,22 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       .single();
 
     if (dbError) {
-      return NextResponse.json({ error: dbError.message }, { status: 500 });
+      const status = /duplicate|unique/i.test(dbError.message) ? 409 : 500;
+      return NextResponse.json(
+        { error: humanizeDbError(dbError.message) },
+        { status }
+      );
+    }
+
+    if (parsed.data.status) {
+      const label = ticketDisplayLabel(data);
+      await createNotification(supabase, userId!, {
+        kind: "ticket_update",
+        title: "Ticket status updated",
+        message: `${data.ticket_number ? `${data.ticket_number}: ` : ""}${label} — ${parsed.data.status.replace("_", " ")}`,
+        related_entity_type: "ticket",
+        related_entity_id: id,
+      });
     }
 
     return NextResponse.json(await enrichTicket(data));

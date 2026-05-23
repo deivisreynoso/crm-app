@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
+import { mergeContacts, type ContactRow } from "@/lib/contacts/merge-contacts";
 import { humanizeDbError } from "@/lib/validation-errors";
+
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(req: NextRequest, context: RouteContext) {
@@ -52,39 +54,30 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         .from("contacts")
         .select("*")
         .eq("id", primaryId)
+        .eq("user_id", userId!)
         .single();
       const { data: secondary } = await supabase
         .from("contacts")
         .select("*")
         .eq("id", secondaryId)
+        .eq("user_id", userId!)
         .single();
 
       if (!primary || !secondary) {
         return NextResponse.json({ error: "Contacts not found" }, { status: 404 });
       }
 
-      const mergedTags = [
-        ...new Set([
-          ...((primary.tags as string[]) ?? []),
-          ...((secondary.tags as string[]) ?? []),
-        ]),
-      ];
-      const notes = [primary.notes, secondary.notes]
-        .filter(Boolean)
-        .join("\n\n---\n\n");
-
-      await supabase
-        .from("contacts")
-        .update({
-          email: primary.email || secondary.email,
-          phone: primary.phone || secondary.phone,
-          notes: notes || primary.notes,
-          tags: mergedTags,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", primaryId);
-
-      await supabase.from("contacts").delete().eq("id", secondaryId);
+      try {
+        await mergeContacts(
+          supabase,
+          userId!,
+          primary as ContactRow,
+          secondary as ContactRow
+        );
+      } catch (mergeErr) {
+        const msg = mergeErr instanceof Error ? mergeErr.message : "Merge failed";
+        return NextResponse.json({ error: humanizeDbError(msg) }, { status: 500 });
+      }
 
       const { data, error: dbError } = await supabase
         .from("duplicate_reviews")

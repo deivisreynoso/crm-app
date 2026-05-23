@@ -79,7 +79,7 @@ export function DataTable({
 
 export function DataTableHead({ children }: { children: React.ReactNode }) {
   return (
-    <thead className="bg-[var(--background)] border-b border-[var(--card-border)]">
+    <thead className="bg-[var(--surface-subtle)] border-b border-[var(--card-border)]">
       {children}
     </thead>
   );

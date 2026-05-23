@@ -22,6 +22,27 @@ export async function generateServiceTicketNumber(userId: string): Promise<strin
   return `ST-${String(max + 1).padStart(4, "0")}`;
 }
 
+export function isTicketNumberConflict(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("ticket_number") ||
+    (lower.includes("duplicate key") && lower.includes("tickets"))
+  );
+}
+
+export function ticketDisplayLabel(ticket: {
+  subject?: string | null;
+  title?: string | null;
+  ticket_number?: string | null;
+}): string {
+  return (
+    ticket.subject?.trim() ||
+    ticket.title?.trim() ||
+    ticket.ticket_number ||
+    "Service ticket"
+  );
+}
+
 export function formatServiceTicketLabel(ticketNumber?: string | null) {
   return ticketNumber ? `Service Ticket # ${ticketNumber}` : "Service Ticket";
 }

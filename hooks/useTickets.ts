@@ -6,6 +6,8 @@ export function useTickets(filters?: {
   contact_id?: string;
   company_id?: string;
   status?: string;
+  created_from?: string;
+  created_to?: string;
 }) {
   return useQuery({
     queryKey: ["tickets", filters],

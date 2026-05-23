@@ -13,6 +13,7 @@ import { useContacts } from "@/hooks/useContacts";
 import { useCompanies } from "@/hooks/useCompanies";
 import { formatDateTime } from "@/lib/utils";
 import { EntityCustomFieldsOverview } from "@/components/custom-fields/entity-custom-fields-overview";
+import { TagsChips } from "@/components/forms/tags-chips";
 import type { Ticket, TicketFormInput } from "@/types";
 
 interface TicketOverviewProps {
@@ -134,6 +135,18 @@ export function TicketOverview({ ticket, onSaveField }: TicketOverviewProps) {
         updatedAt={ticket.updated_at}
         className="sm:col-span-2"
       />
+
+      <div className="sm:col-span-2">
+        <dt className="text-[11px] font-semibold uppercase tracking-wide text-body-muted mb-2">
+          Tags
+        </dt>
+        <dd>
+          <TagsChips
+            tags={ticket.tags ?? []}
+            onChange={(next) => void onSaveField({ tags: next.join(", ") })}
+          />
+        </dd>
+      </div>
     </dl>
 
     <EntityCustomFieldsOverview

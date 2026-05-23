@@ -5,6 +5,7 @@ import { opportunitySchema } from "@/lib/validators";
 import { buildOpportunityRecord } from "@/lib/opportunity-payload";
 import { attachContactToOpportunity, listOpportunitiesWithContacts } from "@/lib/opportunity-queries";
 import { triggerN8NWebhook } from "@/lib/n8n";
+import { createNotification } from "@/lib/notifications/create-notification";
 
 export async function GET(req: NextRequest) {
   try {
@@ -72,6 +73,13 @@ export async function POST(req: NextRequest) {
       console.error("POST opportunity enrich error:", enrichErr);
     }
     await triggerN8NWebhook("opportunity.created", enriched);
+    await createNotification(supabase, userId!, {
+      kind: "opportunity_reminder",
+      title: "New opportunity",
+      message: parsed.data.title,
+      related_entity_type: "opportunity",
+      related_entity_id: data.id as string,
+    });
 
     return NextResponse.json(enriched, { status: 201 });
   } catch (err) {

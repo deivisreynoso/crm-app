@@ -28,18 +28,30 @@ export async function enrichTicket(ticket: Record<string, unknown>) {
 
 export async function listTicketsEnriched(
   userId: string,
-  filters?: { contact_id?: string; company_id?: string; status?: string }
+  filters?: {
+    contact_id?: string;
+    company_id?: string;
+    status?: string;
+    created_from?: string;
+    created_to?: string;
+  }
 ) {
   const supabase = createServerSideClient();
   let query = supabase
     .from("tickets")
     .select("*")
     .eq("user_id", userId)
-    .order("updated_at", { ascending: false });
+    .order("created_at", { ascending: false });
 
   if (filters?.contact_id) query = query.eq("contact_id", filters.contact_id);
   if (filters?.company_id) query = query.eq("company_id", filters.company_id);
   if (filters?.status) query = query.eq("status", filters.status);
+  if (filters?.created_from) {
+    query = query.gte("created_at", `${filters.created_from}T00:00:00.000Z`);
+  }
+  if (filters?.created_to) {
+    query = query.lte("created_at", `${filters.created_to}T23:59:59.999Z`);
+  }
 
   const { data, error } = await query;
   if (error) throw error;

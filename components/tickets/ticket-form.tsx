@@ -16,8 +16,14 @@ import {
   EntityCustomFieldsForm,
   type CustomFieldValues,
 } from "@/components/custom-fields/entity-custom-fields-form";
-import { normalizeCustomFieldValues } from "@/lib/custom-fields/normalize";
-import type { TicketFormInput } from "@/types";
+import {
+  normalizeCustomFieldValues,
+  pruneCustomFieldValues,
+} from "@/lib/custom-fields/normalize";
+import { TagsChips } from "@/components/forms/tags-chips";
+import type { CustomFieldDefinition, TicketFormInput } from "@/types";
+
+const EMPTY_CUSTOM_FIELDS: CustomFieldDefinition[] = [];
 
 interface TicketFormProps {
   initial?: Partial<TicketFormInput> & { id?: string };
@@ -55,15 +61,22 @@ export function TicketForm({
   const [status, setStatus] = useState(initial?.status ?? "open");
   const [priority, setPriority] = useState(initial?.priority ?? "medium");
   const [category, setCategory] = useState(initial?.category ?? "");
-  const [customFields, setCustomFields] = useState<CustomFieldValues>(
-    (initial?.custom_fields as CustomFieldValues) ?? {}
+  const [tags, setTags] = useState<string[]>(
+    Array.isArray(initial?.tags)
+      ? (initial.tags as string[])
+      : typeof initial?.tags === "string" && initial.tags
+        ? initial.tags.split(",").map((t) => t.trim()).filter(Boolean)
+        : []
   );
+  const [customFields, setCustomFields] = useState<CustomFieldValues>({});
 
-  const { data: customFieldDefs = [], isLoading: customFieldsLoading } =
+  const { data: customFieldDefsData, isLoading: customFieldsLoading } =
     useCustomFields("ticket");
+  const customFieldDefs = customFieldDefsData ?? EMPTY_CUSTOM_FIELDS;
 
   useEffect(() => {
-    setCustomFields(normalizeCustomFieldValues(initial?.custom_fields));
+    const raw = normalizeCustomFieldValues(initial?.custom_fields);
+    setCustomFields(pruneCustomFieldValues(raw, customFieldDefs));
     if (initial?.contact_id !== undefined) {
       setContactId(initial.contact_id ?? defaultContactId ?? "");
     }
@@ -77,7 +90,16 @@ export function TicketForm({
     if (initial?.status !== undefined) setStatus(initial.status);
     if (initial?.priority !== undefined) setPriority(initial.priority);
     if (initial?.category !== undefined) setCategory(initial.category ?? "");
-  }, [initial?.id, initial, defaultContactId, defaultCompanyId]);
+    if (initial?.tags !== undefined) {
+      setTags(
+        Array.isArray(initial.tags)
+          ? initial.tags
+          : typeof initial.tags === "string"
+            ? initial.tags.split(",").map((t) => t.trim()).filter(Boolean)
+            : []
+      );
+    }
+  }, [initial?.id, initial, defaultContactId, defaultCompanyId, customFieldDefs]);
 
   const sessionUser = session?.user as { id?: string; name?: string | null; email?: string | null } | undefined;
   const assigneeId = sessionUser?.id ?? "";
@@ -97,7 +119,8 @@ export function TicketForm({
       status,
       priority,
       category: category || undefined,
-      custom_fields: customFields,
+      tags: tags.join(", "),
+      custom_fields: pruneCustomFieldValues(customFields, customFieldDefs),
     });
   }
 
@@ -229,11 +252,18 @@ export function TicketForm({
         </div>
       </div>
 
+      <div>
+        <FormLabel>Tags</FormLabel>
+        <TagsChips tags={tags} onChange={setTags} />
+      </div>
+
       <EntityCustomFieldsForm
         fields={customFieldDefs}
         isLoading={customFieldsLoading}
         values={customFields}
-        onChange={setCustomFields}
+        onChange={(next) =>
+          setCustomFields(pruneCustomFieldValues(next, customFieldDefs))
+        }
       />
 
       <div className="flex gap-2 justify-end">

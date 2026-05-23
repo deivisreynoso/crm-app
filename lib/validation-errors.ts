@@ -29,6 +29,9 @@ export function humanizeDbError(message: string): string {
   if (lower.includes("duplicate key") && lower.includes("phone")) {
     return "A contact with this phone number already exists. Use the existing record or enter a different number.";
   }
+  if (lower.includes("ticket_number") || (lower.includes("duplicate") && lower.includes("tickets"))) {
+    return "A ticket with this number already exists. Please try again.";
+  }
   if (lower.includes("notification_preferences")) {
     if (lower.includes('null value in column "id"')) {
       return "Notification settings could not be saved. Refresh the page and try again.";

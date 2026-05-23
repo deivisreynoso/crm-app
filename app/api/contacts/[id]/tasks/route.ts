@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { taskSchema } from "@/lib/validators";
+import { createNotification } from "@/lib/notifications/create-notification";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -81,6 +82,14 @@ export async function POST(req: NextRequest, context: RouteContext) {
       .single();
 
     if (dbError) throw dbError;
+
+    await createNotification(supabase, userId!, {
+      kind: "task_reminder",
+      title: "Task created",
+      message: parsed.data.title,
+      related_entity_type: "contact",
+      related_entity_id: contactId,
+    });
 
     return NextResponse.json(data, { status: 201 });
   } catch (err) {

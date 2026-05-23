@@ -32,6 +32,7 @@ export interface User {
     platform?: string;
     friction_area?: string;
     communication_channels?: string;
+    ai_summary?: string;
     street_address?: string;
     city?: string;
     state?: string;
@@ -61,6 +62,7 @@ export interface User {
     platform?: string;
     friction_area?: string;
     communication_channels?: string;
+    ai_summary?: string;
     street_address?: string;
     city?: string;
     state?: string;

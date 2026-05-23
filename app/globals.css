@@ -44,6 +44,7 @@ html.light {
   --secondary: #38b6ff;
   --accent: #c96dd8;
   --ring: #38b6ff;
+  --surface-subtle: #eef2f7;
 
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -54,31 +55,34 @@ html.light {
 html.dark {
   color-scheme: dark;
 
-  --background: #0f1419;
-  --foreground: #f3f4f6;
-  --card: #1f2937;
-  --card-border: #374151;
-  --muted: #9ca3af;
-  --muted-subtle: #6b7280;
+  --background: #0c1017;
+  --foreground: #f1f5f9;
+  --card: #1a2332;
+  --card-border: #2d3a4f;
+  --surface-subtle: #141c28;
+  --muted: #b8c5d6;
+  --muted-subtle: #8b9bb0;
 
-  --sidebar: #111827;
-  --sidebar-border: #374151;
-  --sidebar-text: #d1d5db;
-  --sidebar-text-muted: #6b7280;
-  --sidebar-hover: #1f2937;
+  --sidebar: #0f1520;
+  --sidebar-border: #2d3a4f;
+  --sidebar-text: #e2e8f0;
+  --sidebar-text-muted: #94a3b8;
+  --sidebar-hover: #1a2332;
   --sidebar-active: #38b6ff;
-  --sidebar-active-fg: #0f1419;
-  --sidebar-active-bg: rgba(56, 182, 255, 0.15);
+  --sidebar-active-fg: #0c1017;
+  --sidebar-active-bg: rgba(56, 182, 255, 0.18);
 
-  --header: rgba(17, 24, 39, 0.92);
-  --header-border: #374151;
+  --header: rgba(15, 21, 32, 0.94);
+  --header-border: #2d3a4f;
 
-  --primary: #38b6ff;
-  --primary-hover: #5cc4ff;
-  --primary-foreground: #0f1419;
+  --primary: #5cc4ff;
+  --primary-hover: #7dd3fc;
+  --primary-foreground: #0c1017;
+  --secondary: #38b6ff;
+  --accent: #d48ee0;
 
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
 @theme inline {
@@ -142,9 +146,13 @@ h4 {
     line-height: 1.25rem;
     border-radius: var(--radius-md);
     border: 1px solid var(--card-border);
-    background: var(--card);
+    background: color-mix(in srgb, var(--card) 88%, var(--background));
     color: var(--foreground);
     transition: border-color 200ms, box-shadow 200ms;
+  }
+
+  .automation-panel {
+    background: var(--surface-subtle);
   }
 
   .input-field::placeholder {

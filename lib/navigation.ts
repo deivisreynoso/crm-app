@@ -3,6 +3,7 @@ import {
   BarChart3,
   Building2,
   Calendar,
+  CreditCard,
   FileText,
   LayoutDashboard,
   Ticket,
@@ -53,6 +54,12 @@ export const MAIN_NAV: NavItem[] = [
     label: "Analytics",
     icon: BarChart3,
     description: "Pipeline metrics and charts",
+  },
+  {
+    href: "/payments",
+    label: "Payments",
+    icon: CreditCard,
+    description: "Payment history",
   },
 ];
 

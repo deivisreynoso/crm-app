@@ -119,6 +119,7 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
               status: ticket.status,
               priority: ticket.priority,
               category: ticket.category,
+              tags: ticket.tags?.join(", ") ?? "",
               custom_fields: ticket.custom_fields,
             }}
             onSubmit={handleUpdate}
