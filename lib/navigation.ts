@@ -37,9 +37,9 @@ export const MAIN_NAV: NavItem[] = [
   },
   {
     href: "/opportunities",
-    label: "Opportunities",
+    label: "Pipelines",
     icon: TrendingUp,
-    description: "Sales pipeline",
+    description: "Sales pipeline board",
   },
   {
     href: "/tickets",

@@ -1,8 +1,14 @@
 "use client";
 
+import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FormLabel, RequiredHint } from "@/components/ui/form-label";
+import {
+  TICKET_CATEGORIES,
+  TICKET_PRIORITIES,
+  TICKET_STATUSES,
+} from "@/lib/constants/ticket-fields";
 import { useContacts } from "@/hooks/useContacts";
 import { useCompanies } from "@/hooks/useCompanies";
 import type { TicketFormInput } from "@/types";
@@ -24,6 +30,7 @@ export function TicketForm({
   onCancel,
   isLoading,
 }: TicketFormProps) {
+  const { data: session } = useSession();
   const { data: contactsData } = useContacts(1, 200);
   const { data: companies = [] } = useCompanies();
   const contacts = contactsData?.data ?? [];
@@ -34,6 +41,7 @@ export function TicketForm({
   const [companyId, setCompanyId] = useState(
     initial?.company_id ?? defaultCompanyId ?? ""
   );
+  const [assignedTo, setAssignedTo] = useState(initial?.assigned_to ?? "");
   const [subject, setSubject] = useState(
     initial?.subject ?? initial?.title ?? ""
   );
@@ -41,6 +49,10 @@ export function TicketForm({
   const [status, setStatus] = useState(initial?.status ?? "open");
   const [priority, setPriority] = useState(initial?.priority ?? "medium");
   const [category, setCategory] = useState(initial?.category ?? "");
+
+  const sessionUser = session?.user as { id?: string; name?: string | null; email?: string | null } | undefined;
+  const assigneeId = sessionUser?.id ?? "";
+  const assigneeLabel = sessionUser?.name ?? sessionUser?.email ?? "Current user";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -50,6 +62,7 @@ export function TicketForm({
     await onSubmit({
       contact_id: contactId || undefined,
       company_id: companyId || undefined,
+      assigned_to: assignedTo || assigneeId || undefined,
       subject: subject.trim(),
       description: description || undefined,
       status,
@@ -60,37 +73,56 @@ export function TicketForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <FormLabel>Account</FormLabel>
+          <select
+            value={companyId}
+            onChange={(e) => setCompanyId(e.target.value)}
+            className="input-field"
+          >
+            <option value="">— Select account —</option>
+            {companies.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <FormLabel>Contact</FormLabel>
+          <select
+            value={contactId}
+            onChange={(e) => setContactId(e.target.value)}
+            className="input-field"
+          >
+            <option value="">— Select contact —</option>
+            {contacts.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.first_name} {c.last_name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <RequiredHint>Link to an account and/or contact (at least one required)</RequiredHint>
+
       <div>
-        <FormLabel>Account</FormLabel>
+        <FormLabel>Assigned to</FormLabel>
         <select
-          value={companyId}
-          onChange={(e) => setCompanyId(e.target.value)}
+          value={assignedTo || assigneeId}
+          onChange={(e) => setAssignedTo(e.target.value)}
           className="input-field"
         >
-          <option value="">— None —</option>
-          {companies.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
+          <option value="">Unassigned</option>
+          {assigneeId && (
+            <option value={assigneeId}>
+              {assigneeLabel} (me)
             </option>
-          ))}
+          )}
         </select>
       </div>
-      <div>
-        <FormLabel>Contact</FormLabel>
-        <select
-          value={contactId}
-          onChange={(e) => setContactId(e.target.value)}
-          className="input-field"
-        >
-          <option value="">— None —</option>
-          {contacts.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.first_name} {c.last_name}
-            </option>
-          ))}
-        </select>
-        <RequiredHint>Link to an account and/or contact (at least one required)</RequiredHint>
-      </div>
+
       <div>
         <FormLabel required>Subject</FormLabel>
         <input
@@ -101,7 +133,19 @@ export function TicketForm({
           placeholder="Why is the customer requesting support?"
         />
       </div>
-      <div className="grid grid-cols-2 gap-3">
+
+      <div>
+        <FormLabel>Description</FormLabel>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={4}
+          className="input-field"
+          placeholder="Additional details"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <FormLabel>Status</FormLabel>
           <select
@@ -113,10 +157,11 @@ export function TicketForm({
             }
             className="input-field"
           >
-            <option value="open">Open</option>
-            <option value="in_progress">In Progress</option>
-            <option value="on_hold">On Hold</option>
-            <option value="closed">Closed</option>
+            {TICKET_STATUSES.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
           </select>
         </div>
         <div>
@@ -130,32 +175,30 @@ export function TicketForm({
             }
             className="input-field"
           >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="urgent">Urgent</option>
+            {TICKET_PRIORITIES.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <FormLabel>Category</FormLabel>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="input-field"
+          >
+            <option value="">— Select category —</option>
+            {TICKET_CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
           </select>
         </div>
       </div>
-      <div>
-        <FormLabel>Category</FormLabel>
-        <input
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className="input-field"
-          placeholder="e.g. Billing, Technical"
-        />
-      </div>
-      <div>
-        <FormLabel>Description</FormLabel>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={4}
-          className="input-field"
-          placeholder="Additional details about the request"
-        />
-      </div>
+
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel

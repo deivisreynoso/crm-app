@@ -1,8 +1,16 @@
 "use client";
 
-import Link from "next/link";
 import { InlineEditableField } from "@/components/ui/inline-editable-field";
-import { Badge, ticketPriorityVariant, ticketStatusVariant } from "@/components/ui/badge";
+import { InlineSelectField } from "@/components/ui/inline-select-field";
+import { AssociationSelect } from "@/components/ui/association-select";
+import { RecordDates } from "@/components/ui/record-dates";
+import {
+  TICKET_CATEGORIES,
+  TICKET_PRIORITIES,
+  TICKET_STATUSES,
+} from "@/lib/constants/ticket-fields";
+import { useContacts } from "@/hooks/useContacts";
+import { useCompanies } from "@/hooks/useCompanies";
 import { formatDateTime } from "@/lib/utils";
 import type { Ticket, TicketFormInput } from "@/types";
 
@@ -12,11 +20,23 @@ interface TicketOverviewProps {
 }
 
 export function TicketOverview({ ticket, onSaveField }: TicketOverviewProps) {
-  const save =
-    (field: keyof TicketFormInput) => (value: string) =>
-      onSaveField({ [field]: value } as Partial<TicketFormInput>);
+  const { data: companies = [] } = useCompanies();
+  const { data: contactsData } = useContacts(1, 200);
+  const contacts = contactsData?.data ?? [];
 
   const displaySubject = ticket.subject?.trim() || ticket.title;
+
+  const accountOptions = companies.map((c) => ({
+    id: c.id,
+    label: c.name,
+    href: `/accounts/${c.id}`,
+  }));
+
+  const contactOptions = contacts.map((c) => ({
+    id: c.id,
+    label: `${c.first_name} ${c.last_name}`,
+    href: `/contacts/${c.id}`,
+  }));
 
   return (
     <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
@@ -26,102 +46,67 @@ export function TicketOverview({ ticket, onSaveField }: TicketOverviewProps) {
         </dt>
         <dd className="text-sm font-mono text-heading">{ticket.ticket_number ?? "—"}</dd>
       </div>
+
+      <AssociationSelect
+        label="Account"
+        value={ticket.company_id ?? ""}
+        options={accountOptions}
+        placeholder="Link account"
+        onChange={async (id) => onSaveField({ company_id: id || undefined })}
+      />
+      <AssociationSelect
+        label="Contact"
+        value={ticket.contact_id ?? ""}
+        options={contactOptions}
+        placeholder="Link contact"
+        onChange={async (id) => onSaveField({ contact_id: id || undefined })}
+      />
+
+      <InlineSelectField
+        label="Status"
+        value={ticket.status}
+        options={TICKET_STATUSES}
+        onSave={async (v) =>
+          onSaveField({
+            status: v as Ticket["status"],
+          })
+        }
+      />
+      <InlineSelectField
+        label="Priority"
+        value={ticket.priority}
+        options={TICKET_PRIORITIES}
+        onSave={async (v) =>
+          onSaveField({
+            priority: v as Ticket["priority"],
+          })
+        }
+      />
+      <InlineSelectField
+        label="Category"
+        value={ticket.category}
+        options={TICKET_CATEGORIES}
+        allowEmpty
+        onSave={async (v) => onSaveField({ category: v || undefined })}
+      />
+
       <InlineEditableField
         label="Subject"
         value={displaySubject}
         required
+        className="sm:col-span-2"
         onSave={async (value) => {
           await onSaveField({ subject: value, title: value });
         }}
       />
-      <div>
-        <dt className="text-[11px] font-semibold uppercase tracking-wide text-body-muted mb-1">
-          Status
-        </dt>
-        <dd>
-          <Badge variant={ticketStatusVariant(ticket.status)}>
-            {ticket.status.replace("_", " ")}
-          </Badge>
-        </dd>
-      </div>
-      <div>
-        <dt className="text-[11px] font-semibold uppercase tracking-wide text-body-muted mb-1">
-          Priority
-        </dt>
-        <dd>
-          <Badge variant={ticketPriorityVariant(ticket.priority)}>
-            {ticket.priority}
-          </Badge>
-        </dd>
-      </div>
-      <InlineEditableField
-        label="Category"
-        value={ticket.category}
-        onSave={save("category")}
-      />
-      <div>
-        <dt className="text-[11px] font-semibold uppercase tracking-wide text-body-muted mb-1">
-          Account
-        </dt>
-        <dd className="text-sm font-medium text-heading">
-          {ticket.company ? (
-            <Link
-              href={`/accounts/${ticket.company_id}`}
-              className="text-[var(--secondary)] hover:underline"
-            >
-              {ticket.company.name}
-            </Link>
-          ) : (
-            <span className="text-body-muted font-normal">Not set</span>
-          )}
-        </dd>
-      </div>
-      <div>
-        <dt className="text-[11px] font-semibold uppercase tracking-wide text-body-muted mb-1">
-          Contact
-        </dt>
-        <dd className="text-sm font-medium text-heading">
-          {ticket.contact ? (
-            <Link
-              href={`/contacts/${ticket.contact_id}`}
-              className="text-[var(--secondary)] hover:underline"
-            >
-              {ticket.contact.first_name} {ticket.contact.last_name}
-            </Link>
-          ) : (
-            <span className="text-body-muted font-normal">Not set</span>
-          )}
-        </dd>
-      </div>
-      <div>
-        <dt className="text-[11px] font-semibold uppercase tracking-wide text-body-muted mb-1">
-          Created
-        </dt>
-        <dd className="text-sm text-heading">{formatDateTime(ticket.created_at)}</dd>
-      </div>
-      <div>
-        <dt className="text-[11px] font-semibold uppercase tracking-wide text-body-muted mb-1">
-          Last updated
-        </dt>
-        <dd className="text-sm text-heading">{formatDateTime(ticket.updated_at)}</dd>
-      </div>
-      <div>
-        <dt className="text-[11px] font-semibold uppercase tracking-wide text-body-muted mb-1">
-          Resolved
-        </dt>
-        <dd className="text-sm text-heading">
-          {ticket.resolved_at ? formatDateTime(ticket.resolved_at) : (
-            <span className="text-body-muted font-normal">Not set</span>
-          )}
-        </dd>
-      </div>
       <InlineEditableField
         label="Description"
         value={ticket.description}
         multiline
         className="sm:col-span-2"
-        onSave={save("description")}
+        onSave={async (v) => onSaveField({ description: v || undefined })}
       />
+
       {ticket.resolution_notes && (
         <div className="sm:col-span-2">
           <dt className="text-[11px] font-semibold uppercase tracking-wide text-body-muted mb-1">
@@ -132,6 +117,21 @@ export function TicketOverview({ ticket, onSaveField }: TicketOverviewProps) {
           </dd>
         </div>
       )}
+
+      {ticket.resolved_at && (
+        <div>
+          <dt className="text-[11px] font-semibold uppercase tracking-wide text-body-muted mb-1">
+            Resolved
+          </dt>
+          <dd className="text-sm text-heading">{formatDateTime(ticket.resolved_at)}</dd>
+        </div>
+      )}
+
+      <RecordDates
+        createdAt={ticket.created_at}
+        updatedAt={ticket.updated_at}
+        className="sm:col-span-2"
+      />
     </dl>
   );
 }

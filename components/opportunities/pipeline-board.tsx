@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
+import { Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { getStageName, sortStages } from "@/lib/constants/pipelines";
 import type { OpportunityWithContact, Pipeline, PipelineStage } from "@/types";
@@ -11,8 +12,9 @@ interface PipelineBoardProps {
   opportunities: OpportunityWithContact[];
   onMoveStage: (opportunityId: string, stageId: string) => void | Promise<void>;
   onEdit: (opportunity: OpportunityWithContact) => void;
-  onDelete: (opportunityId: string) => void;
+  onDelete: (opportunity: OpportunityWithContact) => void;
   isMoving?: boolean;
+  deletingId?: string | null;
 }
 
 function contactName(opp: OpportunityWithContact) {
@@ -26,6 +28,7 @@ export function PipelineBoard({
   onMoveStage,
   onEdit,
   onDelete,
+  deletingId,
 }: PipelineBoardProps) {
   const stages = sortStages(pipeline.stages as PipelineStage[]);
 
@@ -51,7 +54,7 @@ export function PipelineBoard({
   }
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4 min-h-[400px]">
+    <div className="flex gap-4 overflow-x-auto pb-4 min-h-[min(85vh,900px)]">
       {stages.map((stage) => {
         const cards = byStage.get(stage.id) ?? [];
         const total = stageTotal(stage.id);
@@ -59,7 +62,7 @@ export function PipelineBoard({
         return (
           <div
             key={stage.id}
-            className="flex-shrink-0 w-64 bg-slate-100 rounded-lg flex flex-col max-h-[70vh]"
+            className="flex-shrink-0 w-72 bg-[var(--background)] rounded-lg flex flex-col min-h-[min(80vh,800px)] max-h-[min(90vh,1000px)] border border-[var(--card-border)]"
             onDragOver={(e) => {
               e.preventDefault();
               e.dataTransfer.dropEffect = "move";
@@ -70,16 +73,16 @@ export function PipelineBoard({
               if (id) void onMoveStage(id, stage.id);
             }}
           >
-            <div className="p-3 border-b border-slate-200 bg-white rounded-t-lg">
-              <h3 className="font-semibold text-sm text-slate-900">
+            <div className="p-3 border-b border-[var(--card-border)] bg-[var(--card)] rounded-t-lg shrink-0">
+              <h3 className="font-semibold text-sm text-heading">
                 {stage.name}
               </h3>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-body-muted mt-1">
                 {cards.length} · {formatCurrency(total)}
               </p>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-2 space-y-2">
+            <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-2">
               {cards.map((opp) => (
                 <div
                   key={opp.id}
@@ -88,12 +91,25 @@ export function PipelineBoard({
                     e.dataTransfer.setData("application/opportunity-id", opp.id);
                     e.dataTransfer.effectAllowed = "move";
                   }}
-                  className="bg-white border border-slate-200 rounded-md p-3 cursor-grab active:cursor-grabbing shadow-sm"
+                  className="bg-white border border-slate-200 rounded-md p-3 cursor-grab active:cursor-grabbing shadow-sm group/card relative"
                 >
                   <button
                     type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(opp);
+                    }}
+                    disabled={deletingId === opp.id}
+                    className="absolute top-2 right-2 inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-400 opacity-0 group-hover/card:opacity-100 hover:text-[var(--error)] hover:bg-red-50 transition-opacity disabled:opacity-50"
+                    aria-label={`Delete ${opp.title}`}
+                    title="Delete opportunity"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" strokeWidth={1.75} />
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => onEdit(opp)}
-                    className="text-left w-full"
+                    className="text-left w-full pr-6"
                   >
                     <p className="font-medium text-sm text-slate-900">
                       {opp.title}
@@ -131,13 +147,6 @@ export function PipelineBoard({
                     >
                       Contact
                     </Link>
-                    <button
-                      type="button"
-                      onClick={() => onDelete(opp.id)}
-                      className="text-xs text-red-600 hover:text-red-800"
-                    >
-                      Delete
-                    </button>
                   </div>
                 </div>
               ))}

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
-import { ticketSchema } from "@/lib/validators";
+import { ticketPatchSchema } from "@/lib/validators";
 import { buildTicketUpdate } from "@/lib/ticket-payload";
 import { enrichTicket } from "@/lib/ticket-queries";
+import { formatValidationDetails } from "@/lib/validation-errors";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -39,10 +40,14 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     const { id } = await context.params;
     const body = await req.json();
-    const parsed = ticketSchema.partial().safeParse(body);
+    const parsed = ticketPatchSchema.safeParse(body);
     if (!parsed.success) {
+      const detailStr = formatValidationDetails(parsed.error.flatten());
       return NextResponse.json(
-        { error: "Validation failed", details: parsed.error.flatten() },
+        {
+          error: detailStr || "Validation failed",
+          details: parsed.error.flatten(),
+        },
         { status: 400 }
       );
     }

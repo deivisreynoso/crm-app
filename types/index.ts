@@ -36,6 +36,7 @@ export interface User {
     city?: string;
     state?: string;
     postal_code?: string;
+    country?: string;
     timezone?: string;
     created_at: string;
     updated_at: string;
@@ -64,6 +65,7 @@ export interface User {
     city?: string;
     state?: string;
     postal_code?: string;
+    country?: string;
     timezone?: string;
     tags?: string;
   }

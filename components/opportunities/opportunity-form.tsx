@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { FormLabel } from "@/components/ui/form-label";
 import { TagsInput } from "@/components/forms/tags-input";
 import { useContacts } from "@/hooks/useContacts";
+import { useCompanies } from "@/hooks/useCompanies";
 import type { OpportunityFormInput, PipelineStage } from "@/types";
 
 interface OpportunityFormProps {
@@ -18,9 +20,6 @@ interface OpportunityFormProps {
   isLoading?: boolean;
 }
 
-const inputClassName =
-  "w-full px-3 py-2 border border-slate-300 rounded-md text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900";
-
 export function OpportunityForm({
   pipelineId,
   stages,
@@ -32,12 +31,13 @@ export function OpportunityForm({
   onCancel,
   isLoading,
 }: OpportunityFormProps) {
-  const { data: contactsData } = useContacts(1, 100);
+  const { data: contactsData } = useContacts(1, 200);
+  const { data: companies = [] } = useCompanies();
   const allContacts = contactsData?.data ?? [];
-  const contacts = defaultCompanyId
-    ? allContacts.filter((c) => c.company_id === defaultCompanyId)
-    : allContacts;
 
+  const [companyId, setCompanyId] = useState(
+    initial?.company_id ?? defaultCompanyId ?? ""
+  );
   const [contactId, setContactId] = useState(
     initial?.contact_id ?? defaultContactId ?? ""
   );
@@ -52,13 +52,18 @@ export function OpportunityForm({
     initial?.probability?.toString() ?? "50"
   );
 
+  const contacts = useMemo(() => {
+    if (!companyId) return allContacts;
+    return allContacts.filter((c) => c.company_id === companyId);
+  }, [allContacts, companyId]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!contactId || !title.trim() || !stage) return;
 
     await onSubmit({
       contact_id: contactId,
-      company_id: defaultCompanyId || undefined,
+      company_id: companyId || undefined,
       pipeline_id: pipelineId,
       title: title.trim(),
       value: value ? Number(value) : undefined,
@@ -72,78 +77,87 @@ export function OpportunityForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          Contact *
-        </label>
-        <select
-          value={contactId}
-          onChange={(e) => setContactId(e.target.value)}
-          required
-          className={inputClassName}
-        >
-          <option value="">Select contact</option>
-          {contacts.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.first_name} {c.last_name}
-              {c.company ? ` · ${c.company}` : ""}
-            </option>
-          ))}
-        </select>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <FormLabel>Account</FormLabel>
+          <select
+            value={companyId}
+            onChange={(e) => {
+              setCompanyId(e.target.value);
+              setContactId("");
+            }}
+            className="input-field"
+          >
+            <option value="">— Any account —</option>
+            {companies.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <FormLabel required>Contact</FormLabel>
+          <select
+            value={contactId}
+            onChange={(e) => setContactId(e.target.value)}
+            required
+            className="input-field"
+          >
+            <option value="">Select contact</option>
+            {contacts.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.first_name} {c.last_name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          Opportunity name *
-        </label>
+        <FormLabel required>Deal name</FormLabel>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required
-          className={inputClassName}
-          placeholder="e.g. Campaña - Elizabeth"
+          className="input-field"
+          placeholder="e.g. Annual contract renewal"
         />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            Value (USD)
-          </label>
+          <FormLabel>Value (USD)</FormLabel>
           <input
             type="number"
             min="0"
             step="0.01"
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            className={inputClassName}
+            className="input-field"
             placeholder="0"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            Probability %
-          </label>
+          <FormLabel>Probability %</FormLabel>
           <input
             type="number"
             min="0"
             max="100"
             value={probability}
             onChange={(e) => setProbability(e.target.value)}
-            className={inputClassName}
+            className="input-field"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          Stage *
-        </label>
+        <FormLabel required>Stage</FormLabel>
         <select
           value={stage}
           onChange={(e) => setStage(e.target.value)}
           required
-          className={inputClassName}
+          className="input-field"
         >
           {stages.map((s) => (
             <option key={s.id} value={s.id}>
@@ -154,21 +168,17 @@ export function OpportunityForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          Tags
-        </label>
+        <FormLabel>Tags</FormLabel>
         <TagsInput value={tags} onChange={setTags} />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          Notes
-        </label>
+        <FormLabel>Notes</FormLabel>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          rows={3}
-          className={inputClassName}
+          rows={2}
+          className="input-field"
         />
       </div>
 
@@ -177,7 +187,7 @@ export function OpportunityForm({
           Cancel
         </Button>
         <Button type="submit" disabled={isLoading}>
-          {isLoading ? "Saving..." : initial?.id ? "Update" : "Create"}
+          {isLoading ? "Saving…" : initial?.id ? "Update" : "Create"}
         </Button>
       </div>
     </form>

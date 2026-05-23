@@ -29,6 +29,7 @@ export function buildContactRecord(data: ContactFormData, userId?: string) {
     city: emptyToNull(data.city),
     state: emptyToNull(data.state),
     postal_code: emptyToNull(data.postal_code),
+    country: emptyToNull(data.country),
     timezone: emptyToNull(data.timezone),
     tags: data.tags ? parseTagsInput(data.tags) : [],
     company_id: data.company_id?.trim() ? data.company_id : null,
@@ -55,6 +56,7 @@ const STRING_FIELDS = [
   "city",
   "state",
   "postal_code",
+  "country",
   "timezone",
 ] as const;
 
@@ -104,6 +106,7 @@ export function contactToFormDefaults(contact: Contact): Partial<ContactFormData
     city: contact.city ?? "",
     state: contact.state ?? "",
     postal_code: contact.postal_code ?? "",
+    country: contact.country ?? "",
     timezone: contact.timezone ?? "",
     tags: contact.tags?.join(", ") ?? "",
     company_id: contact.company_id ?? "",

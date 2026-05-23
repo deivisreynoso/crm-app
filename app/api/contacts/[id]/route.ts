@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
-import { contactSchema } from "@/lib/validators";
-import { buildContactRecord, buildContactUpdate } from "@/lib/contact-payload";
+import { contactPatchSchema } from "@/lib/validators";
+import { buildContactUpdate } from "@/lib/contact-payload";
 import { triggerN8NWebhook } from "@/lib/n8n";
+import { formatValidationDetails } from "@/lib/validation-errors";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -36,6 +37,21 @@ export async function GET(_req: NextRequest, context: RouteContext) {
   }
 }
 
+async function patchContact(
+  supabase: ReturnType<typeof createServerSideClient>,
+  id: string,
+  userId: string,
+  updates: Record<string, unknown>
+) {
+  return supabase
+    .from("contacts")
+    .update(updates)
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select()
+    .single();
+}
+
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
     const { userId, error } = await requireAuth();
@@ -43,30 +59,55 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     const { id } = await context.params;
     const body = await req.json();
-    const parsed = contactSchema.partial().safeParse(body);
+    const parsed = contactPatchSchema.safeParse(body);
 
     if (!parsed.success) {
+      const detailStr = formatValidationDetails(parsed.error.flatten());
       return NextResponse.json(
-        { error: "Validation failed", details: parsed.error.flatten() },
+        { error: detailStr || "Validation failed", details: parsed.error.flatten() },
         { status: 400 }
       );
     }
 
     const supabase = createServerSideClient();
-    const updates = {
+    const baseUpdates = {
       ...buildContactUpdate(parsed.data),
       updated_at: new Date().toISOString(),
     };
 
-    const { data, error: dbError } = await supabase
-      .from("contacts")
-      .update(updates)
-      .eq("id", id)
-      .eq("user_id", userId!)
-      .select()
-      .single();
+    let { data, error: dbError } = await patchContact(
+      supabase,
+      id,
+      userId!,
+      baseUpdates
+    );
 
-    if (dbError || !data) {
+    if (
+      dbError &&
+      "country" in baseUpdates &&
+      /country/i.test(dbError.message)
+    ) {
+      const { country: _c, ...withoutCountry } = baseUpdates;
+      ({ data, error: dbError } = await patchContact(
+        supabase,
+        id,
+        userId!,
+        withoutCountry
+      ));
+    }
+
+    if (dbError) {
+      console.error("PATCH /api/contacts/[id] db:", dbError);
+      return NextResponse.json(
+        {
+          error: dbError.message,
+          hint: "Run migrations/009_contact_country.sql in Supabase if updating country.",
+        },
+        { status: 500 }
+      );
+    }
+
+    if (!data) {
       return NextResponse.json({ error: "Contact not found" }, { status: 404 });
     }
 

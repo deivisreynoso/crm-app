@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { AuthBrandHeader } from "@/components/auth/auth-brand-header";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,7 +32,7 @@ export default function LoginPage() {
         router.push("/dashboard");
         router.refresh();
       }
-    } catch (err) {
+    } catch {
       setError("An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
@@ -40,28 +40,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="bg-[var(--card)] rounded-xl shadow-lg p-8 border border-[var(--card-border)]">
-      <div className="flex justify-center mb-6">
-        <Image
-          src="/brand/logo-light.png"
-          alt="ClickIn"
-          width={160}
-          height={40}
-          className="h-9 w-auto dark:hidden"
-          priority
-        />
-        <Image
-          src="/brand/logo-dark.png"
-          alt="ClickIn"
-          width={160}
-          height={40}
-          className="h-9 w-auto hidden dark:block"
-          priority
+    <div className="surface-card p-8 border border-[var(--card-border)] shadow-[var(--shadow-md)]">
+      <div className="lg:hidden">
+        <AuthBrandHeader
+          title="Welcome back"
+          subtitle="Sign in to your CRM workspace"
         />
       </div>
-      <p className="text-[var(--muted)] text-sm text-center mb-6">
-        Sign in to your CRM workspace
-      </p>
+      <div className="hidden lg:block mb-8">
+        <h1 className="text-2xl font-bold text-heading tracking-tight">Welcome back</h1>
+        <p className="text-body-muted text-sm mt-1.5">Sign in to your CRM workspace</p>
+      </div>
 
       {error && (
         <div className="bg-red-500/10 border border-[var(--error)] text-[var(--error)] px-4 py-3 rounded-lg mb-4 text-sm">
@@ -100,11 +89,7 @@ export default function LoginPage() {
           />
         </div>
 
-        <Button
-          type="submit"
-          disabled={isLoading}
-          className="w-full"
-        >
+        <Button type="submit" disabled={isLoading} className="w-full">
           {isLoading ? "Signing in..." : "Sign in"}
         </Button>
       </form>

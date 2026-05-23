@@ -25,6 +25,7 @@ export const contactSchema = z
     city: optionalString,
     state: optionalString,
     postal_code: optionalString,
+    country: optionalString,
     timezone: optionalString,
     tags: optionalString,
     company_id: z.string().uuid().optional().or(z.literal('')),
@@ -33,6 +34,35 @@ export const contactSchema = z
     message: 'Email or phone is required',
     path: ['email'],
   });
+
+/** PATCH body — no email/phone refine so single-field updates work */
+export const contactPatchSchema = z.object({
+  first_name: z.string().min(2).optional(),
+  last_name: z.string().min(2).optional(),
+  email: z.string().email().optional().or(z.literal('')),
+  phone: optionalString,
+  company: optionalString,
+  title: optionalString,
+  source: optionalString,
+  status: z.enum(['lead', 'active', 'inactive', 'prospect']).optional(),
+  notes: optionalString,
+  preferred_language: optionalString,
+  website: optionalString,
+  date_of_birth: optionalString,
+  preferred_contact_method: optionalString,
+  signals: optionalString,
+  platform: optionalString,
+  friction_area: optionalString,
+  communication_channels: optionalString,
+  street_address: optionalString,
+  city: optionalString,
+  state: optionalString,
+  postal_code: optionalString,
+  country: optionalString,
+  timezone: optionalString,
+  tags: optionalString,
+  company_id: z.string().uuid().optional().or(z.literal('')),
+});
 
 export const noteSchema = z.object({
   content: z.string().min(1, 'Note content is required'),
@@ -115,6 +145,26 @@ export const ticketSchema = z
   );
 
 export type TicketFormData = z.infer<typeof ticketSchema>;
+
+/** PATCH body — no contact/account refine so single-field updates work */
+export const ticketPatchSchema = z.object({
+  contact_id: z.string().uuid().optional().or(z.literal("")),
+  company_id: z.string().uuid().optional().or(z.literal("")),
+  subject: z.string().min(3, "Subject must be at least 3 characters").optional(),
+  title: z.string().optional().or(z.literal("")),
+  description: z.string().optional().or(z.literal("")),
+  status: z
+    .enum(["open", "in_progress", "closed", "on_hold"])
+    .optional(),
+  priority: z
+    .enum(["low", "medium", "high", "urgent"])
+    .optional(),
+  assigned_to: z.string().uuid().optional().or(z.literal("")),
+  category: z.string().optional().or(z.literal("")),
+  tags: z.string().optional().or(z.literal("")),
+});
+
+export type TicketPatchData = z.infer<typeof ticketPatchSchema>;
 
 export const documentSchema = z
   .object({

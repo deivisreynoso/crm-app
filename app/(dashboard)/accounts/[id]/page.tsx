@@ -2,20 +2,15 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Building2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { RecordSectionTabs } from "@/components/crm/record-section-tabs";
 import { AccountOverview, type AccountPatch } from "@/components/accounts/account-overview";
 import { EntityRelatedPanel } from "@/components/crm/entity-related-panel";
-import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import {
   useCompany,
   useCompanyRelated,
   useUpdateCompany,
-  useDeleteCompany,
 } from "@/hooks/useCompanies";
 import { useCreateTicket } from "@/hooks/useTickets";
 import { useUploadDocument } from "@/hooks/useDocuments";
@@ -25,32 +20,16 @@ type MobileTab = "details" | "related";
 
 export default function AccountDetailPage({ params }: PageProps) {
   const { id } = use(params);
-  const router = useRouter();
   const [mobileTab, setMobileTab] = useState<MobileTab>("details");
-  const { confirm, dialogProps } = useConfirmDialog();
 
   const { data: account, isLoading } = useCompany(id);
   const { data: related, refetch: refetchRelated } = useCompanyRelated(id);
   const updateCompany = useUpdateCompany(id);
-  const deleteCompany = useDeleteCompany();
   const createTicket = useCreateTicket();
   const uploadDocument = useUploadDocument();
 
   async function handleSaveField(patch: AccountPatch) {
     await updateCompany.mutateAsync(patch);
-  }
-
-  async function handleDelete() {
-    const ok = await confirm({
-      title: "Delete account?",
-      description:
-        "This account will be permanently removed. Linked contacts will be unlinked. This cannot be undone.",
-      confirmLabel: "Delete account",
-      destructive: true,
-    });
-    if (!ok) return;
-    await deleteCompany.mutateAsync(id);
-    router.push("/accounts");
   }
 
   if (isLoading) return <p className="text-body-muted text-sm">Loading account…</p>;
@@ -97,8 +76,6 @@ export default function AccountDetailPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6 w-full">
-      <ConfirmDialog {...dialogProps} />
-
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div className="flex items-start gap-4 min-w-0">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)]">
@@ -118,17 +95,6 @@ export default function AccountDetailPage({ params }: PageProps) {
               {[account.industry, account.phone].filter(Boolean).join(" · ") || "Account"}
             </p>
           </div>
-        </div>
-        <div className="flex gap-2 shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDelete}
-            disabled={deleteCompany.isPending}
-            className="text-[var(--error)] border-red-200 dark:border-red-900"
-          >
-            Delete
-          </Button>
         </div>
       </div>
 

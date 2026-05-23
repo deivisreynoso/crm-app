@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { MAIN_NAV, SECONDARY_NAV } from "@/lib/navigation";
-import { useTheme } from "@/components/dashboard/theme-provider";
 
 function NavLink({
   href,
@@ -22,7 +21,7 @@ function NavLink({
     <Link
       href={href}
       className={cn(
-        "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
+        "group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-all duration-150",
         isActive
           ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-fg)] shadow-sm"
           : "text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover)]"
@@ -31,7 +30,7 @@ function NavLink({
     >
       <Icon
         className={cn(
-          "h-5 w-5 shrink-0",
+          "h-4 w-4 shrink-0",
           isActive ? "text-[var(--sidebar-active-fg)]" : "text-[var(--sidebar-text-muted)] group-hover:text-[var(--secondary)]"
         )}
         strokeWidth={1.75}
@@ -54,7 +53,7 @@ function NavSection({
   return (
     <div className="space-y-0.5">
       {title && (
-        <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--sidebar-text-muted)]">
+        <p className="px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--sidebar-text-muted)]">
           {title}
         </p>
       )}
@@ -76,20 +75,22 @@ function NavSection({
 }
 
 export function SidebarBrand() {
-  const { theme, mounted } = useTheme();
-  const src =
-    mounted && theme === "dark"
-      ? "/brand/logo-dark.png"
-      : "/brand/logo-light.png";
-
   return (
-    <Link href="/dashboard" className="flex items-center px-0.5 py-1 w-full">
+    <Link href="/dashboard" className="flex items-center w-full">
       <Image
-        src={src}
+        src="/brand/logo-light.png"
         alt="ClickIn"
-        width={320}
-        height={80}
-        className="h-16 w-full max-w-[320px] object-contain object-left"
+        width={200}
+        height={48}
+        className="h-9 w-full object-contain object-left dark:hidden"
+        priority
+      />
+      <Image
+        src="/brand/logo-dark.png"
+        alt="ClickIn"
+        width={200}
+        height={48}
+        className="h-9 w-full object-contain object-left hidden dark:block"
         priority
       />
     </Link>
@@ -100,7 +101,7 @@ export function SidebarNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex flex-col gap-6" aria-label="Main navigation">
+    <nav className="flex flex-col gap-5" aria-label="Main navigation">
       <NavSection items={MAIN_NAV} pathname={pathname} />
       <NavSection title="Tools" items={SECONDARY_NAV} pathname={pathname} />
     </nav>

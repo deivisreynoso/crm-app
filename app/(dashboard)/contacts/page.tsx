@@ -17,11 +17,13 @@ import {
 } from "@/components/ui/page-shell";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ListActions } from "@/components/ui/list-actions";
 import {
   useContacts,
   useCreateContact,
   useDeleteContact,
 } from "@/hooks/useContacts";
+import { useCompanies } from "@/hooks/useCompanies";
 import type { ContactFormInput } from "@/types";
 import { formatDate } from "@/lib/utils";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
@@ -56,6 +58,8 @@ function ContactsPageContent() {
     search || undefined,
     statusFilter || undefined
   );
+  const { data: companies = [] } = useCompanies();
+  const companyMap = Object.fromEntries(companies.map((c) => [c.id, c.name]));
   const createContact = useCreateContact();
   const deleteContact = useDeleteContact();
 
@@ -164,9 +168,10 @@ function ContactsPageContent() {
               <tr>
                 <DataTableHeadCell>Name</DataTableHeadCell>
                 <DataTableHeadCell>Email</DataTableHeadCell>
-                <DataTableHeadCell>Company</DataTableHeadCell>
+                <DataTableHeadCell>Phone</DataTableHeadCell>
+                <DataTableHeadCell>Account</DataTableHeadCell>
+                <DataTableHeadCell>Title</DataTableHeadCell>
                 <DataTableHeadCell>Status</DataTableHeadCell>
-                <DataTableHeadCell>Created</DataTableHeadCell>
                 <DataTableHeadCell align="right">Actions</DataTableHeadCell>
               </tr>
             </DataTableHead>
@@ -185,24 +190,25 @@ function ContactsPageContent() {
                     <span className="text-body-muted">{contact.email || "—"}</span>
                   </DataTableCell>
                   <DataTableCell>
-                    <span className="text-body-muted">{contact.company || "—"}</span>
+                    <span className="text-body-muted">{contact.phone || "—"}</span>
+                  </DataTableCell>
+                  <DataTableCell>
+                    <span className="text-body-muted">
+                      {contact.company_id
+                        ? companyMap[contact.company_id] ?? "—"
+                        : contact.company || "—"}
+                    </span>
+                  </DataTableCell>
+                  <DataTableCell>
+                    <span className="text-body-muted">{contact.title || "—"}</span>
                   </DataTableCell>
                   <DataTableCell>
                     <Badge variant="info">{contact.status}</Badge>
                   </DataTableCell>
-                  <DataTableCell>
-                    <span className="text-body-muted">{formatDate(contact.created_at)}</span>
-                  </DataTableCell>
                   <DataTableCell align="right">
-                    <Link
-                      href={`/contacts/${contact.id}`}
-                      className="text-[var(--primary)] hover:underline mr-3"
-                    >
-                      View
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={async () => {
+                    <ListActions
+                      viewHref={`/contacts/${contact.id}`}
+                      onDelete={async () => {
                         const ok = await confirm({
                           title: "Delete contact?",
                           description: `${contact.first_name} ${contact.last_name} will be permanently removed. This cannot be undone.`,
@@ -216,11 +222,8 @@ function ContactsPageContent() {
                           alert("Failed to delete contact.");
                         }
                       }}
-                      disabled={deleteContact.isPending}
-                      className="text-[var(--error)] hover:underline disabled:opacity-50"
-                    >
-                      Delete
-                    </button>
+                      deleteDisabled={deleteContact.isPending}
+                    />
                   </DataTableCell>
                 </DataTableRow>
               ))}

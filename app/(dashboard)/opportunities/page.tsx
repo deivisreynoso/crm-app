@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { PageHeader } from "@/components/ui/page-shell";
 import { Card } from "@/components/ui/card";
 import { PipelineBoard } from "@/components/opportunities/pipeline-board";
@@ -22,8 +23,6 @@ import {
   useMoveOpportunityStage,
   useDeleteOpportunity,
 } from "@/hooks/useOpportunities";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { DEFAULT_PIPELINE_STAGES } from "@/lib/constants/pipelines";
 import { formatTagsForInput } from "@/lib/tags";
 import type { OpportunityFormInput, OpportunityWithContact } from "@/types";
@@ -45,6 +44,8 @@ export default function OpportunitiesPage() {
   const [editingOpportunity, setEditingOpportunity] =
     useState<OpportunityWithContact | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [deletingOpportunity, setDeletingOpportunity] =
+    useState<OpportunityWithContact | null>(null);
 
   const selectedPipeline = pipelines.find((p) => p.id === selectedPipelineId);
 
@@ -58,7 +59,6 @@ export default function OpportunitiesPage() {
   const updateOpportunity = useUpdateOpportunity(selectedPipelineId);
   const moveStage = useMoveOpportunityStage(selectedPipelineId);
   const deleteOpportunity = useDeleteOpportunity(selectedPipelineId);
-  const { confirm, dialogProps } = useConfirmDialog();
 
   useEffect(() => {
     if (pipelines.length && !selectedPipelineId) {
@@ -123,24 +123,26 @@ export default function OpportunitiesPage() {
     openPanel("edit");
   }
 
-  async function handleDelete(id: string) {
-    const ok = await confirm({
-      title: "Delete opportunity?",
-      description: "This opportunity will be permanently removed from the pipeline.",
-      confirmLabel: "Delete opportunity",
-      destructive: true,
-    });
-    if (!ok) return;
+  async function handleMoveStage(id: string, stage: string) {
     try {
-      await deleteOpportunity.mutateAsync(id);
+      await moveStage.mutateAsync({ id, stage });
     } catch (err) {
       alert(apiErrorMessage(err));
     }
   }
 
-  async function handleMoveStage(id: string, stage: string) {
+  function requestDelete(opp: OpportunityWithContact) {
+    setDeletingOpportunity(opp);
+  }
+
+  async function confirmDelete() {
+    if (!deletingOpportunity) return;
     try {
-      await moveStage.mutateAsync({ id, stage });
+      await deleteOpportunity.mutateAsync(deletingOpportunity.id);
+      if (editingOpportunity?.id === deletingOpportunity.id) {
+        closePanel();
+      }
+      setDeletingOpportunity(null);
     } catch (err) {
       alert(apiErrorMessage(err));
     }
@@ -158,10 +160,9 @@ export default function OpportunitiesPage() {
 
   return (
     <div className="space-y-4 w-full">
-      <ConfirmDialog {...dialogProps} />
       <PageHeader
-        title="Opportunities"
-        description="Pipeline board — drag cards between stages"
+        title="Pipelines"
+        description="Drag deals between stages on your pipeline board"
         actions={
           <>
             <Button
@@ -199,7 +200,7 @@ export default function OpportunitiesPage() {
         <select
           value={selectedPipelineId}
           onChange={(e) => setSelectedPipelineId(e.target.value)}
-          className="input-field w-auto min-w-[180px] h-9 py-1"
+          className="input-field min-w-[180px]"
         >
           {pipelines.map((p) => (
             <option key={p.id} value={p.id}>
@@ -284,17 +285,35 @@ export default function OpportunitiesPage() {
         )}
       </Modal>
 
+      <ConfirmDialog
+        open={!!deletingOpportunity}
+        title="Delete opportunity"
+        description={
+          deletingOpportunity
+            ? `Remove "${deletingOpportunity.title}" from this pipeline? This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        destructive
+        loading={deleteOpportunity.isPending}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeletingOpportunity(null)}
+      />
+
       {pipelinesLoading || oppsLoading ? (
         <p className="text-body-muted">Loading…</p>
       ) : selectedPipeline ? (
         <div className="surface-card p-4 overflow-x-auto">
           <PipelineBoard
-          pipeline={selectedPipeline}
-          opportunities={opportunities}
-          onMoveStage={handleMoveStage}
-          onEdit={openEdit}
-          onDelete={handleDelete}
-        />
+            pipeline={selectedPipeline}
+            opportunities={opportunities}
+            onMoveStage={handleMoveStage}
+            onEdit={openEdit}
+            onDelete={requestDelete}
+            deletingId={
+              deleteOpportunity.isPending ? deletingOpportunity?.id ?? null : null
+            }
+          />
         </div>
       ) : (
         <p className="text-body-muted">No pipeline selected.</p>

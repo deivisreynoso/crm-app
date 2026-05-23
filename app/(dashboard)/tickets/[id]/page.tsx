@@ -7,12 +7,10 @@ import { Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge, ticketPriorityVariant, ticketStatusVariant } from "@/components/ui/badge";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ActivityPanel } from "@/components/contact/activity-panel";
 import { TicketForm } from "@/components/tickets/ticket-form";
 import { TicketOverview } from "@/components/tickets/ticket-overview";
-import { useConfirmDialog } from "@/hooks/useConfirmDialog";
-import { useTicket, useUpdateTicket, useDeleteTicket } from "@/hooks/useTickets";
+import { useTicket, useUpdateTicket } from "@/hooks/useTickets";
 import { useTicketNotes, useCreateTicketNote } from "@/hooks/useTicketNotes";
 import { formatServiceTicketLabel } from "@/lib/service-ticket-number";
 import type { TicketFormInput } from "@/types";
@@ -25,11 +23,9 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
   const router = useRouter();
   const [tab, setTab] = useState<TicketTab>("details");
   const [editing, setEditing] = useState(false);
-  const { confirm, dialogProps } = useConfirmDialog();
 
   const { data: ticket, isLoading, error } = useTicket(id);
   const updateTicket = useUpdateTicket(id);
-  const deleteTicket = useDeleteTicket();
   const { data: notes = [] } = useTicketNotes(id);
   const createNote = useCreateTicketNote(id);
 
@@ -40,19 +36,6 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
 
   async function handleSaveField(patch: Partial<TicketFormInput>) {
     await updateTicket.mutateAsync(patch);
-  }
-
-  async function handleDelete() {
-    const ok = await confirm({
-      title: "Delete service ticket?",
-      description:
-        "This ticket and its activity notes will be permanently removed. This cannot be undone.",
-      confirmLabel: "Delete ticket",
-      destructive: true,
-    });
-    if (!ok) return;
-    await deleteTicket.mutateAsync(id);
-    router.push("/tickets");
   }
 
   if (isLoading) {
@@ -89,8 +72,6 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6 w-full">
-      <ConfirmDialog {...dialogProps} />
-
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div className="flex items-start gap-4 min-w-0">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)] text-white">
@@ -121,15 +102,6 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
         <div className="flex gap-2 shrink-0">
           <Button variant="outline" size="sm" onClick={() => setEditing((v) => !v)}>
             {editing ? "Cancel" : "Edit"}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDelete}
-            disabled={deleteTicket.isPending}
-            className="text-[var(--error)] border-red-200 dark:border-red-900"
-          >
-            Delete
           </Button>
         </div>
       </div>

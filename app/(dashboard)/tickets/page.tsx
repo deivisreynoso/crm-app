@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ListActions } from "@/components/ui/list-actions";
 import { Badge, ticketPriorityVariant, ticketStatusVariant } from "@/components/ui/badge";
 import {
   PageHeader,
@@ -53,7 +54,7 @@ export default function ServiceTicketsPage() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="input-field w-auto min-w-[160px] h-10 py-0"
+          className="input-field min-w-[160px]"
           aria-label="Filter by status"
         >
           <option value="">All statuses</option>
@@ -82,6 +83,7 @@ export default function ServiceTicketsPage() {
                 <DataTableHeadCell>Ticket #</DataTableHeadCell>
                 <DataTableHeadCell>Subject</DataTableHeadCell>
                 <DataTableHeadCell>Account / Contact</DataTableHeadCell>
+                <DataTableHeadCell>Category</DataTableHeadCell>
                 <DataTableHeadCell>Status</DataTableHeadCell>
                 <DataTableHeadCell>Priority</DataTableHeadCell>
                 <DataTableHeadCell align="right">Actions</DataTableHeadCell>
@@ -128,6 +130,9 @@ export default function ServiceTicketsPage() {
                     </div>
                   </DataTableCell>
                   <DataTableCell>
+                    <span className="text-body-muted">{t.category || "—"}</span>
+                  </DataTableCell>
+                  <DataTableCell>
                     <Badge variant={ticketStatusVariant(t.status)}>
                       {t.status.replace("_", " ")}
                     </Badge>
@@ -138,16 +143,9 @@ export default function ServiceTicketsPage() {
                     </Badge>
                   </DataTableCell>
                   <DataTableCell align="right">
-                    <Link
-                      href={`/tickets/${t.id}`}
-                      className="text-[var(--primary)] hover:underline mr-3"
-                    >
-                      View
-                    </Link>
-                    <button
-                      type="button"
-                      className="text-[var(--error)] hover:underline"
-                      onClick={async () => {
+                    <ListActions
+                      viewHref={`/tickets/${t.id}`}
+                      onDelete={async () => {
                         const ok = await confirm({
                           title: "Delete service ticket?",
                           description:
@@ -158,9 +156,7 @@ export default function ServiceTicketsPage() {
                         if (!ok) return;
                         await deleteTicket.mutateAsync(t.id);
                       }}
-                    >
-                      Delete
-                    </button>
+                    />
                   </DataTableCell>
                 </DataTableRow>
               ))}

@@ -2,7 +2,6 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,13 +11,10 @@ import { ContactOverview } from "@/components/contact/contact-overview";
 import { ActivityPanel } from "@/components/contact/activity-panel";
 import { TasksPanel } from "@/components/contact/tasks-panel";
 import { RecordSectionTabs } from "@/components/crm/record-section-tabs";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EntityRelatedPanel } from "@/components/crm/entity-related-panel";
-import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import {
   useContact,
   useUpdateContact,
-  useDeleteContact,
   useContactNotes,
   useCreateContactNote,
   useContactTasks,
@@ -39,15 +35,12 @@ type MobileTab = "overview" | WorkTab;
 
 export default function ContactDetailPage({ params }: PageProps) {
   const { id } = use(params);
-  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [workTab, setWorkTab] = useState<WorkTab>("related");
   const [mobileTab, setMobileTab] = useState<MobileTab>("overview");
-  const { confirm, dialogProps } = useConfirmDialog();
 
   const { data: contact, isLoading, error } = useContact(id);
   const updateContact = useUpdateContact(id);
-  const deleteContact = useDeleteContact();
   const { data: notes = [] } = useContactNotes(id);
   const createNote = useCreateContactNote(id);
   const { data: tasks = [] } = useContactTasks(id);
@@ -70,19 +63,6 @@ export default function ContactDetailPage({ params }: PageProps) {
 
   async function handleSaveField(patch: Partial<ContactFormInput>) {
     await updateContact.mutateAsync(patch);
-  }
-
-  async function handleDelete() {
-    const ok = await confirm({
-      title: "Delete contact?",
-      description: `${contact?.first_name ?? "This contact"} will be permanently removed. This cannot be undone.`,
-      confirmLabel: "Delete contact",
-      destructive: true,
-    });
-    if (!ok) return;
-    await deleteContact.mutateAsync(id);
-    router.push("/contacts");
-    router.refresh();
   }
 
   if (isLoading) {
@@ -181,7 +161,6 @@ export default function ContactDetailPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6 w-full">
-      <ConfirmDialog {...dialogProps} />
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div className="flex items-start gap-4 min-w-0">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-semibold">
@@ -219,15 +198,6 @@ export default function ContactDetailPage({ params }: PageProps) {
         <div className="flex gap-2 shrink-0">
           <Button variant="outline" size="sm" onClick={() => setIsEditing((v) => !v)}>
             {isEditing ? "Cancel" : "Edit"}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDelete}
-            disabled={deleteContact.isPending}
-            className="text-[var(--error)] border-red-200 dark:border-red-900"
-          >
-            Delete
           </Button>
         </div>
       </div>

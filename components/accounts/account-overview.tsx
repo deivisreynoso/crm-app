@@ -1,6 +1,9 @@
 "use client";
 
 import { InlineEditableField } from "@/components/ui/inline-editable-field";
+import { InlineSelectField } from "@/components/ui/inline-select-field";
+import { INDUSTRIES } from "@/lib/constants/industries";
+import { RecordDates } from "@/components/ui/record-dates";
 import type { Company } from "@/types";
 
 export type AccountPatch = Partial<{
@@ -31,9 +34,11 @@ export function AccountOverview({ account, onSaveField }: AccountOverviewProps) 
         required
         onSave={save("name")}
       />
-      <InlineEditableField
+      <InlineSelectField
         label="Industry"
         value={account.industry}
+        options={INDUSTRIES}
+        allowEmpty
         onSave={save("industry")}
       />
       <InlineEditableField
@@ -71,6 +76,11 @@ export function AccountOverview({ account, onSaveField }: AccountOverviewProps) 
           onSave={save("account_summary")}
         />
       </div>
+      <RecordDates
+        createdAt={account.created_at}
+        updatedAt={account.updated_at}
+        className="sm:col-span-2"
+      />
     </dl>
   );
 }

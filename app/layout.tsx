@@ -34,12 +34,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning className="light">
-      <head>
-        <ThemeInitScript />
-      </head>
       <body
+        suppressHydrationWarning
         className={`${poppins.variable} ${montserrat.variable} antialiased`}
       >
+        <ThemeInitScript />
         <Providers>{children}</Providers>
       </body>
     </html>

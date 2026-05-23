@@ -16,6 +16,8 @@ import {
   DataTableRow,
   DataTableCell,
 } from "@/components/ui/page-shell";
+import { ListActions } from "@/components/ui/list-actions";
+import { INDUSTRIES } from "@/lib/constants/industries";
 import { useCompanies, useCreateCompany, useDeleteCompany } from "@/hooks/useCompanies";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
@@ -27,6 +29,7 @@ export default function AccountsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState("");
   const [website, setWebsite] = useState("");
+  const [industry, setIndustry] = useState("");
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -34,9 +37,11 @@ export default function AccountsPage() {
     await createCompany.mutateAsync({
       name: name.trim(),
       website: website || undefined,
+      industry: industry || undefined,
     });
     setName("");
     setWebsite("");
+    setIndustry("");
     setModalOpen(false);
   }
 
@@ -68,7 +73,7 @@ export default function AccountsPage() {
               <tr>
                 <DataTableHeadCell>Account name</DataTableHeadCell>
                 <DataTableHeadCell>Industry</DataTableHeadCell>
-                <DataTableHeadCell>Phone</DataTableHeadCell>
+                <DataTableHeadCell>Website</DataTableHeadCell>
                 <DataTableHeadCell align="right">Actions</DataTableHeadCell>
               </tr>
             </DataTableHead>
@@ -87,19 +92,12 @@ export default function AccountsPage() {
                     <span className="text-body-muted">{c.industry || "—"}</span>
                   </DataTableCell>
                   <DataTableCell>
-                    <span className="text-body-muted">{c.phone || "—"}</span>
+                    <span className="text-body-muted">{c.website || "—"}</span>
                   </DataTableCell>
                   <DataTableCell align="right">
-                    <Link
-                      href={`/accounts/${c.id}`}
-                      className="text-[var(--primary)] hover:underline mr-3"
-                    >
-                      View
-                    </Link>
-                    <button
-                      type="button"
-                      className="text-[var(--error)] hover:underline"
-                      onClick={async () => {
+                    <ListActions
+                      viewHref={`/accounts/${c.id}`}
+                      onDelete={async () => {
                         const ok = await confirm({
                           title: "Delete account?",
                           description: `“${c.name}” will be permanently removed. Linked contacts will be unlinked.`,
@@ -109,9 +107,7 @@ export default function AccountsPage() {
                         if (!ok) return;
                         await deleteCompany.mutateAsync(c.id);
                       }}
-                    >
-                      Delete
-                    </button>
+                    />
                   </DataTableCell>
                 </DataTableRow>
               ))}
@@ -132,9 +128,22 @@ export default function AccountsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-heading mb-1">
-              Website
-            </label>
+            <FormLabel>Industry</FormLabel>
+            <select
+              value={industry}
+              onChange={(e) => setIndustry(e.target.value)}
+              className="input-field"
+            >
+              <option value="">Select industry</option>
+              {INDUSTRIES.map((i) => (
+                <option key={i} value={i}>
+                  {i}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <FormLabel>Website</FormLabel>
             <input
               value={website}
               onChange={(e) => setWebsite(e.target.value)}
