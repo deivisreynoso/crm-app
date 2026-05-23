@@ -12,6 +12,18 @@ const DEFAULTS = {
   timezone: "UTC",
 };
 
+function newPreferencesRow(
+  userId: string,
+  overrides: Record<string, unknown> = {}
+) {
+  return {
+    id: crypto.randomUUID(),
+    user_id: userId,
+    ...DEFAULTS,
+    ...overrides,
+  };
+}
+
 export async function GET() {
   try {
     const { userId, error } = await requireAuth();
@@ -34,7 +46,7 @@ export async function GET() {
     if (!data) {
       const { data: created, error: insertError } = await supabase
         .from("notification_preferences")
-        .insert({ user_id: userId!, ...DEFAULTS })
+        .insert(newPreferencesRow(userId!))
         .select()
         .single();
       if (insertError) {
@@ -71,19 +83,36 @@ export async function PATCH(req: NextRequest) {
     }
 
     const supabase = createServerSideClient();
-    const { data, error: dbError } = await supabase
+    const updates: Record<string, unknown> = { ...parsed.data };
+    if (parsed.data.timezone !== undefined) {
+      updates.timezone = parsed.data.timezone?.trim() || DEFAULTS.timezone;
+    }
+
+    const { data: existing, error: fetchError } = await supabase
       .from("notification_preferences")
-      .upsert(
-        {
-          user_id: userId!,
-          ...DEFAULTS,
-          ...parsed.data,
-          timezone: parsed.data.timezone?.trim() || DEFAULTS.timezone,
-        },
-        { onConflict: "user_id" }
-      )
-      .select()
-      .single();
+      .select("id")
+      .eq("user_id", userId!)
+      .maybeSingle();
+
+    if (fetchError) {
+      return NextResponse.json(
+        { error: humanizeDbError(fetchError.message) },
+        { status: 500 }
+      );
+    }
+
+    const { data, error: dbError } = existing
+      ? await supabase
+          .from("notification_preferences")
+          .update(updates)
+          .eq("user_id", userId!)
+          .select()
+          .single()
+      : await supabase
+          .from("notification_preferences")
+          .insert(newPreferencesRow(userId!, updates))
+          .select()
+          .single();
 
     if (dbError) {
       return NextResponse.json(
