@@ -22,10 +22,14 @@ export const authOptions: NextAuthOptions = {
 
         if (error || !data.user) return null;
 
+        const fullName = data.user.user_metadata?.full_name as
+          | string
+          | undefined;
+
         return {
           id: data.user.id,
           email: data.user.email,
-          name: data.user.user_metadata?.full_name || data.user.email,
+          name: fullName?.trim() || data.user.email,
         };
       },
     }),

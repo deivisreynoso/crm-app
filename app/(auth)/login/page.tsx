@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -39,23 +40,38 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-8 border border-slate-200">
-      <h1 className="text-2xl font-bold text-slate-900 mb-2">
-        Login to CRM
-      </h1>
-      <p className="text-slate-600 mb-6">
-        Enter your email and password to access your account
+    <div className="bg-[var(--card)] rounded-xl shadow-lg p-8 border border-[var(--card-border)]">
+      <div className="flex justify-center mb-6">
+        <Image
+          src="/brand/logo-light.png"
+          alt="ClickIn"
+          width={160}
+          height={40}
+          className="h-9 w-auto dark:hidden"
+          priority
+        />
+        <Image
+          src="/brand/logo-dark.png"
+          alt="ClickIn"
+          width={160}
+          height={40}
+          className="h-9 w-auto hidden dark:block"
+          priority
+        />
+      </div>
+      <p className="text-[var(--muted)] text-sm text-center mb-6">
+        Sign in to your CRM workspace
       </p>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="bg-red-500/10 border border-[var(--error)] text-[var(--error)] px-4 py-3 rounded-lg mb-4 text-sm">
           {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
+          <label htmlFor="email" className="block text-sm font-medium text-heading mb-1">
             Email
           </label>
           <input
@@ -65,12 +81,12 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             required
-            className="w-full px-4 py-2 border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900"
+            className="input-field"
           />
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
+          <label htmlFor="password" className="block text-sm font-medium text-heading mb-1">
             Password
           </label>
           <input
@@ -80,7 +96,7 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             required
-            className="w-full px-4 py-2 border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900"
+            className="input-field"
           />
         </div>
 
@@ -93,10 +109,10 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <div className="mt-6 pt-6 border-t border-slate-200">
-        <p className="text-sm text-slate-600">
-          Don't have an account?{" "}
-          <Link href="/register" className="text-slate-900 font-medium hover:underline">
+      <div className="mt-6 pt-6 border-t border-[var(--card-border)]">
+        <p className="text-sm text-body-muted">
+          Don&apos;t have an account?{" "}
+          <Link href="/register" className="text-[var(--primary)] font-medium hover:underline">
             Register here
           </Link>
         </p>

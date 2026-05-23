@@ -1,0 +1,270 @@
+"use client";
+
+import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { ContactForm } from "@/components/forms/ContactForm";
+import {
+  PageHeader,
+  DataTableShell,
+  DataTable,
+  DataTableHead,
+  DataTableHeadCell,
+  DataTableBody,
+  DataTableRow,
+  DataTableCell,
+} from "@/components/ui/page-shell";
+import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  useContacts,
+  useCreateContact,
+  useDeleteContact,
+} from "@/hooks/useContacts";
+import type { ContactFormInput } from "@/types";
+import { formatDate } from "@/lib/utils";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+
+function ContactsPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { confirm, dialogProps } = useConfirmDialog();
+  const presetCompanyId = searchParams.get("company_id") ?? searchParams.get("company") ?? "";
+  const presetSearch = searchParams.get("search") ?? "";
+
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState(presetSearch);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [searchInput, setSearchInput] = useState(presetSearch);
+
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      setShowForm(true);
+    }
+    const q = searchParams.get("search");
+    if (q) {
+      setSearch(q);
+      setSearchInput(q);
+    }
+  }, [searchParams]);
+
+  const { data, isLoading, error } = useContacts(
+    page,
+    20,
+    search || undefined,
+    statusFilter || undefined
+  );
+  const createContact = useCreateContact();
+  const deleteContact = useDeleteContact();
+
+  async function handleCreate(contact: ContactFormInput) {
+    const payload = presetCompanyId
+      ? { ...contact, company_id: presetCompanyId }
+      : contact;
+    const result = await createContact.mutateAsync(payload);
+    setShowForm(false);
+    router.refresh();
+    const created = result.data;
+    if (created?.id) {
+      router.push(`/contacts/${created.id}`);
+    }
+  }
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    setSearch(searchInput);
+    setPage(1);
+  }
+
+  const contacts = data?.data ?? [];
+  const total = data?.pagination.total ?? 0;
+  const totalPages = Math.ceil(total / 20) || 1;
+
+  return (
+    <div className="space-y-6 w-full">
+      <ConfirmDialog {...dialogProps} />
+      <PageHeader
+        title="Contacts"
+        description="Manage your customer relationships"
+        actions={
+          <Button onClick={() => setShowForm((v) => !v)}>
+            {showForm ? "Cancel" : "Add Contact"}
+          </Button>
+        }
+      />
+
+      {showForm && (
+        <div className="surface-card p-6">
+          <h2 className="text-lg font-semibold text-[var(--foreground)] mb-4">
+            New Contact
+          </h2>
+          <ContactForm
+            defaultValues={
+              presetCompanyId ? { company_id: presetCompanyId } : undefined
+            }
+            onSubmit={handleCreate}
+            isLoading={createContact.isPending}
+            submitLabel="Create Contact"
+          />
+          {createContact.isError && (
+            <p className="text-sm text-red-600 mt-4">
+              Failed to create contact. Please try again.
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="surface-card p-4">
+        <form
+          onSubmit={handleSearch}
+          className="flex flex-col sm:flex-row gap-3"
+        >
+          <input
+            type="search"
+            placeholder="Search by name, email, or company..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="flex-1 px-4 py-2 border border-[var(--card-border)] rounded-md bg-[var(--card)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
+            className="px-4 py-2 border border-[var(--card-border)] rounded-md bg-[var(--card)] text-[var(--foreground)]"
+          >
+            <option value="">All statuses</option>
+            <option value="lead">Lead</option>
+            <option value="prospect">Prospect</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          <Button type="submit" variant="outline">
+            Search
+          </Button>
+        </form>
+      </div>
+
+      <DataTableShell
+        isLoading={isLoading}
+        empty={
+          !isLoading && !error && contacts.length === 0
+            ? "No contacts yet. Create your first contact to get started."
+            : undefined
+        }
+      >
+        {error ? (
+          <p className="p-6 text-[var(--error)]">Failed to load contacts.</p>
+        ) : contacts.length > 0 ? (
+          <DataTable>
+            <DataTableHead>
+              <tr>
+                <DataTableHeadCell>Name</DataTableHeadCell>
+                <DataTableHeadCell>Email</DataTableHeadCell>
+                <DataTableHeadCell>Company</DataTableHeadCell>
+                <DataTableHeadCell>Status</DataTableHeadCell>
+                <DataTableHeadCell>Created</DataTableHeadCell>
+                <DataTableHeadCell align="right">Actions</DataTableHeadCell>
+              </tr>
+            </DataTableHead>
+            <DataTableBody>
+              {contacts.map((contact) => (
+                <DataTableRow key={contact.id}>
+                  <DataTableCell>
+                    <Link
+                      href={`/contacts/${contact.id}`}
+                      className="font-medium text-heading hover:underline"
+                    >
+                      {contact.first_name} {contact.last_name}
+                    </Link>
+                  </DataTableCell>
+                  <DataTableCell>
+                    <span className="text-body-muted">{contact.email || "—"}</span>
+                  </DataTableCell>
+                  <DataTableCell>
+                    <span className="text-body-muted">{contact.company || "—"}</span>
+                  </DataTableCell>
+                  <DataTableCell>
+                    <Badge variant="info">{contact.status}</Badge>
+                  </DataTableCell>
+                  <DataTableCell>
+                    <span className="text-body-muted">{formatDate(contact.created_at)}</span>
+                  </DataTableCell>
+                  <DataTableCell align="right">
+                    <Link
+                      href={`/contacts/${contact.id}`}
+                      className="text-[var(--primary)] hover:underline mr-3"
+                    >
+                      View
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: "Delete contact?",
+                          description: `${contact.first_name} ${contact.last_name} will be permanently removed. This cannot be undone.`,
+                          confirmLabel: "Delete contact",
+                          destructive: true,
+                        });
+                        if (!ok) return;
+                        try {
+                          await deleteContact.mutateAsync(contact.id);
+                        } catch {
+                          alert("Failed to delete contact.");
+                        }
+                      }}
+                      disabled={deleteContact.isPending}
+                      className="text-[var(--error)] hover:underline disabled:opacity-50"
+                    >
+                      Delete
+                    </button>
+                  </DataTableCell>
+                </DataTableRow>
+              ))}
+            </DataTableBody>
+          </DataTable>
+        ) : null}
+      </DataTableShell>
+
+      {total > 0 && (
+        <div className="flex items-center justify-between surface-card px-4 py-3">
+            <p className="text-sm text-[var(--muted)]">
+              {total} contact{total !== 1 ? "s" : ""} total
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-[var(--muted)] self-center">
+                Page {page} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+      )}
+    </div>
+  );
+}
+
+export default function ContactsPage() {
+  return (
+    <Suspense fallback={<p className="text-[var(--muted)]">Loading contacts…</p>}>
+      <ContactsPageContent />
+    </Suspense>
+  );
+}

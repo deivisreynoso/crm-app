@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { SidebarBrand, SidebarNav } from "@/components/dashboard/sidebar-nav";
+import { SidebarFooter } from "@/components/dashboard/sidebar-footer";
+import { AppHeader } from "@/components/dashboard/app-header";
 
 export const metadata: Metadata = {
-  title: "CRM Dashboard",
+  title: "ClickIn 360 CRM",
 };
 
 export default async function DashboardLayout({
@@ -19,26 +22,25 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <nav className="bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-slate-900">CRM Dashboard</h1>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-slate-600">{session.user?.email}</span>
-            <form action="/api/auth/signout" method="POST">
-              <button
-                type="submit"
-                className="text-sm px-4 py-2 text-slate-600 hover:text-slate-900 border border-slate-300 rounded hover:bg-slate-50"
-              >
-                Logout
-              </button>
-            </form>
-          </div>
+    <div className="min-h-screen flex bg-[var(--background)]">
+      <aside
+        className="w-[280px] shrink-0 flex flex-col border-r border-[var(--sidebar-border)] bg-[var(--sidebar)]"
+        aria-label="Sidebar"
+      >
+        <div className="px-5 py-6 border-b border-[var(--sidebar-border)]">
+          <SidebarBrand />
         </div>
-      </nav>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {children}
-      </main>
+        <div className="flex-1 px-3 py-5 overflow-y-auto">
+          <SidebarNav />
+        </div>
+        <SidebarFooter />
+      </aside>
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="shrink-0 sticky top-0 z-20 border-b border-[var(--header-border)] bg-[var(--header)] backdrop-blur-md px-6 lg:px-10 py-3">
+          <AppHeader user={session.user ?? {}} />
+        </header>
+        <main className="flex-1 p-6 lg:p-8 overflow-auto w-full">{children}</main>
+      </div>
     </div>
   );
 }

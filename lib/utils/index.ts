@@ -23,6 +23,22 @@ export function formatDate(date: string | Date): string {
   });
 }
 
+// Format date and time
+export function formatDateTime(date: string | Date): string {
+  return new Date(date).toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+export function formatWebsiteUrl(url: string): string {
+  if (!url) return '';
+  return url.startsWith('http') ? url : `https://${url}`;
+}
+
 // Format time ago
 export function formatTimeAgo(date: string | Date): string {
   const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
