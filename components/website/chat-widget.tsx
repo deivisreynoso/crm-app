@@ -189,18 +189,24 @@ export function ChatWidget({
   }, [open, variant, welcomed, messages.length, t.welcome]);
 
   useEffect(() => {
-    listRef.current?.scrollTo({
+    if (!listRef.current) return;
+    listRef.current.scrollTo({
       top: listRef.current.scrollHeight,
-      behavior: "smooth",
+      behavior: variant === "inline" ? "auto" : "smooth",
     });
-  }, [messages, loading]);
+  }, [messages, loading, variant]);
 
   useEffect(() => {
+    // Inline chat sits mid-page — autofocus scrolls the viewport to #chat on load.
+    if (variant === "inline") return;
     if (open && !minimized) {
-      const timer = window.setTimeout(() => inputRef.current?.focus(), 200);
+      const timer = window.setTimeout(
+        () => inputRef.current?.focus({ preventScroll: true }),
+        200
+      );
       return () => window.clearTimeout(timer);
     }
-  }, [open, minimized]);
+  }, [open, minimized, variant]);
 
   const postMessage = useCallback(
     async (text: string, userMessageId?: string) => {
