@@ -6,7 +6,7 @@ import { getGoogleOAuthEnvStatus } from "@/lib/google/oauth-config";
 
 export async function GET(req: Request) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const oauth = getGoogleOAuthEnvStatus(req.url);
@@ -24,7 +24,7 @@ export async function GET(req: Request) {
     const { data } = await supabase
       .from("google_calendar_tokens")
       .select("id, expires_at")
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .maybeSingle();
 
     return NextResponse.json({

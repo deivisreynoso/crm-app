@@ -26,7 +26,7 @@ function newPreferencesRow(
 
 export async function GET() {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const supabase = createServerSideClient();
@@ -70,7 +70,7 @@ export async function GET() {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const body = await req.json();

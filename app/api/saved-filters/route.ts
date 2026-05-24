@@ -6,7 +6,7 @@ import { formatValidationDetails, humanizeDbError } from "@/lib/validation-error
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const entityType = new URL(req.url).searchParams.get("entity_type");
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     let query = supabase
       .from("saved_filters")
       .select("*")
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .order("name");
 
     if (entityType) {
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const body = await req.json();
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     const { data, error: dbError } = await supabase
       .from("saved_filters")
       .insert({
-        user_id: userId!,
+        user_id: workspaceOwnerId!,
         name: parsed.data.name.trim(),
         entity_type: parsed.data.entity_type,
         filter_config: parsed.data.filter_config,

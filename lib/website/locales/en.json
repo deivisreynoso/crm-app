@@ -1,0 +1,307 @@
+{
+  "meta": {
+    "title": "ClickIn 360 — AI & automation for your eCommerce store",
+    "description": "Reduce friction before and after purchase with systems connected to your real store data."
+  },
+  "nav": {
+    "problem": "Problem",
+    "solution": "How it works",
+    "offers": "Offers",
+    "platforms": "Platforms",
+    "about": "About",
+    "faq": "FAQ",
+    "book": "Book a call",
+    "bookCta": "Book",
+    "login": "CRM"
+  },
+  "hero": {
+    "badge": "AI assistants for eCommerce",
+    "headlineLine1": "Your assistant.",
+    "headlineLine2": "Your store, ",
+    "headlineAccent": "powered up",
+    "subheadline": "AI and automation connected to your real store data—faster answers, recovered carts, and less manual support work.",
+    "ctaPrimary": "Book a free discovery call",
+    "ctaSecondary": "Chat with AI",
+    "stats": [
+      { "value": "24/7", "label": "Connected support" },
+      { "value": "Shopify", "label": "& WooCommerce" },
+      { "value": "WhatsApp", "label": "Post-purchase" }
+    ]
+  },
+  "problem": {
+    "title": "Customer friction costs you sales and time",
+    "subtitle": "Before and after checkout, the same questions drain your team.",
+    "beforeTitle": "Before purchase",
+    "beforePoints": [
+      "Product questions slow checkout",
+      "Abandoned carts with no follow-up",
+      "Store data disconnected from the experience"
+    ],
+    "afterTitle": "After purchase",
+    "afterPoints": [
+      "Order status and shipping all day long",
+      "Manual refunds and returns",
+      "Support growing faster than your team"
+    ]
+  },
+  "solution": {
+    "title": "How ClickIn 360 works",
+    "subtitle": "Automation for predictable work. AI for conversation. Your team approves what matters.",
+    "steps": [
+      { "title": "Right channel", "desc": "Web, WhatsApp, Instagram, or Messenger for each moment." },
+      { "title": "Understands intent", "desc": "Detects product, order, shipping, or return requests." },
+      { "title": "Real data", "desc": "Pulls from your catalog, orders, policies, and FAQs." },
+      { "title": "Respond or act", "desc": "Automates repeat work; AI handles flexible chat." },
+      { "title": "Escalate with context", "desc": "Sensitive cases reach your team with full history." }
+    ]
+  },
+  "offers": {
+    "sectionTitle": "Current offers",
+    "sectionSubtitle": "Ready-made packages to automate your business, sell more, and improve customer experience.",
+    "includesTitle": "Includes",
+    "cta": "Book a call",
+    "ctaSubtle": "I want this package",
+    "featuredBadge": "Most complete",
+    "packages": [
+      {
+        "label": "Offer #1",
+        "title": "ECOMMERCE + CRM + WHATSAPP",
+        "tagline": "Everything you need to automate your business, sell more, and deliver a better customer experience.",
+        "image": "/website/offer-1.webp",
+        "featured": false,
+        "includes": [
+          "Full system implementation",
+          "Integrated CRM",
+          "WhatsApp automation",
+          "Lead capture and follow-up",
+          "Social and form integrations",
+          "Funnel and automation setup",
+          "Basic training"
+        ]
+      },
+      {
+        "label": "Offer #2",
+        "title": "ECOMMERCE + CRM + WHATSAPP + AI",
+        "tagline": "Everything you need to automate your business, sell more, and deliver a better customer experience.",
+        "image": "/website/offer-2.webp",
+        "featured": true,
+        "includes": [
+          "Full system implementation",
+          "Integrated CRM",
+          "WhatsApp automation",
+          "AI for support and follow-up",
+          "Lead capture and follow-up",
+          "Social and form integrations",
+          "Funnel and automation setup",
+          "FREE hosting for 1 year",
+          "FREE domain for 1 year",
+          "Basic training"
+        ]
+      }
+    ],
+    "outcomes": {
+      "title": "Business benefits",
+      "subtitle": "Both packages are built to deliver the same operational outcomes.",
+      "benefits": [
+        "24/7 automated responses",
+        "Organized contacts and prospects",
+        "Structured client follow-up",
+        "Less manual work, more efficiency",
+        "Recovered sales opportunities",
+        "Better customer experience"
+      ],
+      "idealTitle": "Ideal for",
+      "idealFor": [
+        "Ecommerce",
+        "Service businesses",
+        "Online stores",
+        "Growing companies"
+      ]
+    },
+    "voice": {
+      "title": "AI voice",
+      "subtitle": "Optional add-on",
+      "desc": "For stores with a support phone line and frequent call volume. Routes, handles common requests, and captures context—no autonomous refund approvals.",
+      "bullets": ["Order and shipping by phone", "Routing and callbacks", "Fewer missed calls"]
+    }
+  },
+  "ctaSubtle": {
+    "book": "Book a discovery call",
+    "chat": "Chat with AI"
+  },
+  "platforms": {
+    "title": "Platforms & channels",
+    "subtitle": "Shopify and WooCommerce first. Other platforms with reliable API access.",
+    "platformsTitle": "eCommerce",
+    "channelsTitle": "Channels",
+    "platforms": ["Shopify", "WooCommerce", "Tiendanube", "Others with API"],
+    "channels": ["WhatsApp", "Web chat", "Instagram DM", "Messenger", "Phone (voice)"]
+  },
+  "about": {
+    "title": "About ClickIn 360",
+    "subtitle": "We build systems—not hype chatbots.",
+    "paragraphs": [
+      "We're a startup focused on B2C stores in Mexico, LATAM, and the US that want real friction reduction—with connected data and workflows your team controls.",
+      "We don't promise magic or replacing your people: we automate repeat work and keep approvals, exceptions, and financial decisions human.",
+      "Every project starts with a discovery call to align scope, integrations, and channels."
+    ],
+    "values": [
+      { "title": "Connected data", "desc": "Answers grounded in your catalog, orders, and policies." },
+      { "title": "Right channel", "desc": "On-site before checkout; WhatsApp after." },
+      { "title": "Human judgment", "desc": "Refunds and exceptions with clear rules." }
+    ]
+  },
+  "faq": {
+    "title": "Frequently asked questions",
+    "subtitle": "Clear answers about how we work."
+  },
+  "faqItems": [
+    {
+      "category": "About the system",
+      "items": [
+        {
+          "q": "Is this just a chatbot?",
+          "a": "No. ClickIn 360 builds systems connected to real store data and workflows (products, orders, shipping, policies, FAQs, carts)—not generic text-only bots."
+        },
+        {
+          "q": "How does the system work?",
+          "a": "It connects your channels (WhatsApp, Instagram, etc.) to business data, understands each request, pulls relevant information, and responds automatically. Human judgment cases route to your team."
+        },
+        {
+          "q": "How long does implementation take?",
+          "a": "It depends on scope and integration complexity—defined on your discovery call with our technical team."
+        },
+        {
+          "q": "Do I need to change my eCommerce platform?",
+          "a": "No. We integrate with your existing platform when reliable API access is available."
+        },
+        {
+          "q": "Can it run on multiple channels at once?",
+          "a": "Yes—WhatsApp, Instagram DM, Messenger, and web chat can run together in one implementation."
+        }
+      ]
+    },
+    {
+      "category": "WhatsApp",
+      "items": [
+        {
+          "q": "Does it work with WhatsApp?",
+          "a": "Yes—especially for post-purchase and off-site conversations. Pre-purchase on-site uses web chat, product/cart assistants, or embed widgets. Instagram DM and Messenger are evaluated per case."
+        },
+        {
+          "q": "Do I need WhatsApp Business?",
+          "a": "It's preferred. We can review setup on your discovery call. Advanced integrations use WhatsApp Business API (Meta), which requires Meta approval."
+        },
+        {
+          "q": "Can the system send outbound messages?",
+          "a": "Yes, within WhatsApp Business API policies—order/shipping updates, cart reminders, and post-sale follow-ups using approved templates."
+        }
+      ]
+    },
+    {
+      "category": "Specific automation",
+      "items": [
+        {
+          "q": "Can it automate returns?",
+          "a": "Yes—eligibility checks, order data collection, return instructions, and refund status updates. Final refund approval always stays with your team."
+        },
+        {
+          "q": "Can it handle angry customers?",
+          "a": "It can detect tone and route delicate cases to humans—it won't try to resolve complex complaints autonomously."
+        },
+        {
+          "q": "Can it answer product-specific questions?",
+          "a": "Yes, when your platform provides reliable product data. Answer depth depends on what's available."
+        },
+        {
+          "q": "Can it follow up on abandoned carts?",
+          "a": "Yes—when your platform supports it, with automated follow-ups via WhatsApp or other channels."
+        },
+        {
+          "q": "Can it integrate with my CRM?",
+          "a": "Depends on the CRM. We work with tools like GoHighLevel and HubSpot; others are evaluated case by case."
+        },
+        {
+          "q": "Can AI approve refunds, discounts, or cancellations?",
+          "a": "Not by default—these require clear rules and approval paths. AI facilitates; humans authorize financial actions."
+        }
+      ]
+    },
+    {
+      "category": "Team & business",
+      "items": [
+        {
+          "q": "Does AI replace my team?",
+          "a": "No—it reduces manual work on common interactions. Your team keeps approvals, exceptions, complaints, refunds, discounts, and sensitive cases."
+        },
+        {
+          "q": "What happens when AI can't resolve a case?",
+          "a": "It routes to your team with full conversation context—customers don't have to repeat everything."
+        },
+        {
+          "q": "Do I need a technical team to maintain it?",
+          "a": "Not necessarily—we handle implementation and configuration. Ongoing maintenance depends on scope in your proposal."
+        },
+        {
+          "q": "Do you guarantee more sales?",
+          "a": "No—we reduce friction; results depend on traffic, product, offer, pricing, demand, and execution."
+        },
+        {
+          "q": "Can it work with a custom platform?",
+          "a": "Possibly, with reliable API access—requires technical review before confirming scope."
+        },
+        {
+          "q": "Do you offer voice agents?",
+          "a": "Yes, as an add-on for stores with a support phone line and frequent call volume."
+        },
+        {
+          "q": "What store data do you need?",
+          "a": "Typically products, orders, inventory, shipping, tracking, policies, FAQs, and customer data when available—defined on the technical call."
+        },
+        {
+          "q": "Is it safe to give you store data access?",
+          "a": "We use read-only access where possible and minimum permissions per integration. Security details are reviewed on your discovery call."
+        }
+      ]
+    }
+  ],
+  "chat": {
+    "title": "Prefer to talk first?",
+    "desc": "Our AI agent qualifies your store in minutes. If chat isn't available, use the booking form.",
+    "cta": "Open chat",
+    "embedLoading": "Loading chat…",
+    "embedUnavailable": "Live chat will be enabled soon. In the meantime, book a discovery call."
+  },
+  "cta": {
+    "title": "Ready to reduce friction in your store?",
+    "subtitle": "Book a discovery call—no commitment.",
+    "book": "Book a free discovery call",
+    "chat": "Chat with AI"
+  },
+  "footer": {
+    "tagline": "AI & automation connected to your eCommerce store.",
+    "rights": "All rights reserved.",
+    "privacy": "Privacy",
+    "login": "CRM Login",
+    "howItWorks": "How it works",
+    "contact": "Contact"
+  },
+  "pages": {
+    "about": {
+      "title": "About ClickIn 360 — eCommerce AI & automation",
+      "description": "How we build systems connected to real store data for B2C brands."
+    },
+    "howItWorks": {
+      "title": "How ClickIn 360 works",
+      "description": "Automation, AI, and human escalation to reduce friction in your store."
+    },
+    "offers": {
+      "title": "eCommerce + CRM + WhatsApp packages",
+      "description": "Current offers to automate sales, support, and follow-up."
+    }
+  },
+  "login": {
+    "inviteOnly": "CRM access is invite-only.",
+    "backToSite": "Back to website"
+  }
+}

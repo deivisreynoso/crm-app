@@ -4,7 +4,7 @@ import { createServerSideClient } from "@/lib/supabase";
 
 export async function GET() {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const supabase = createServerSideClient();
@@ -13,20 +13,20 @@ export async function GET() {
       supabase
         .from("contacts")
         .select("*", { count: "exact", head: true })
-        .eq("user_id", userId!),
+        .eq("user_id", workspaceOwnerId!),
       supabase
         .from("opportunities")
         .select("*", { count: "exact", head: true })
-        .eq("user_id", userId!),
+        .eq("user_id", workspaceOwnerId!),
       supabase
         .from("tickets")
         .select("*", { count: "exact", head: true })
-        .eq("user_id", userId!)
+        .eq("user_id", workspaceOwnerId!)
         .in("status", ["open", "in_progress", "on_hold"]),
       supabase
         .from("tasks")
         .select("*", { count: "exact", head: true })
-        .eq("user_id", userId!)
+        .eq("user_id", workspaceOwnerId!)
         .in("status", ["open", "in_progress"]),
     ]);
 

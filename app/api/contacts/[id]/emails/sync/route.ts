@@ -7,7 +7,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(_req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id: contactId } = await context.params;
@@ -17,7 +17,7 @@ export async function POST(_req: NextRequest, context: RouteContext) {
       .from("contacts")
       .select("id, email")
       .eq("id", contactId)
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .maybeSingle();
 
     if (contactError || !contact) {

@@ -12,7 +12,7 @@ function emptyToNull(value: string | undefined): string | null {
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const params = new URL(req.url).searchParams;
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     let query = supabase
       .from("calendar_events")
       .select("*")
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .order("start_time", { ascending: true });
 
     const contactId = params.get("contact_id");
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const body = await req.json();
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerSideClient();
     const row = {
-      user_id: userId!,
+      user_id: workspaceOwnerId!,
       contact_id: parsed.data.contact_id?.trim() || null,
       company_id: parsed.data.company_id?.trim() || null,
       opportunity_id: parsed.data.opportunity_id?.trim() || null,
@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
 
     let googleEventId: string | null = null;
     try {
-      googleEventId = await createGoogleCalendarEvent(userId!, {
+      googleEventId = await createGoogleCalendarEvent(workspaceOwnerId!, {
         title: row.title,
         description: row.description,
         location: row.location,
@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq("id", created.id)
-        .eq("user_id", userId!)
+        .eq("user_id", workspaceOwnerId!)
         .select()
         .single();
 

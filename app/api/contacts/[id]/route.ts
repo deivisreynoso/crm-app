@@ -16,7 +16,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;
@@ -26,7 +26,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       .from("contacts")
       .select("*")
       .eq("id", id)
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .single();
 
     if (dbError || !data) {
@@ -60,7 +60,7 @@ async function patchContact(
 
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;
@@ -78,7 +78,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const supabase = createServerSideClient();
 
     if (parsed.data.email !== undefined || parsed.data.phone !== undefined) {
-      const duplicate = await findDuplicateContact(supabase, userId!, {
+      const duplicate = await findDuplicateContact(supabase, workspaceOwnerId!, {
         email: parsed.data.email,
         phone: parsed.data.phone,
         excludeId: id,
@@ -96,10 +96,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       updated_at: new Date().toISOString(),
     };
 
-    let { data, error: dbError } = await patchContact(
-      supabase,
-      id,
-      userId!,
+    let { data, error: dbError } = await patchContact(supabase, id, workspaceOwnerId!,
       baseUpdates
     );
 
@@ -109,10 +106,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       /country/i.test(dbError.message)
     ) {
       const { country: _c, ...withoutCountry } = baseUpdates;
-      ({ data, error: dbError } = await patchContact(
-        supabase,
-        id,
-        userId!,
+      ({ data, error: dbError } = await patchContact(supabase, id, workspaceOwnerId!,
         withoutCountry
       ));
     }
@@ -141,7 +135,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     );
     if (changedKeys.length > 0) {
       await logContactActivity(supabase, {
-        userId: userId!,
+        userId: workspaceOwnerId!,
         contactId: id,
         type: "update",
         description: `Contact updated: ${changedKeys.slice(0, 5).join(", ")}${changedKeys.length > 5 ? "…" : ""}`,
@@ -161,7 +155,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
 export async function DELETE(_req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;
@@ -171,7 +165,7 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
       .from("contacts")
       .delete()
       .eq("id", id)
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .select()
       .single();
 

@@ -144,6 +144,12 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
           <InlineEditableField
+            label="Platform"
+            value={contact.platform}
+            placeholder="e.g. Shopify, WooCommerce"
+            onSave={save("platform")}
+          />
+          <InlineEditableField
             label="Friction area"
             value={contact.friction_area}
             placeholder="Not set yet"

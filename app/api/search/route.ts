@@ -4,7 +4,7 @@ import { createServerSideClient } from "@/lib/supabase";
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const q = new URL(req.url).searchParams.get("q")?.trim();
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
       supabase
         .from("contacts")
         .select("id, first_name, last_name, email, company")
-        .eq("user_id", userId!)
+        .eq("user_id", workspaceOwnerId!)
         .or(
           `first_name.ilike.${pattern},last_name.ilike.${pattern},email.ilike.${pattern},company.ilike.${pattern}`
         )
@@ -27,13 +27,13 @@ export async function GET(req: NextRequest) {
       supabase
         .from("companies")
         .select("id, name, industry")
-        .eq("user_id", userId!)
+        .eq("user_id", workspaceOwnerId!)
         .or(`name.ilike.${pattern},industry.ilike.${pattern}`)
         .limit(5),
       supabase
         .from("tickets")
         .select("id, title, subject, ticket_number, status")
-        .eq("user_id", userId!)
+        .eq("user_id", workspaceOwnerId!)
         .or(
           `title.ilike.${pattern},subject.ilike.${pattern},ticket_number.ilike.${pattern}`
         )
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
       supabase
         .from("opportunities")
         .select("id, title, stage, value")
-        .eq("user_id", userId!)
+        .eq("user_id", workspaceOwnerId!)
         .ilike("title", pattern)
         .limit(5),
     ]);

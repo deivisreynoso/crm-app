@@ -16,7 +16,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id: contactId } = await context.params;
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
       .from("contacts")
       .select("id, first_name, last_name, email, phone, company, company_id")
       .eq("id", contactId)
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .maybeSingle();
 
     if (contactError || !contact) {
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
         .from("email_templates")
         .select("subject, body")
         .eq("id", parsed.data.template_id)
-        .eq("user_id", userId!)
+        .eq("user_id", workspaceOwnerId!)
         .maybeSingle();
 
       if (!template) {
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
           .from("companies")
           .select("name")
           .eq("id", contact.company_id)
-          .eq("user_id", userId!)
+          .eq("user_id", workspaceOwnerId!)
           .maybeSingle();
         companyName = company?.name;
       }
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
       );
     }
 
-    const sent = await sendGmailMessage(userId!, { to, subject, body: emailBody });
+    const sent = await sendGmailMessage(workspaceOwnerId!, { to, subject, body: emailBody });
 
     if (!sent) {
       return NextResponse.json(
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     try {
       await saveContactEmail(supabase, {
-        user_id: userId!,
+        user_id: workspaceOwnerId!,
         contact_id: contactId,
         direction: "outbound",
         gmail_message_id: sent.messageId,
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     await logEmailContactActivity(supabase, {
-      userId: userId!,
+      userId: workspaceOwnerId!,
       contactId,
       direction: "outbound",
       subject,

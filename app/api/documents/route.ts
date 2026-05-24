@@ -11,7 +11,7 @@ import { formatValidationDetails } from "@/lib/validation-errors";
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const params = new URL(req.url).searchParams;
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     let query = supabase
       .from("documents")
       .select("*")
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .order("created_at", { ascending: false });
 
     const contactId = params.get("contact_id");
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const contentType = req.headers.get("content-type") ?? "";
@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
     }
 
     const record = {
-      ...buildDocumentRecord(parsed.data, userId!, fileMeta),
+      ...buildDocumentRecord(parsed.data, workspaceOwnerId!, fileMeta),
       id: docId,
       storage_path: fileMeta?.storage_path ?? null,
     };

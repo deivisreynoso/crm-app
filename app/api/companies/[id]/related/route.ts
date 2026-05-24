@@ -6,11 +6,11 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;
-    const data = await getCompanyRelated(userId!, id);
+    const data = await getCompanyRelated(workspaceOwnerId!, id);
 
     return NextResponse.json(data);
   } catch (err) {

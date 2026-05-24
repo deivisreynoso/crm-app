@@ -10,7 +10,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;
@@ -19,7 +19,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       .from("documents")
       .select("*")
       .eq("id", id)
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .single();
 
     if (dbError || !data) {
@@ -41,7 +41,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;
@@ -60,7 +60,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       .from("documents")
       .select("*")
       .eq("id", id)
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .single();
 
     if (!existing) {
@@ -69,7 +69,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     if (parsed.data.content !== undefined && parsed.data.content !== existing.content) {
       try {
-        await snapshotDocumentVersion(supabase, userId!, existing);
+        await snapshotDocumentVersion(supabase, workspaceOwnerId!, existing);
       } catch (versionErr) {
         console.warn("Document version snapshot skipped:", versionErr);
       }
@@ -100,7 +100,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       .from("documents")
       .update(updates)
       .eq("id", id)
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .select()
       .single();
 
@@ -117,7 +117,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
 export async function DELETE(_req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;
@@ -126,7 +126,7 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
       .from("documents")
       .delete()
       .eq("id", id)
-      .eq("user_id", userId!);
+      .eq("user_id", workspaceOwnerId!);
 
     if (dbError) {
       return NextResponse.json({ error: dbError.message }, { status: 500 });

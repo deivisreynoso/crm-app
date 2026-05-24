@@ -5,7 +5,7 @@ import { humanizeDbError } from "@/lib/validation-errors";
 
 export async function GET() {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const supabase = createServerSideClient();
@@ -18,7 +18,7 @@ export async function GET() {
         opportunity:opportunities(id, title)
       `
       )
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .order("created_at", { ascending: false })
       .limit(100);
 

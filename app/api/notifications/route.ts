@@ -4,7 +4,7 @@ import { createServerSideClient } from "@/lib/supabase";
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const unreadOnly = new URL(req.url).searchParams.get("unread") === "true";

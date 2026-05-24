@@ -7,7 +7,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;
@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       .from("pipelines")
       .select("*")
       .eq("id", id)
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .single();
 
     if (dbError || !data) {
@@ -36,7 +36,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;
@@ -58,7 +58,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .select()
       .single();
 
@@ -78,7 +78,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
 export async function DELETE(_req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;
@@ -87,7 +87,7 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
     const { count } = await supabase
       .from("pipelines")
       .select("*", { count: "exact", head: true })
-      .eq("user_id", userId!);
+      .eq("user_id", workspaceOwnerId!);
 
     if ((count ?? 0) <= 1) {
       return NextResponse.json(
@@ -100,7 +100,7 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
       .from("opportunities")
       .select("*", { count: "exact", head: true })
       .eq("pipeline_id", id)
-      .eq("user_id", userId!);
+      .eq("user_id", workspaceOwnerId!);
 
     if ((oppCount ?? 0) > 0) {
       return NextResponse.json(
@@ -115,7 +115,7 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
       .from("pipelines")
       .delete()
       .eq("id", id)
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .select()
       .single();
 

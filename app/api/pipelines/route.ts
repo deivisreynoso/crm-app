@@ -6,14 +6,14 @@ import { DEFAULT_PIPELINE_STAGES } from "@/lib/constants/pipelines";
 
 export async function GET() {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const supabase = createServerSideClient();
     let { data, error: dbError } = await supabase
       .from("pipelines")
       .select("*")
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .order("created_at", { ascending: true });
 
     if (dbError) throw dbError;
@@ -23,7 +23,7 @@ export async function GET() {
         .from("pipelines")
         .insert([
           {
-            user_id: userId,
+            user_id: workspaceOwnerId,
             name: "Sales Pipeline",
             stages: DEFAULT_PIPELINE_STAGES,
           },
@@ -47,7 +47,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const body = await req.json();
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
       .from("pipelines")
       .insert([
         {
-          user_id: userId,
+          user_id: workspaceOwnerId,
           name: parsed.data.name,
           stages: parsed.data.stages,
         },

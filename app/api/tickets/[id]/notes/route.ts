@@ -18,11 +18,11 @@ async function verifyTicketOwnership(userId: string, ticketId: string) {
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id: ticketId } = await context.params;
-    if (!(await verifyTicketOwnership(userId!, ticketId))) {
+    if (!(await verifyTicketOwnership(workspaceOwnerId!, ticketId))) {
       return NextResponse.json({ error: "Service ticket not found" }, { status: 404 });
     }
 
@@ -30,7 +30,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     const { data, error: dbError } = await supabase
       .from("notes")
       .select("*")
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .eq("entity_type", "ticket")
       .eq("entity_id", ticketId)
       .order("created_at", { ascending: false });
@@ -46,11 +46,11 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id: ticketId } = await context.params;
-    if (!(await verifyTicketOwnership(userId!, ticketId))) {
+    if (!(await verifyTicketOwnership(workspaceOwnerId!, ticketId))) {
       return NextResponse.json({ error: "Service ticket not found" }, { status: 404 });
     }
 
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
       .from("notes")
       .insert([
         {
-          user_id: userId,
+          user_id: workspaceOwnerId,
           entity_type: "ticket",
           entity_id: ticketId,
           content: parsed.data.content,

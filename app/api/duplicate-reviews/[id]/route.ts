@@ -8,7 +8,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;
@@ -21,7 +21,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       .from("duplicate_reviews")
       .select("*")
       .eq("id", id)
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .single();
 
     if (fetchError || !review) {
@@ -54,13 +54,13 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         .from("contacts")
         .select("*")
         .eq("id", primaryId)
-        .eq("user_id", userId!)
+        .eq("user_id", workspaceOwnerId!)
         .single();
       const { data: secondary } = await supabase
         .from("contacts")
         .select("*")
         .eq("id", secondaryId)
-        .eq("user_id", userId!)
+        .eq("user_id", workspaceOwnerId!)
         .single();
 
       if (!primary || !secondary) {
@@ -70,7 +70,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       try {
         await mergeContacts(
           supabase,
-          userId!,
+          workspaceOwnerId!,
           primary as ContactRow,
           secondary as ContactRow
         );

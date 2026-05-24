@@ -1,22 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { AuthBrandHeader } from "@/components/auth/auth-brand-header";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("registered") === "true") {
+      setNotice("Account created. Sign in with your email and password.");
+    } else if (searchParams.get("error") === "invite_only") {
+      setNotice(
+        "CRM registration is invite-only. Use the link from your team admin, or sign in if you already have access."
+      );
+    }
+  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setNotice(null);
     if (!email.trim()) {
       setError("Enter your email address.");
       return;
@@ -60,6 +73,12 @@ export default function LoginPage() {
         <p className="text-body-muted text-sm mt-1.5">Sign in to your CRM workspace</p>
       </div>
 
+      {notice && (
+        <div className="bg-[var(--secondary)]/10 border border-[var(--secondary)]/40 text-heading px-4 py-3 rounded-lg mb-4 text-sm">
+          {notice}
+        </div>
+      )}
+
       {error && (
         <div className="bg-red-500/10 border border-[var(--error)] text-[var(--error)] px-4 py-3 rounded-lg mb-4 text-sm">
           {error}
@@ -100,14 +119,30 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <div className="mt-6 pt-6 border-t border-[var(--card-border)]">
+      <div className="mt-6 pt-6 border-t border-[var(--card-border)] space-y-2">
         <p className="text-sm text-body-muted">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-[var(--primary)] font-medium hover:underline">
-            Register here
+          Need CRM access? Ask your team admin for an invitation link.
+        </p>
+        <p className="text-sm text-body-muted">
+          <Link href="/es" className="text-[var(--primary)] font-medium hover:underline">
+            Volver al sitio ClickIn 360
           </Link>
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="surface-card p-8 border border-[var(--card-border)] shadow-[var(--shadow-md)]">
+          <p className="text-sm text-body-muted">Loading…</p>
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

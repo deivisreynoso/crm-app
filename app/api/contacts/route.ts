@@ -13,7 +13,7 @@ import { formatValidationDetails, humanizeDbError } from "@/lib/validation-error
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { searchParams } = new URL(req.url);
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     let query = supabase
       .from("contacts")
       .select("*", { count: "exact" })
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .order("created_at", { ascending: false });
 
     if (status) {
@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const body = await req.json();
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServerSideClient();
-    const duplicate = await findDuplicateContact(supabase, userId!, {
+    const duplicate = await findDuplicateContact(supabase, workspaceOwnerId!, {
       email: parsed.data.email,
       phone: parsed.data.phone,
     });
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const payload = buildContactRecord(parsed.data, userId!);
+    const payload = buildContactRecord(parsed.data, workspaceOwnerId!);
 
     const { data, error: dbError } = await supabase
       .from("contacts")

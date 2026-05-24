@@ -15,11 +15,11 @@ import { formatValidationDetails, humanizeDbError } from "@/lib/validation-error
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const params = new URL(req.url).searchParams;
-    const data = await listTicketsEnriched(userId!, {
+    const data = await listTicketsEnriched(workspaceOwnerId!, {
       contact_id: params.get("contact_id") ?? undefined,
       company_id: params.get("company_id") ?? undefined,
       status: params.get("status") ?? undefined,
@@ -49,7 +49,7 @@ async function insertTicket(
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const body = await req.json();
@@ -65,21 +65,21 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServerSideClient();
-    const record = buildTicketRecord(parsed.data, userId!);
-    let ticketNumber = await generateServiceTicketNumber(userId!);
+    const record = buildTicketRecord(parsed.data, workspaceOwnerId!);
+    let ticketNumber = await generateServiceTicketNumber(workspaceOwnerId!);
 
     let { data, error: dbError } = await insertTicket(
       supabase,
-      userId!,
+      workspaceOwnerId!,
       record,
       ticketNumber
     );
 
     if (dbError && isTicketNumberConflict(dbError.message)) {
-      ticketNumber = await generateServiceTicketNumber(userId!);
+      ticketNumber = await generateServiceTicketNumber(workspaceOwnerId!);
       ({ data, error: dbError } = await insertTicket(
         supabase,
-        userId!,
+        workspaceOwnerId!,
         record,
         ticketNumber
       ));
@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
 
     if (parsed.data.contact_id) {
       await logContactActivity(supabase, {
-        userId: userId!,
+        userId: workspaceOwnerId!,
         contactId: parsed.data.contact_id,
         type: "created",
         description: `Service ticket created: ${label}`,

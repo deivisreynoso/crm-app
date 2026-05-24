@@ -4,11 +4,11 @@ import { getOperationsMetrics } from "@/lib/analytics/operations";
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const params = new URL(req.url).searchParams;
-    const data = await getOperationsMetrics(userId!, {
+    const data = await getOperationsMetrics(workspaceOwnerId!, {
       startDate: params.get("start_date") ?? undefined,
       endDate: params.get("end_date") ?? undefined,
     });

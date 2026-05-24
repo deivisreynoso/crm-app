@@ -6,14 +6,14 @@ import { formatValidationDetails } from "@/lib/validation-errors";
 
 export async function GET() {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const supabase = createServerSideClient();
     const { data, error: dbError } = await supabase
       .from("document_templates")
       .select("*")
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .order("name");
 
     if (dbError) {
@@ -35,7 +35,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const body = await req.json();
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     const { data, error: dbError } = await supabase
       .from("document_templates")
       .insert({
-        user_id: userId!,
+        user_id: workspaceOwnerId!,
         name: parsed.data.name,
         type: parsed.data.type ?? null,
         content: parsed.data.content?.trim() || null,

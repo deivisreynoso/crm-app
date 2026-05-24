@@ -5,7 +5,7 @@ import { revokeGoogleToken } from "@/lib/google/revoke-google-token";
 
 export async function DELETE() {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const supabase = createServerSideClient();
@@ -13,7 +13,7 @@ export async function DELETE() {
     const { data: row } = await supabase
       .from("google_gmail_tokens")
       .select("refresh_token, access_token")
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .maybeSingle();
 
     const tokenToRevoke = row?.refresh_token ?? row?.access_token;
@@ -24,7 +24,7 @@ export async function DELETE() {
     const { error: dbError } = await supabase
       .from("google_gmail_tokens")
       .delete()
-      .eq("user_id", userId!);
+      .eq("user_id", workspaceOwnerId!);
 
     if (dbError) {
       return NextResponse.json({ error: dbError.message }, { status: 500 });

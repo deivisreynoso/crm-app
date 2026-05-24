@@ -7,7 +7,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id: documentId } = await context.params;
@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       .from("documents")
       .select("id")
       .eq("id", documentId)
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .single();
 
     if (!doc) {

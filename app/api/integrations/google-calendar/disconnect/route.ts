@@ -4,14 +4,14 @@ import { createServerSideClient } from "@/lib/supabase";
 
 export async function DELETE() {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const supabase = createServerSideClient();
     const { error: dbError } = await supabase
       .from("google_calendar_tokens")
       .delete()
-      .eq("user_id", userId!);
+      .eq("user_id", workspaceOwnerId!);
 
     if (dbError) {
       return NextResponse.json({ error: dbError.message }, { status: 500 });

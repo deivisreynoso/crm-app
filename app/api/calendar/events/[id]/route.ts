@@ -17,7 +17,7 @@ function emptyToNull(value: string | undefined): string | null {
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;
@@ -26,7 +26,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       .from("calendar_events")
       .select("*")
       .eq("id", id)
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .single();
 
     if (dbError || !data) {
@@ -45,7 +45,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;
@@ -88,7 +88,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           .from("calendar_events")
           .update(payload)
           .eq("id", id)
-          .eq("user_id", userId!)
+          .eq("user_id", workspaceOwnerId!)
           .select()
           .single(),
       updates,
@@ -120,7 +120,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const eventRow = data as Record<string, unknown>;
     if (eventRow.google_event_id) {
       try {
-        await updateGoogleCalendarEvent(userId!, String(eventRow.google_event_id), {
+        await updateGoogleCalendarEvent(workspaceOwnerId!, String(eventRow.google_event_id), {
           title: String(eventRow.title),
           description: (eventRow.description as string | null) ?? null,
           location: (eventRow.location as string | null) ?? null,
@@ -141,7 +141,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
 export async function DELETE(_req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;
@@ -151,7 +151,7 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
       .from("calendar_events")
       .select("google_event_id")
       .eq("id", id)
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .maybeSingle();
 
     if (existing?.google_event_id) {
@@ -169,7 +169,7 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
       .from("calendar_events")
       .delete()
       .eq("id", id)
-      .eq("user_id", userId!);
+      .eq("user_id", workspaceOwnerId!);
 
     if (dbError) {
       return NextResponse.json(

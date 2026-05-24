@@ -4,13 +4,13 @@ import { getPipelineAnalytics } from "@/lib/analytics/pipeline";
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const params = new URL(req.url).searchParams;
     const pipelineId = params.get("pipeline_id") ?? undefined;
 
-    const data = await getPipelineAnalytics(userId!, pipelineId ?? undefined, {
+    const data = await getPipelineAnalytics(workspaceOwnerId!, pipelineId ?? undefined, {
       startDate: params.get("start_date") ?? undefined,
       endDate: params.get("end_date") ?? undefined,
     });

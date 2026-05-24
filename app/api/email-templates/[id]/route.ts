@@ -8,7 +8,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;
@@ -36,7 +36,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       .from("email_templates")
       .update(updates)
       .eq("id", id)
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .select()
       .single();
 
@@ -53,7 +53,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
 export async function DELETE(_req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;
@@ -62,7 +62,7 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
       .from("email_templates")
       .delete()
       .eq("id", id)
-      .eq("user_id", userId!);
+      .eq("user_id", workspaceOwnerId!);
 
     if (dbError) {
       return NextResponse.json(

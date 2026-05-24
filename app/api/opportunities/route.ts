@@ -10,11 +10,11 @@ import { logContactActivity } from "@/lib/activities/log-contact-activity";
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const params = new URL(req.url).searchParams;
-    const data = await listOpportunitiesWithContacts(userId!, {
+    const data = await listOpportunitiesWithContacts(workspaceOwnerId!, {
       pipelineId: params.get("pipeline_id") ?? undefined,
       contactId: params.get("contact_id") ?? undefined,
       stage: params.get("stage") ?? undefined,
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const body = await req.json();
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
 
     if (parsed.data.contact_id) {
       await logContactActivity(supabase, {
-        userId: userId!,
+        userId: workspaceOwnerId!,
         contactId: parsed.data.contact_id,
         type: "created",
         description: `Opportunity created: ${parsed.data.title}`,

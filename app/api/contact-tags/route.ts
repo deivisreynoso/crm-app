@@ -6,14 +6,14 @@ import { formatValidationDetails, humanizeDbError } from "@/lib/validation-error
 
 export async function GET() {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const supabase = createServerSideClient();
     const { data, error: dbError } = await supabase
       .from("contact_tags")
       .select("*")
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .order("name");
 
     if (dbError) {
@@ -32,7 +32,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const body = await req.json();
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     const { data, error: dbError } = await supabase
       .from("contact_tags")
       .insert({
-        user_id: userId!,
+        user_id: workspaceOwnerId!,
         name: parsed.data.name.trim(),
         color: parsed.data.color ?? "#1b318b",
       })

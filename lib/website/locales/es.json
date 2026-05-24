@@ -1,0 +1,307 @@
+{
+  "meta": {
+    "title": "ClickIn 360 — IA y automatización para tu eCommerce",
+    "description": "Reduce la fricción antes y después de la compra con sistemas conectados a los datos de tu tienda."
+  },
+  "nav": {
+    "problem": "Problema",
+    "solution": "Cómo funciona",
+    "offers": "Ofertas",
+    "platforms": "Plataformas",
+    "about": "Nosotros",
+    "faq": "FAQ",
+    "book": "Agendar llamada",
+    "bookCta": "Agendar",
+    "login": "CRM"
+  },
+  "hero": {
+    "badge": "Asistentes de IA para eCommerce",
+    "headlineLine1": "Tu asistente.",
+    "headlineLine2": "Tu eCommerce, ",
+    "headlineAccent": "potenciado",
+    "subheadline": "Sistemas de IA y automatización conectados a los datos reales de tu tienda—para responder más rápido, recuperar carritos y aliviar tu equipo de soporte.",
+    "ctaPrimary": "Agendar llamada gratis",
+    "ctaSecondary": "Chatear con IA",
+    "stats": [
+      { "value": "24/7", "label": "Atención conectada" },
+      { "value": "Shopify", "label": "y WooCommerce" },
+      { "value": "WhatsApp", "label": "Post-compra" }
+    ]
+  },
+  "problem": {
+    "title": "La fricción del cliente te cuesta ventas y tiempo",
+    "subtitle": "Antes y después del checkout, las mismas preguntas consumen a tu equipo.",
+    "beforeTitle": "Antes de comprar",
+    "beforePoints": [
+      "Preguntas de producto que frenan el checkout",
+      "Carritos abandonados sin seguimiento",
+      "Datos de tienda desconectados de la experiencia"
+    ],
+    "afterTitle": "Después de comprar",
+    "afterPoints": [
+      "Estado de pedido y envíos todo el día",
+      "Devoluciones y reembolsos manuales",
+      "Soporte que crece más rápido que el equipo"
+    ]
+  },
+  "solution": {
+    "title": "Cómo funciona ClickIn 360",
+    "subtitle": "Automatización para lo predecible. IA para la conversación. Tu equipo aprueba lo importante.",
+    "steps": [
+      { "title": "Canal correcto", "desc": "Web, WhatsApp, Instagram o Messenger según el momento del cliente." },
+      { "title": "Entiende la consulta", "desc": "Detecta si es producto, pedido, envío o devolución." },
+      { "title": "Datos reales", "desc": "Consulta productos, pedidos, políticas y FAQs de tu tienda." },
+      { "title": "Responde o actúa", "desc": "Automatiza lo repetible; la IA conversa cuando hace falta." },
+      { "title": "Escala con contexto", "desc": "Casos sensibles van a tu equipo con historial completo." }
+    ]
+  },
+  "offers": {
+    "sectionTitle": "Ofertas actuales",
+    "sectionSubtitle": "Paquetes listos para automatizar tu negocio, vender más y mejorar la experiencia de tus clientes.",
+    "includesTitle": "Incluye",
+    "cta": "Agendar llamada",
+    "ctaSubtle": "Quiero este paquete",
+    "featuredBadge": "Más completo",
+    "packages": [
+      {
+        "label": "Oferta #1",
+        "title": "ECOMMERCE + CRM + WHATSAPP",
+        "tagline": "Todo lo que necesitas para automatizar tu negocio, vender más y dar una mejor experiencia a tus clientes.",
+        "image": "/website/offer-1.webp",
+        "featured": false,
+        "includes": [
+          "Implementación completa del sistema",
+          "CRM integrado",
+          "Automatización con WhatsApp",
+          "Captura y seguimiento de leads",
+          "Integración con redes y formularios",
+          "Configuración de embudos y automatizaciones",
+          "Capacitación básica de uso"
+        ]
+      },
+      {
+        "label": "Oferta #2",
+        "title": "ECOMMERCE + CRM + WHATSAPP + AI",
+        "tagline": "Todo lo que necesitas para automatizar tu negocio, vender más y dar una mejor experiencia a tus clientes.",
+        "image": "/website/offer-2.webp",
+        "featured": true,
+        "includes": [
+          "Implementación completa del sistema",
+          "CRM integrado",
+          "Automatización con WhatsApp",
+          "Inteligencia Artificial para atención y seguimiento",
+          "Captura y seguimiento de leads",
+          "Integración con redes y formularios",
+          "Configuración de embudos y automatizaciones",
+          "Hosting GRATIS por 1 año",
+          "Dominio GRATIS por 1 año",
+          "Capacitación básica de uso"
+        ]
+      }
+    ],
+    "outcomes": {
+      "title": "Beneficios para tu negocio",
+      "subtitle": "Ambos paquetes están diseñados para generar los mismos resultados operativos.",
+      "benefits": [
+        "Respuestas automáticas 24/7",
+        "Organización total de contactos y prospectos",
+        "Seguimiento organizado de clientes y prospectos",
+        "Menos trabajo manual y más eficiencia",
+        "Recuperación de oportunidades de venta",
+        "Mejor experiencia para tus clientes"
+      ],
+      "idealTitle": "Ideal para",
+      "idealFor": [
+        "Ecommerce",
+        "Negocios de servicios",
+        "Tiendas online",
+        "Empresas que quieren crecer"
+      ]
+    },
+    "voice": {
+      "title": "Voz con IA",
+      "subtitle": "Complemento opcional",
+      "desc": "Para tiendas con línea telefónica de soporte y volumen de llamadas frecuentes. Enruta, responde lo común y captura contexto—sin aprobar reembolsos de forma autónoma.",
+      "bullets": ["Estado de pedido y envíos por teléfono", "Enrutamiento y callbacks", "Menos llamadas perdidas"]
+    }
+  },
+  "ctaSubtle": {
+    "book": "Agendar una llamada",
+    "chat": "Hablar con IA"
+  },
+  "platforms": {
+    "title": "Plataformas y canales",
+    "subtitle": "Priorizamos Shopify y WooCommerce. Otros casos con API confiable.",
+    "platformsTitle": "eCommerce",
+    "channelsTitle": "Canales",
+    "platforms": ["Shopify", "WooCommerce", "Tiendanube", "Otras con API"],
+    "channels": ["WhatsApp", "Web chat", "Instagram DM", "Messenger", "Teléfono (voz)"]
+  },
+  "about": {
+    "title": "Sobre ClickIn 360",
+    "subtitle": "Construimos sistemas, no chatbots de moda.",
+    "paragraphs": [
+      "Somos un startup enfocado en tiendas B2C en México, LATAM y EE.UU. que quieren reducir fricción real—con datos conectados y workflows que tu equipo controla.",
+      "No prometemos magia ni reemplazar a tu gente: automatizamos lo repetible y dejamos aprobaciones, excepciones y decisiones financieras en manos humanas.",
+      "Cada implementación empieza con una llamada de descubrimiento para alinear alcance, integraciones y canales."
+    ],
+    "values": [
+      { "title": "Datos conectados", "desc": "Respuestas basadas en tu catálogo, pedidos y políticas." },
+      { "title": "Canal correcto", "desc": "En sitio antes del checkout; WhatsApp después." },
+      { "title": "Criterio humano", "desc": "Reembolsos y excepciones con reglas claras." }
+    ]
+  },
+  "faq": {
+    "title": "Preguntas frecuentes",
+    "subtitle": "Respuestas claras sobre cómo trabajamos."
+  },
+  "faqItems": [
+    {
+      "category": "Sobre el sistema",
+      "items": [
+        {
+          "q": "¿Esto es solo un chatbot?",
+          "a": "No. ClickIn 360 no se enfoca en chatbots genéricos; construye sistemas conectados a datos y workflows reales de la tienda (productos, pedidos, envíos, políticas, FAQs, carritos). La diferencia es que el sistema puede consultar información real y ejecutar acciones, no solo responder texto."
+        },
+        {
+          "q": "¿Cómo funciona el sistema?",
+          "a": "El sistema conecta los canales de comunicación de la tienda (WhatsApp, Instagram, etc.) con los datos del negocio. Cuando un cliente escribe, el sistema entiende la consulta, consulta la información relevante (pedido, política, producto) y responde de forma automática. Los casos que requieren decisión humana se enrutan al equipo."
+        },
+        {
+          "q": "¿Cuánto tiempo toma implementarlo?",
+          "a": "Depende del alcance y la complejidad de las integraciones. Se define en la llamada inicial con el equipo técnico."
+        },
+        {
+          "q": "¿Necesito cambiar mi plataforma eCommerce?",
+          "a": "No. El sistema se integra con la plataforma existente si tiene acceso vía API o integración confiable."
+        },
+        {
+          "q": "¿Funciona en varios canales al mismo tiempo?",
+          "a": "Sí. El sistema puede manejar WhatsApp, Instagram DM, Messenger y web chat de forma simultánea con una sola implementación."
+        }
+      ]
+    },
+    {
+      "category": "Sobre WhatsApp",
+      "items": [
+        {
+          "q": "¿Funciona con WhatsApp?",
+          "a": "Sí. WhatsApp es un canal clave, especialmente para post-compra y conversaciones que inician fuera del sitio. Para antes de la compra dentro de la tienda se pueden usar web chat, asistente de producto, asistente de carrito o widget embed. También se evalúan Instagram DM y Messenger según el caso."
+        },
+        {
+          "q": "¿Necesito WhatsApp Business?",
+          "a": "Es preferible. Si la tienda aún no lo tiene configurado, ClickIn 360 puede revisar lo necesario en la llamada inicial. Para integraciones avanzadas se usa la WhatsApp Business API (Meta), que requiere aprobación de Meta."
+        },
+        {
+          "q": "¿El sistema puede enviar mensajes primero (outbound)?",
+          "a": "Sí, dentro de las políticas de WhatsApp Business API. Se pueden enviar notificaciones proactivas de pedido, envío, recordatorios de carrito y seguimiento post-venta usando plantillas aprobadas por Meta."
+        }
+      ]
+    },
+    {
+      "category": "Sobre automatización específica",
+      "items": [
+        {
+          "q": "¿Puede automatizar el proceso de devoluciones?",
+          "a": "Sí. El sistema puede guiar al cliente por el proceso completo: verificar elegibilidad, solicitar datos del pedido, dar instrucciones de devolución y actualizar sobre el estado del reembolso. La aprobación final de reembolsos queda siempre en el equipo humano."
+        },
+        {
+          "q": "¿Puede manejar quejas o clientes enojados?",
+          "a": "El sistema detecta el tono y puede enrutar automáticamente los casos delicados al equipo humano. No intenta resolver quejas complejas de forma autónoma."
+        },
+        {
+          "q": "¿Puede responder preguntas sobre productos específicos?",
+          "a": "Sí, si la plataforma tiene acceso confiable a los datos de productos (nombre, precio, disponibilidad, características). La profundidad de la respuesta depende de los datos disponibles."
+        },
+        {
+          "q": "¿Puede hacer seguimiento de carritos abandonados?",
+          "a": "Sí. El sistema puede detectar carritos abandonados (si la plataforma lo permite) y enviar mensajes de seguimiento automáticos por WhatsApp u otros canales."
+        },
+        {
+          "q": "¿Puede integrarse con mi CRM?",
+          "a": "Depende del CRM. ClickIn 360 trabaja con herramientas como GoHighLevel y HubSpot. Otras integraciones se evalúan caso por caso en la llamada inicial."
+        },
+        {
+          "q": "¿La IA puede tomar decisiones sobre reembolsos, descuentos o cancelaciones?",
+          "a": "No por defecto. Estas acciones requieren reglas claras y rutas de aprobación definidas por la tienda. La IA facilita el proceso pero no ejecuta estas acciones sin autorización humana explícita."
+        }
+      ]
+    },
+    {
+      "category": "Sobre el equipo y el negocio",
+      "items": [
+        {
+          "q": "¿La IA reemplaza a mi equipo?",
+          "a": "No. Reduce trabajo manual y atiende interacciones comunes; el equipo sigue en aprobaciones, excepciones, quejas, reembolsos, cancelaciones, descuentos y casos sensibles."
+        },
+        {
+          "q": "¿Qué pasa con los casos que la IA no puede resolver?",
+          "a": "Se enrutan automáticamente al equipo humano con el contexto de la conversación. El equipo retoma desde donde la IA dejó, sin que el cliente tenga que repetir todo."
+        },
+        {
+          "q": "¿Necesito un equipo técnico para mantenerlo?",
+          "a": "No necesariamente. ClickIn 360 maneja la implementación y configuración. El mantenimiento depende del alcance; se define en la propuesta."
+        },
+        {
+          "q": "¿ClickIn 360 garantiza más ventas?",
+          "a": "No. Ayuda a reducir fricción antes y después de la compra; los resultados dependen del tráfico, producto, oferta, precio, demanda y ejecución."
+        },
+        {
+          "q": "¿Puede funcionar con una plataforma custom?",
+          "a": "Posiblemente, solo si tiene acceso confiable vía API o integración. Requiere revisión técnica antes de confirmar alcance."
+        },
+        {
+          "q": "¿También hacen agente de voz?",
+          "a": "Sí, como add-on, si la tienda tiene línea telefónica de soporte y recibe llamadas frecuentes."
+        },
+        {
+          "q": "¿Qué datos del negocio necesitan acceso?",
+          "a": "Depende del caso de uso. Típicamente: productos, pedidos, inventario, envíos, tracking, políticas, FAQs y datos del cliente cuando están disponibles. El acceso exacto se define en la llamada técnica."
+        },
+        {
+          "q": "¿Es seguro darles acceso a los datos de mi tienda?",
+          "a": "ClickIn 360 trabaja con accesos de solo lectura donde es posible, y con permisos mínimos necesarios para cada integración. Los detalles de seguridad y cumplimiento se revisan en la llamada inicial."
+        }
+      ]
+    }
+  ],
+  "chat": {
+    "title": "¿Prefieres conversar primero?",
+    "desc": "Nuestro agente de IA califica tu tienda en minutos. Si el chat no está disponible, usa el formulario de agendamiento.",
+    "cta": "Abrir chat",
+    "embedLoading": "Cargando chat…",
+    "embedUnavailable": "El chat en vivo se activará pronto. Mientras tanto, agenda una llamada de descubrimiento."
+  },
+  "cta": {
+    "title": "¿Listo para reducir fricción en tu tienda?",
+    "subtitle": "Agenda una llamada de descubrimiento—sin compromiso.",
+    "book": "Agendar llamada gratis",
+    "chat": "Chatear con IA"
+  },
+  "footer": {
+    "tagline": "IA y automatización conectadas a tu eCommerce.",
+    "rights": "Todos los derechos reservados.",
+    "privacy": "Privacidad",
+    "login": "Acceso CRM",
+    "howItWorks": "Cómo funciona",
+    "contact": "Contacto"
+  },
+  "pages": {
+    "about": {
+      "title": "Sobre ClickIn 360 — IA y automatización eCommerce",
+      "description": "Conoce cómo construimos sistemas conectados a datos reales para tiendas B2C."
+    },
+    "howItWorks": {
+      "title": "Cómo funciona ClickIn 360",
+      "description": "Automatización, IA y escalamiento humano para reducir fricción en tu tienda."
+    },
+    "offers": {
+      "title": "Paquetes eCommerce + CRM + WhatsApp",
+      "description": "Ofertas actuales para automatizar ventas, soporte y seguimiento."
+    }
+  },
+  "login": {
+    "inviteOnly": "El CRM es solo por invitación.",
+    "backToSite": "Volver al sitio"
+  }
+}

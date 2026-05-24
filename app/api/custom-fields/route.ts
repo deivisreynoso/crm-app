@@ -7,7 +7,7 @@ import { insertWithColumnFallback } from "@/lib/api/strip-insert";
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const entityType = new URL(req.url).searchParams.get("entity_type");
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     let query = supabase
       .from("custom_fields")
       .select("*")
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .order("display_order");
 
     if (entityType) {
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const body = await req.json();
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerSideClient();
     const row = {
-      user_id: userId!,
+      user_id: workspaceOwnerId!,
       entity_type: parsed.data.entity_type,
       field_name: parsed.data.field_name.trim(),
       field_type: parsed.data.field_type,

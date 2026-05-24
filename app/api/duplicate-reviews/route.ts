@@ -6,7 +6,7 @@ import { humanizeDbError } from "@/lib/validation-errors";
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const status = new URL(req.url).searchParams.get("status") ?? "pending";
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
         contact2:contacts!duplicate_reviews_contact2_id_fkey(id, first_name, last_name, email, phone)
       `
       )
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .eq("status", status)
       .order("created_at", { ascending: false });
 
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
       const { data: fallback, error: fallbackError } = await supabase
         .from("duplicate_reviews")
         .select("*")
-        .eq("user_id", userId!)
+        .eq("user_id", workspaceOwnerId!)
         .eq("status", status)
         .order("created_at", { ascending: false });
 
@@ -78,7 +78,7 @@ async function enrichContacts(
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const body = await req.json().catch(() => ({}));

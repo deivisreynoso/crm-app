@@ -10,7 +10,7 @@ import { getGoogleGmailRedirectUri } from "@/lib/google/oauth-config";
 
 export async function GET(req: Request) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const redirectUri = getGoogleGmailRedirectUri(req.url);
@@ -29,7 +29,7 @@ export async function GET(req: Request) {
     const { data, error: dbError } = await supabase
       .from("google_gmail_tokens")
       .select("id, email_address")
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .maybeSingle();
 
     if (dbError) {
@@ -52,7 +52,7 @@ export async function GET(req: Request) {
       (connected ? await getGoogleGmailConnectedEmail(userId!) : null);
 
     const read_access = connected
-      ? await checkGmailReadAccess(userId!)
+      ? await checkGmailReadAccess(workspaceOwnerId!)
       : false;
 
     return NextResponse.json({

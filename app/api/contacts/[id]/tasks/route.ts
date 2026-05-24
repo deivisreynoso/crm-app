@@ -31,11 +31,11 @@ function buildDueFields(due_at?: string, due_date?: string) {
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id: contactId } = await context.params;
-    if (!(await verifyContactOwnership(userId!, contactId))) {
+    if (!(await verifyContactOwnership(workspaceOwnerId!, contactId))) {
       return NextResponse.json({ error: "Contact not found" }, { status: 404 });
     }
 
@@ -43,7 +43,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     const { data, error: dbError } = await supabase
       .from("tasks")
       .select("*")
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .eq("contact_id", contactId)
       .order("created_at", { ascending: false });
 
@@ -61,11 +61,11 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id: contactId } = await context.params;
-    if (!(await verifyContactOwnership(userId!, contactId))) {
+    if (!(await verifyContactOwnership(workspaceOwnerId!, contactId))) {
       return NextResponse.json({ error: "Contact not found" }, { status: 404 });
     }
 
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
       status: parsed.data.status,
       priority: parsed.data.priority,
       contact_id: contactId,
-      user_id: userId,
+      user_id: workspaceOwnerId,
       assigned_to: assignee,
       ...dueFields,
     };
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     if (dbError) throw dbError;
 
     await logContactActivity(supabase, {
-      userId: userId!,
+      userId: workspaceOwnerId!,
       contactId,
       type: "task",
       description: `Task created: ${parsed.data.title}`,

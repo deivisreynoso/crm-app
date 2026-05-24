@@ -2,8 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import type { WorkspaceCurrency } from "@/lib/constants/currencies";
 
+import type { BookingAvailabilityConfig } from "@/lib/website/booking-availability";
+
 export interface WorkspaceSettings {
   default_currency: WorkspaceCurrency;
+  default_sales_assignee?: string | null;
+  booking_availability?: BookingAvailabilityConfig;
   updated_at?: string;
 }
 
@@ -20,8 +24,11 @@ export function useWorkspaceSettings() {
 export function useUpdateWorkspaceSettings() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (patch: { default_currency: WorkspaceCurrency }) =>
-      axios.patch<WorkspaceSettings>("/api/settings", patch),
+    mutationFn: (patch: {
+      default_currency?: WorkspaceCurrency;
+      default_sales_assignee?: string | null;
+      booking_availability?: BookingAvailabilityConfig;
+    }) => axios.patch<WorkspaceSettings>("/api/settings", patch),
     onSuccess: (res) => {
       queryClient.setQueryData(["workspace-settings"], res.data);
     },

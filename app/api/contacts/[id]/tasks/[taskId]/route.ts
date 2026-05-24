@@ -19,11 +19,11 @@ async function verifyContactOwnership(userId: string, contactId: string) {
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id: contactId, taskId } = await context.params;
-    if (!(await verifyContactOwnership(userId!, contactId))) {
+    if (!(await verifyContactOwnership(workspaceOwnerId!, contactId))) {
       return NextResponse.json({ error: "Contact not found" }, { status: 404 });
     }
 
@@ -33,7 +33,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       .select("*")
       .eq("id", taskId)
       .eq("contact_id", contactId)
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .single();
 
     if (dbError || !data) {
@@ -49,11 +49,11 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id: contactId, taskId } = await context.params;
-    if (!(await verifyContactOwnership(userId!, contactId))) {
+    if (!(await verifyContactOwnership(workspaceOwnerId!, contactId))) {
       return NextResponse.json({ error: "Contact not found" }, { status: 404 });
     }
 
@@ -88,7 +88,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       .update(patch)
       .eq("id", taskId)
       .eq("contact_id", contactId)
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .select()
       .single();
 

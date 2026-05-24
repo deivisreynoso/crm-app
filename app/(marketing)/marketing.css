@@ -1,0 +1,146 @@
+/* Marketing site — startup-style UI (scoped via layout import) */
+
+.website-dot-grid {
+  background-image: radial-gradient(circle, #d1d5db 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.website-hero-glow {
+  background:
+    radial-gradient(ellipse 70% 60% at 20% 30%, rgba(56, 182, 255, 0.35) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 85% 70%, rgba(201, 109, 216, 0.3) 0%, transparent 50%),
+    linear-gradient(160deg, #3e5fde 0%, #6b4bb8 45%, #9f41af 100%);
+}
+
+.website-card-lift {
+  transition:
+    transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.website-card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(27, 49, 139, 0.12);
+}
+
+.website-float {
+  animation: website-float 5s ease-in-out infinite;
+}
+
+@keyframes website-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.website-fade-up {
+  animation: website-fade-up 0.6s ease-out both;
+}
+
+@keyframes website-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.website-stagger > * {
+  animation: website-fade-up 0.5s ease-out both;
+}
+
+.website-stagger > *:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.website-stagger > *:nth-child(2) {
+  animation-delay: 0.12s;
+}
+.website-stagger > *:nth-child(3) {
+  animation-delay: 0.19s;
+}
+.website-stagger > *:nth-child(4) {
+  animation-delay: 0.26s;
+}
+
+.website-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(56, 182, 255, 0.15);
+  color: #1b318b;
+  border: 1px solid rgba(56, 182, 255, 0.35);
+}
+
+html.dark .website-pill {
+  color: #7dd3fc;
+  border-color: rgba(56, 182, 255, 0.4);
+}
+
+.website-cta-primary {
+  background: #fff;
+  color: #1b318b;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.website-cta-primary:hover {
+  background: #f8fafc;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+}
+
+.website-cta-secondary {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+}
+
+.website-cta-secondary:hover {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+/* Offer / hero art — transparent WebP on brand-tinted surface */
+.website-offer-image-area {
+  background-color: var(--card);
+  background-image:
+    radial-gradient(ellipse 90% 80% at 50% 45%, rgba(56, 182, 255, 0.1) 0%, transparent 70%),
+    radial-gradient(ellipse 70% 60% at 80% 80%, rgba(201, 109, 216, 0.08) 0%, transparent 65%);
+}
+
+.website-hero-image-area {
+  background: transparent;
+}
+
+.chat-widget-panel-enter {
+  transform: translateY(100%);
+  opacity: 0;
+  transition:
+    transform 0.35s cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 0.3s ease;
+}
+
+@media (min-width: 640px) {
+  .chat-widget-panel-enter {
+    transform: translateY(24px) scale(0.96);
+  }
+}
+
+.chat-widget-panel-enter.chat-widget-panel-visible {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}

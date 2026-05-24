@@ -19,7 +19,7 @@ function emptyToNull(value: string | undefined): string | null {
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const params = new URL(req.url).searchParams;
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     let query = supabase
       .from("companies")
       .select("*")
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .order("name", { ascending: true });
 
     if (industry) {
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const body = await req.json();
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
       .from("companies")
       .insert([
         {
-          user_id: userId!,
+          user_id: workspaceOwnerId!,
           name: parsed.data.name.trim(),
           website: emptyToNull(parsed.data.website),
           phone: emptyToNull(parsed.data.phone),

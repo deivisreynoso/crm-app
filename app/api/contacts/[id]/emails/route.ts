@@ -6,7 +6,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id: contactId } = await context.params;
@@ -16,7 +16,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       .from("contacts")
       .select("id")
       .eq("id", contactId)
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .maybeSingle();
 
     if (!contact) {
@@ -28,7 +28,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       .select(
         "id, direction, gmail_message_id, gmail_thread_id, from_email, to_email, subject, body, sent_at"
       )
-      .eq("user_id", userId!)
+      .eq("user_id", workspaceOwnerId!)
       .eq("contact_id", contactId)
       .order("sent_at", { ascending: true });
 

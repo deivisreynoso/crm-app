@@ -63,11 +63,11 @@ async function verifyContactOwnership(userId: string, contactId: string) {
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id: contactId } = await context.params;
-    if (!(await verifyContactOwnership(userId!, contactId))) {
+    if (!(await verifyContactOwnership(workspaceOwnerId!, contactId))) {
       return NextResponse.json({ error: "Contact not found" }, { status: 404 });
     }
 
@@ -77,14 +77,14 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       supabase
         .from("notes")
         .select("id, content, activity_type, created_at")
-        .eq("user_id", userId!)
+        .eq("user_id", workspaceOwnerId!)
         .eq("entity_type", "contact")
         .eq("entity_id", contactId)
         .order("created_at", { ascending: false }),
       supabase
         .from("activities")
         .select("id, type, description, metadata, created_at")
-        .eq("user_id", userId!)
+        .eq("user_id", workspaceOwnerId!)
         .eq("contact_id", contactId)
         .order("created_at", { ascending: false }),
     ]);
