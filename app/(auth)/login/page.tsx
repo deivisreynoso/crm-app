@@ -1,5 +1,5 @@
 "use client";
-
+import Link from 'next/link';
 import { Suspense, useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -113,7 +113,12 @@ function LoginForm() {
             className="input-field"
           />
         </div>
-
+<Link 
+  href="/auth/reset-password" 
+  className="text-sm text-blue-600 hover:underline"
+>
+  Forgot password?
+</Link>
         <Button type="submit" disabled={isLoading} className="w-full">
           {isLoading ? "Signing in..." : "Sign in"}
         </Button>
