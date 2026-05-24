@@ -1,5 +1,5 @@
 "use client";
-import Link from 'next/link';
+
 import { Suspense, useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -19,10 +19,14 @@ function LoginForm() {
   useEffect(() => {
     if (searchParams.get("registered") === "true") {
       setNotice("Account created. Sign in with your email and password.");
+    } else if (searchParams.get("reset") === "success") {
+      setNotice("Password updated. Sign in with your new password.");
     } else if (searchParams.get("error") === "invite_only") {
       setNotice(
         "CRM registration is invite-only. Use the link from your team admin, or sign in if you already have access."
       );
+    } else if (searchParams.get("error") === "reset_link_invalid") {
+      setError("Your password reset link is invalid or has expired. Request a new one below.");
     }
   }, [searchParams]);
 
@@ -97,13 +101,22 @@ function LoginForm() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             className="input-field"
+            autoComplete="email"
           />
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-heading mb-1">
-            Password
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label htmlFor="password" className="block text-sm font-medium text-heading">
+              Password
+            </label>
+            <Link
+              href="/forgot-password"
+              className="text-sm text-[var(--primary)] font-medium hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
           <input
             id="password"
             type="password"
@@ -111,14 +124,10 @@ function LoginForm() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             className="input-field"
+            autoComplete="current-password"
           />
         </div>
-<Link 
-  href="/auth/reset-password" 
-  className="text-sm text-blue-600 hover:underline"
->
-  Forgot password?
-</Link>
+
         <Button type="submit" disabled={isLoading} className="w-full">
           {isLoading ? "Signing in..." : "Sign in"}
         </Button>
