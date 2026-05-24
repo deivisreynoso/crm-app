@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth";
+import { requireAuth, requireWorkspaceWrite } from "@/lib/api/auth";
+import { deleteContactWithDependents } from "@/lib/contacts/delete-contact";
 import { createServerSideClient } from "@/lib/supabase";
 import { contactPatchSchema } from "@/lib/validators";
 import { buildContactUpdate } from "@/lib/contact-payload";
@@ -158,18 +159,29 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
     const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
+    const writeError = requireWorkspaceWrite(role!);
+    if (writeError) return writeError;
+
     const { id } = await context.params;
     const supabase = createServerSideClient();
 
-    const { data, error: dbError } = await supabase
-      .from("contacts")
-      .delete()
-      .eq("id", id)
-      .eq("user_id", workspaceOwnerId!)
-      .select()
-      .single();
+    const { data, error: dbError } = await deleteContactWithDependents(
+      supabase,
+      workspaceOwnerId!,
+      id
+    );
 
-    if (dbError || !data) {
+    if (dbError) {
+      if (dbError.code === "NOT_FOUND") {
+        return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+      }
+      console.error("DELETE /api/contacts/[id] db:", dbError);
+      const message = humanizeDbError(dbError.message);
+      const status = /foreign key|violates/i.test(dbError.message) ? 409 : 500;
+      return NextResponse.json({ error: message }, { status });
+    }
+
+    if (!data) {
       return NextResponse.json({ error: "Contact not found" }, { status: 404 });
     }
 

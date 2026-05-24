@@ -53,6 +53,9 @@ export function humanizeDbError(message: string): string {
     return "A required database update is missing. Please run the latest migrations in Supabase.";
   }
   if (lower.includes("violates foreign key")) {
+    if (lower.includes("contacts")) {
+      return "This contact is linked to documents, payments, or calendar events that could not be removed automatically. Try again or contact support.";
+    }
     return "A linked record was removed or is invalid. Refresh the page and try again.";
   }
   if (lower.includes("invalid input syntax for type uuid")) {

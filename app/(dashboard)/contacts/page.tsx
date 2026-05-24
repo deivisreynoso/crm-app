@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import axios from "axios";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,14 @@ import {
   useCreateContact,
   useDeleteContact,
 } from "@/hooks/useContacts";
+
+function apiErrorMessage(err: unknown): string {
+  if (axios.isAxiosError(err)) {
+    const msg = err.response?.data as { error?: string } | undefined;
+    return msg?.error ?? err.message;
+  }
+  return "Failed to delete contact.";
+}
 import { useCompanies } from "@/hooks/useCompanies";
 import type { ContactFormInput } from "@/types";
 import { formatDate } from "@/lib/utils";
@@ -283,8 +292,8 @@ function ContactsPageContent() {
                         if (!ok) return;
                         try {
                           await deleteContact.mutateAsync(contact.id);
-                        } catch {
-                          alert("Failed to delete contact.");
+                        } catch (err: unknown) {
+                          alert(apiErrorMessage(err));
                         }
                       }}
                       deleteDisabled={deleteContact.isPending}
