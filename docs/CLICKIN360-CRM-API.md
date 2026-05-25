@@ -137,6 +137,13 @@ x-website-secret: a1b2c3...your-secret...f9e8
 - `GET /api/leads/booking-offers`
 - `POST /api/leads/bookings`
 
+**Protected Integration PATCH routes** (same header + `WEBSITE_LEADS_USER_ID` tenant):
+
+- `PATCH /api/integrations/contacts/[id]`
+- `PATCH /api/integrations/tickets/[id]`
+- `PATCH /api/integrations/opportunities/[id]`
+- `PATCH /api/integrations/accounts/[id]` — company accounts (CRM “accounts”)
+
 **Server-only (never send in requests):**
 
 | Variable | Purpose | Where to get |
@@ -510,6 +517,39 @@ Book a discovery call: **contact + opportunity + CRM calendar event**.
 | `400` | `missing_slot` | Provide `slot_start` or index + `offered_slots` |
 
 **Note:** Does **not** sync to Google Calendar. Owner’s Google connection applies only to events created via CRM calendar UI/API.
+
+---
+
+### 7.4 Integration PATCH API (CRM updates)
+
+Partial updates for existing CRM records. Same auth as Lead API (`x-website-secret`). All writes apply to the workspace owner in `WEBSITE_LEADS_USER_ID`.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `PATCH` | `/api/integrations/contacts/[id]` | Same body as `PATCH /api/contacts/[id]` (`contactPatchSchema`). Fires `contact.updated` webhook. |
+| `PATCH` | `/api/integrations/tickets/[id]` | Same body as `PATCH /api/tickets/[id]` (`ticketPatchSchema`). |
+| `PATCH` | `/api/integrations/opportunities/[id]` | Same body as `PATCH /api/opportunities/[id]` (full partial or `{ "stage": "..." }` only). Fires `opportunity.updated` webhook. |
+| `PATCH` | `/api/integrations/accounts/[id]` | Company account fields: `name`, `website`, `phone`, `industry`, `company_size`, `revenue`, `account_summary`. |
+
+**Example — update contact from N8N:**
+
+```bash
+curl -s -X PATCH "$BASE_URL/api/integrations/contacts/CONTACT_UUID" \
+  -H "Content-Type: application/json" \
+  -H "x-website-secret: $SECRET" \
+  -d '{"status":"active","ai_summary":"Qualified via WhatsApp"}' | jq
+```
+
+**Example — move opportunity stage:**
+
+```bash
+curl -s -X PATCH "$BASE_URL/api/integrations/opportunities/OPP_UUID" \
+  -H "Content-Type: application/json" \
+  -H "x-website-secret: $SECRET" \
+  -d '{"stage":"Proposal"}' | jq
+```
+
+**Responses:** `200` with updated record JSON; `400` validation; `401`/`503` auth; `404` not found; `409` duplicate contact email/phone.
 
 ---
 
@@ -1108,6 +1148,10 @@ sequenceDiagram
 | POST | `/api/leads/webchat` | `x-website-secret` |
 | GET | `/api/leads/booking-offers` | `x-website-secret` |
 | POST | `/api/leads/bookings` | `x-website-secret` |
+| PATCH | `/api/integrations/contacts/[id]` | `x-website-secret` |
+| PATCH | `/api/integrations/tickets/[id]` | `x-website-secret` |
+| PATCH | `/api/integrations/opportunities/[id]` | `x-website-secret` |
+| PATCH | `/api/integrations/accounts/[id]` | `x-website-secret` |
 
 ### CRM (session) — 60+ routes
 
@@ -1118,6 +1162,8 @@ See [§9](#9-crm-api-session). Full route list matches files under `app/api/**/r
 | Topic | File |
 |-------|------|
 | Lead auth | `lib/website/lead-api-auth.ts` |
+| Integration auth | `lib/api/integration-auth.ts` |
+| Integration PATCH | `lib/integrations/patch-*.ts` |
 | Session auth | `lib/api/auth.ts` |
 | Leads | `lib/leads/website-leads.ts` |
 | Booking | `lib/leads/book-appointment.ts` |
