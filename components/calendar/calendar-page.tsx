@@ -14,7 +14,11 @@ import {
   useDeleteCalendarEvent,
   useUpdateCalendarEvent,
 } from "@/hooks/useCalendarEvents";
-import { shiftMonth } from "@/lib/calendar/utils";
+import {
+  APPOINTMENT_EVENT_COLOR,
+  LOCATION_TYPES,
+  shiftMonth,
+} from "@/lib/calendar/utils";
 import { GoogleCalendarBanner } from "@/components/calendar/google-calendar-banner";
 import { useContacts } from "@/hooks/useContacts";
 import type { CalendarEvent } from "@/types";
@@ -96,6 +100,25 @@ export function CalendarPage() {
         <Button variant="outline" size="sm" onClick={() => setMonth(new Date())}>
           Today
         </Button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-body-muted">
+        <span className="inline-flex items-center gap-1.5">
+          <span
+            className="h-2.5 w-2.5 rounded-full shrink-0"
+            style={{ background: APPOINTMENT_EVENT_COLOR }}
+          />
+          Website appointment
+        </span>
+        {LOCATION_TYPES.map((t) => (
+          <span key={t.value} className="inline-flex items-center gap-1.5">
+            <span
+              className="h-2.5 w-2.5 rounded-full shrink-0"
+              style={{ background: t.color }}
+            />
+            {t.label}
+          </span>
+        ))}
       </div>
 
       {isLoading ? (
