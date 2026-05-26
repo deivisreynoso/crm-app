@@ -46,6 +46,14 @@ export function getGoogleGmailRedirectUri(requestUrl?: string): string {
   return `http://localhost:3000${GOOGLE_GMAIL_CALLBACK_PATH}`;
 }
 
+export function isGoogleOAuthConfigured(): boolean {
+  return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+}
+
+export function isGoogleGmailConfigured(): boolean {
+  return isGoogleOAuthConfigured();
+}
+
 export function getGoogleOAuthEnvStatus(requestUrl?: string) {
   const redirectUri = getGoogleCalendarRedirectUri(requestUrl);
   const configured = Boolean(

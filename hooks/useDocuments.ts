@@ -12,6 +12,7 @@ export function useDocuments(filters?: {
   contact_id?: string;
   company_id?: string;
   opportunity_id?: string;
+  kind?: "quotes" | "attachments";
 }) {
   return useQuery({
     queryKey: ["documents", filters],

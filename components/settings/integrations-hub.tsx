@@ -205,7 +205,7 @@ export function IntegrationsHub() {
       id: "gmail",
       name: "Gmail",
       description:
-        "Send email to contacts and sync threads into the Emails tab on each contact. Disconnect and reconnect after updates to grant read access for sync.",
+        "Each user connects their Google Workspace mailbox. Send quotes (PDF attached) and contact emails from your company address; sync threads on the contact Emails tab when read access is granted.",
       status: gmailLoading ? "available" : gmailStatus,
       loading: gmailLoading,
       actionLabel: !gmailConfigured

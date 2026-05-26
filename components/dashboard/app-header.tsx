@@ -1,3 +1,4 @@
+import { CrmLanguageSwitcher } from "@/components/crm/crm-language-switcher";
 import { GlobalSearch } from "@/components/dashboard/global-search";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { ThemeToggle } from "@/components/dashboard/theme-toggle";
@@ -17,6 +18,7 @@ export function AppHeader({ user }: AppHeaderProps) {
         <GlobalSearch />
       </div>
       <div className="flex items-center gap-3 shrink-0 ml-auto">
+        <CrmLanguageSwitcher />
         <NotificationBell />
         <ThemeToggle />
         <UserMenu user={user} />

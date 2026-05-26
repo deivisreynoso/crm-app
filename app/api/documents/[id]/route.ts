@@ -5,6 +5,8 @@ import { documentPatchSchema } from "@/lib/validators";
 import { formatValidationDetails } from "@/lib/validation-errors";
 import { resolveDocumentFileUrl } from "@/lib/storage/documents";
 import { snapshotDocumentVersion } from "@/lib/documents/versioning";
+import { isQuoteDocument } from "@/lib/documents/kinds";
+import { ensureQuoteReference } from "@/lib/quotes/reference";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -26,13 +28,34 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Document not found" }, { status: 404 });
     }
 
+    const { data: lineItems } = await supabase
+      .from("quote_line_items")
+      .select("*")
+      .eq("document_id", id)
+      .order("sort_order");
+
     const file_url = await resolveDocumentFileUrl(
       supabase,
       data.storage_path as string | undefined,
       data.file_url as string | undefined
     );
 
-    return NextResponse.json({ ...data, file_url: file_url ?? data.file_url });
+    let quote_reference = data.quote_reference as string | null | undefined;
+    if (isQuoteDocument(data.type as string) && !quote_reference?.trim()) {
+      quote_reference = await ensureQuoteReference(supabase, {
+        id: data.id,
+        user_id: workspaceOwnerId!,
+        type: data.type as string,
+        quote_reference: null,
+      });
+    }
+
+    return NextResponse.json({
+      ...data,
+      quote_reference: quote_reference ?? data.quote_reference,
+      file_url: file_url ?? data.file_url,
+      line_items: lineItems ?? [],
+    });
   } catch (err) {
     console.error("GET /api/documents/[id]:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -94,6 +117,16 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     if (d.status !== undefined) updates.status = d.status;
     if (d.valid_until !== undefined) {
       updates.valid_until = d.valid_until?.trim() ? d.valid_until : null;
+    }
+    if (d.subtotal !== undefined) updates.subtotal = d.subtotal;
+    if (d.tax_rate !== undefined) updates.tax_rate = d.tax_rate;
+    if (d.tax_amount !== undefined) updates.tax_amount = d.tax_amount;
+    if (d.total_amount !== undefined) updates.total_amount = d.total_amount;
+    if (d.header_html !== undefined) {
+      updates.header_html = d.header_html?.trim() ? d.header_html : null;
+    }
+    if (d.footer_html !== undefined) {
+      updates.footer_html = d.footer_html?.trim() ? d.footer_html : null;
     }
 
     const { data, error: dbError } = await supabase

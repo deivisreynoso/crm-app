@@ -124,6 +124,7 @@ export const opportunitySchema = z.object({
   expected_close_date: z.string().optional().or(z.literal('')),
   notes: z.string().optional().or(z.literal('')),
   tags: z.string().optional().or(z.literal('')),
+  owner_id: z.string().uuid().optional().or(z.literal('')),
   company_id: z.string().uuid().optional().or(z.literal('')),
   custom_fields: customFieldValuesSchema,
 });
@@ -243,6 +244,23 @@ export const documentPatchSchema = z.object({
     .enum(["draft", "sent", "signed", "accepted", "rejected"])
     .optional(),
   valid_until: z.string().optional().or(z.literal("")),
+  subtotal: z.coerce.number().nonnegative().optional(),
+  tax_rate: z.coerce.number().min(0).max(100).optional(),
+  tax_amount: z.coerce.number().nonnegative().optional(),
+  total_amount: z.coerce.number().nonnegative().optional(),
+  header_html: z.string().optional().or(z.literal("")),
+  footer_html: z.string().optional().or(z.literal("")),
+});
+
+export const quoteLineItemInputSchema = z.object({
+  service_id: z.string().uuid(),
+  quantity: z.coerce.number().positive(),
+  sort_order: z.coerce.number().int().optional(),
+});
+
+export const quoteLineItemsPutSchema = z.object({
+  tax_rate: z.coerce.number().min(0).max(100).optional().default(0),
+  line_items: z.array(quoteLineItemInputSchema),
 });
 
 export const documentTemplateSchema = z.object({
@@ -395,6 +413,14 @@ export const gmailSendSchema = z
   );
 
 export type GmailSendInput = z.infer<typeof gmailSendSchema>;
+
+export const documentSendViaGmailSchema = z.object({
+  to: z.string().email("Enter a valid recipient email").optional(),
+  subject: z.string().max(998).optional().or(z.literal("")),
+  body: z.string().max(100_000).optional().or(z.literal("")),
+});
+
+export type DocumentSendViaGmailInput = z.infer<typeof documentSendViaGmailSchema>;
 
 export const notificationPreferencesSchema = z.object({
   task_reminders: z.boolean().optional(),

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { MAIN_NAV, SECONDARY_NAV } from "@/lib/navigation";
 
 function NavLink({
@@ -45,10 +46,12 @@ function NavSection({
   title,
   items,
   pathname,
+  dict,
 }: {
   title?: string;
   items: typeof MAIN_NAV;
   pathname: string;
+  dict: Record<string, string>;
 }) {
   return (
     <div className="space-y-0.5">
@@ -60,11 +63,13 @@ function NavSection({
       {items.map((item) => {
         const isActive =
           pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const label =
+          (item.labelKey && dict[item.labelKey]) || item.label;
         return (
           <NavLink
             key={item.href}
             href={item.href}
-            label={item.label}
+            label={label}
             icon={item.icon}
             isActive={isActive}
           />
@@ -99,11 +104,19 @@ export function SidebarBrand() {
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const { dict, locale } = useCrmLocale();
+  const navDict = dict.nav as Record<string, string>;
+  const toolsTitle = locale === "es" ? "Herramientas" : "Tools";
 
   return (
     <nav className="flex flex-col gap-5" aria-label="Main navigation">
-      <NavSection items={MAIN_NAV} pathname={pathname} />
-      <NavSection title="Tools" items={SECONDARY_NAV} pathname={pathname} />
+      <NavSection items={MAIN_NAV} pathname={pathname} dict={navDict} />
+      <NavSection
+        title={toolsTitle}
+        items={SECONDARY_NAV}
+        pathname={pathname}
+        dict={navDict}
+      />
     </nav>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Modal } from "@/components/ui/modal";
 import {
   RelatedCardsRow,
@@ -40,7 +41,8 @@ interface EntityRelatedPanelProps {
   showAccountContacts?: boolean;
   opportunities?: OpportunityWithContact[];
   tickets?: Ticket[];
-  documents?: CrmDocument[];
+  quotes?: CrmDocument[];
+  attachments?: CrmDocument[];
   calendarEvents?: CalendarEvent[];
   contacts?: CompanyRelated["contacts"];
   onCreateTicket?: (data: TicketFormInput) => Promise<void>;
@@ -57,7 +59,8 @@ export function EntityRelatedPanel({
   showAccountContacts = false,
   opportunities = [],
   tickets = [],
-  documents = [],
+  quotes = [],
+  attachments = [],
   calendarEvents = [],
   contacts = [],
   onCreateTicket,
@@ -179,21 +182,82 @@ export function EntityRelatedPanel({
       </RelatedListSection>
 
       <RelatedListSection
-        title="Notes & Attachments"
-        count={documents.length}
+        title="Quotes"
+        count={quotes.length}
         iconBg="bg-slate-500"
         iconGlyph="📄"
         viewAllHref={
           context.contactId
-            ? `/documents?contact_id=${context.contactId}`
+            ? `/quotes?contact_id=${context.contactId}`
             : context.companyId
-              ? `/documents?company_id=${context.companyId}`
-              : "/documents"
+              ? `/quotes?company_id=${context.companyId}`
+              : "/quotes"
         }
-        onNew={onCreateDocument ? () => { setDocError(null); setDocModal(true); } : undefined}
+      >
+        {context.contactId && (
+          <div className="mb-3">
+            <Link
+              href={`/quotes/new?contact_id=${context.contactId}${
+                context.companyId ? `&company_id=${context.companyId}` : ""
+              }`}
+              className="text-sm font-medium text-[var(--primary)] hover:underline"
+            >
+              + New quote
+            </Link>
+          </div>
+        )}
+        {quotes.length === 0 ? (
+          <p className="text-sm text-[var(--muted)]">No quotes yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {quotes.map((d) => (
+              <li
+                key={d.id}
+                className="flex items-center justify-between gap-2 text-sm border border-[var(--card-border)] rounded-md px-3 py-2 bg-[var(--card)]"
+              >
+                <div className="min-w-0">
+                  <Link
+                    href={`/quotes/${d.id}`}
+                    className="font-medium text-[var(--primary)] hover:underline truncate block"
+                  >
+                    {d.title}
+                  </Link>
+                  <p className="text-xs text-[var(--muted)]">
+                    {d.type} · {d.status}
+                    {d.total_amount != null && Number(d.total_amount) > 0
+                      ? ` · ${formatCurrency(Number(d.total_amount))}`
+                      : ""}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </RelatedListSection>
+
+      <RelatedListSection
+        title="Attachments"
+        count={attachments.length}
+        iconBg="bg-gray-500"
+        iconGlyph="📎"
+        viewAllHref={
+          context.contactId
+            ? `/attachments?contact_id=${context.contactId}`
+            : context.companyId
+              ? `/attachments?company_id=${context.companyId}`
+              : "/attachments"
+        }
+        onNew={
+          onCreateDocument
+            ? () => {
+                setDocError(null);
+                setDocModal(true);
+              }
+            : undefined
+        }
         newLabel="Upload"
       >
-        {documents.length === 0 ? (
+        {attachments.length === 0 ? (
           <div
             className="border-2 border-dashed border-[var(--card-border)] rounded-lg p-8 text-center"
             onDragOver={(e) => e.preventDefault()}
@@ -204,28 +268,33 @@ export function EntityRelatedPanel({
               }
             }}
           >
-            <p className="text-sm text-[var(--muted)] mb-2">No files yet</p>
+            <p className="text-sm text-[var(--muted)] mb-2">No attachments yet</p>
             {onCreateDocument && (
               <button
                 type="button"
                 onClick={() => setDocModal(true)}
                 className="text-sm font-medium text-[var(--primary)] hover:underline"
               >
-                Upload files
+                Upload file
               </button>
             )}
           </div>
         ) : (
           <ul className="space-y-2">
-            {documents.map((d) => (
+            {attachments.map((d) => (
               <li
                 key={d.id}
                 className="flex items-center justify-between gap-2 text-sm border border-[var(--card-border)] rounded-md px-3 py-2 bg-[var(--card)]"
               >
                 <div className="min-w-0">
-                  <p className="font-medium text-[var(--foreground)] truncate">{d.title}</p>
+                  <Link
+                    href={`/attachments/${d.id}`}
+                    className="font-medium text-[var(--primary)] hover:underline truncate block"
+                  >
+                    {d.title}
+                  </Link>
                   <p className="text-xs text-[var(--muted)]">
-                    {d.file_name ?? d.type} · {d.status}
+                    {d.file_name ?? "attachment"}
                   </p>
                 </div>
                 {(d.file_url || d.storage_path) && (

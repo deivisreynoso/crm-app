@@ -141,6 +141,7 @@ x-website-secret: a1b2c3...your-secret...f9e8
 
 - `PATCH /api/integrations/contacts/[id]`
 - `PATCH /api/integrations/tickets/[id]`
+- `GET` / `POST /api/integrations/opportunities`
 - `PATCH /api/integrations/opportunities/[id]`
 - `PATCH /api/integrations/accounts/[id]` — company accounts (CRM “accounts”)
 
@@ -279,11 +280,12 @@ Response shape:
 
 All CRM data is scoped to a **workspace owner** (`workspaceOwnerId`). Team members act inside the owner’s workspace.
 
-| Role | Read | Write |
-|------|------|-------|
-| `owner` | Yes | Yes; settings & team |
-| `sales` | Yes | Yes |
-| `viewer` | Yes | No (`403` on writes) |
+| Role | Read | Write | Settings & team |
+|------|------|-------|-----------------|
+| `owner` | Yes | Yes | Yes |
+| `admin` | Yes | Yes | Yes (teammate; cannot delete workspace) |
+| `sales` | Yes | Yes | No |
+| `viewer` | Yes | No (`403` on writes; UI simulates saves for demos) | No |
 
 **Check current context:**
 
@@ -528,6 +530,8 @@ Partial updates for existing CRM records. Same auth as Lead API (`x-website-secr
 |--------|------|-------------|
 | `PATCH` | `/api/integrations/contacts/[id]` | Same body as `PATCH /api/contacts/[id]` (`contactPatchSchema`). Fires `contact.updated` webhook. |
 | `PATCH` | `/api/integrations/tickets/[id]` | Same body as `PATCH /api/tickets/[id]` (`ticketPatchSchema`). |
+| `GET` | `/api/integrations/opportunities` | List opportunities (`pipeline_id`, `contact_id`, `stage`, `search` query params). |
+| `POST` | `/api/integrations/opportunities` | Create opportunity (same body as CRM `POST /api/opportunities`, includes `owner_id`, `tags`). |
 | `PATCH` | `/api/integrations/opportunities/[id]` | Same body as `PATCH /api/opportunities/[id]` (full partial or `{ "stage": "..." }` only). Fires `opportunity.updated` webhook. |
 | `PATCH` | `/api/integrations/accounts/[id]` | Company account fields: `name`, `website`, `phone`, `industry`, `company_size`, `revenue`, `account_summary`. |
 
@@ -549,7 +553,62 @@ curl -s -X PATCH "$BASE_URL/api/integrations/opportunities/OPP_UUID" \
   -d '{"stage":"Proposal"}' | jq
 ```
 
-**Responses:** `200` with updated record JSON; `400` validation; `401`/`503` auth; `404` not found; `409` duplicate contact email/phone.
+**Example — create opportunity with owner and tags:**
+
+```bash
+curl -s -X POST "$BASE_URL/api/integrations/opportunities" \
+  -H "Content-Type: application/json" \
+  -H "x-website-secret: $SECRET" \
+  -d '{
+    "pipeline_id": "PIPELINE_UUID",
+    "contact_id": "CONTACT_UUID",
+    "title": "WhatsApp deal",
+    "stage": "Qualified Lead",
+    "owner_id": "USER_UUID",
+    "tags": "whatsapp,hot"
+  }' | jq
+```
+
+**Responses:** `200`/`201` with record JSON; `400` validation; `401`/`503` auth; `404` not found; `409` duplicate contact email/phone.
+
+---
+
+### 7.5 Quotes API (session only)
+
+Quotes use the `documents` table (types `estimate`, `proposal`, `contract`). Requires dashboard session auth (not `x-website-secret`).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/documents` | List quotes/documents (`contact_id`, `company_id`, `opportunity_id` filters). |
+| `POST` | `/api/documents` | Create quote (JSON or multipart upload). |
+| `GET` | `/api/documents/[id]` | Quote detail including `line_items[]`. |
+| `PATCH` | `/api/documents/[id]` | Update title, content, status, `header_html`, `footer_html`, totals. |
+| `PUT` | `/api/documents/[id]/line-items` | Replace line items + `tax_rate`; recalculates subtotal/tax/total. |
+| `POST` | `/api/documents/[id]/pdf` | Generate PDF (merges variables, header/footer, line-item table). |
+| `POST` | `/api/documents/[id]/send-via-gmail` | Send quote as PDF via the signed-in user's Gmail / Workspace mailbox. |
+| `POST` | `/api/documents/[id]/send` | **Deprecated (410)** — use `send-via-gmail`. |
+| `GET` | `/api/quote-services` | Service catalog for line items. |
+| `POST` | `/api/quote-services` | Add catalog service (`name`, `unit_price`, …). |
+| `PATCH` | `/api/quote-services/[id]` | Update catalog service. |
+| `DELETE` | `/api/quote-services/[id]` | Remove catalog service. |
+
+**Line items body (`PUT /api/documents/[id]/line-items`):**
+
+```json
+{
+  "tax_rate": 16,
+  "line_items": [
+    {
+      "description": "CRM implementation",
+      "quantity": 1,
+      "unit_price": 2500,
+      "service_id": "optional-catalog-uuid"
+    }
+  ]
+}
+```
+
+**Migration:** run `migrations/025_quotes_services_locale.sql` on Supabase before using quotes or CRM locale.
 
 ---
 
@@ -686,7 +745,7 @@ GET /api/team/invites/validate?token=<invite-token>
 
 All routes require login (`401` without session). Data filtered by `workspaceOwnerId`.
 
-**Roles:** `owner` | `sales` can write; `viewer` read-only. **Owner-only:** `PATCH /api/settings`, team invites.
+**Roles:** `owner` | `admin` | `sales` can write CRM data; `admin` also manages settings/team. `viewer` is read-only (`403` on writes). **Owner-only:** `DELETE /api/account` (delete workspace).
 
 ---
 
@@ -710,7 +769,7 @@ Change password (authenticated).
 
 ---
 
-### 9.2 Team (owner)
+### 9.2 Team (owner / admin)
 
 #### `GET /api/team/members`
 
@@ -718,7 +777,19 @@ List workspace members.
 
 #### `POST /api/team/members`
 
-Invite teammate (email, role).
+Invite teammate (email, role: `sales` | `admin` | `viewer`).
+
+#### `PATCH /api/team/members/{memberUserId}`
+
+Update an existing teammate's role (`sales` | `admin` | `viewer`). Owner role cannot be changed.
+
+```json
+{ "role": "admin" }
+```
+
+#### `DELETE /api/team/members/{memberUserId}`
+
+Remove a teammate from the workspace (**owner only**). Also clears pending invites for that email.
 
 #### `POST /api/team/invites/complete`
 
@@ -784,7 +855,9 @@ Triggers `contact.deleted`.
 
 Timeline of activities.
 
-#### Email (Gmail integration)
+#### Email (Gmail / Google Workspace — per user)
+
+Each CRM user connects their own mailbox (`google_gmail_tokens.user_id` = actor). Sends use that user's OAuth token, not the workspace owner.
 
 | Method | Path |
 |--------|------|
@@ -793,6 +866,20 @@ Timeline of activities.
 | `POST` | `/api/contacts/[id]/emails/send` |
 
 Send body: `{ "to", "subject", "body" }` or `{ "template_id" }`.
+
+#### Send quote via Gmail
+
+`POST /api/documents/[id]/send-via-gmail`
+
+```json
+{
+  "to": "customer@example.com",
+  "subject": "Quote: Acme estimate",
+  "body": "Optional message (plain text). PDF is attached automatically."
+}
+```
+
+Requires Gmail connected for the signed-in user. Updates document `status` to `sent`, stores PDF, logs on linked contact when `contact_id` is set.
 
 ---
 
@@ -937,9 +1024,11 @@ Returns `default_currency`, `default_sales_assignee`, `booking_availability`, `u
 | `GET` | `/api/integrations/google-calendar/status` | Connected? |
 | `POST` | `/api/integrations/google-calendar/disconnect` | Disconnect |
 | `GET` | `/api/auth/google-calendar` | Start OAuth |
-| `GET` | `/api/integrations/gmail/status` | Gmail status |
-| `POST` | `/api/integrations/gmail/disconnect` | Disconnect Gmail |
+| `GET` | `/api/integrations/google-workspace/setup` | OAuth checklist + per-user mailbox status |
+| `GET` | `/api/integrations/gmail/status` | Gmail status (signed-in user) |
+| `DELETE` | `/api/integrations/gmail/disconnect` | Disconnect signed-in user's Gmail |
 | `GET` | `/api/auth/google-gmail` | Start Gmail OAuth |
+| `GET` | `/api/auth/google-gmail/reconnect` | Re-consent (send + read scopes) |
 
 ---
 
@@ -957,7 +1046,7 @@ Returns `default_currency`, `default_sales_assignee`, `booking_availability`, `u
 | **Notifications** | `GET|POST /api/notifications`, `PATCH /api/notifications/[id]` |
 | **Notification prefs** | `GET|PATCH /api/notification-preferences` |
 | **Saved filters** | `GET|POST /api/saved-filters`, `GET|PATCH|DELETE /api/saved-filters/[id]` |
-| **Documents** | `/api/documents`, `/api/documents/[id]`, file/pdf/send/versions |
+| **Quotes (documents)** | `/api/documents`, line-items, pdf, send-via-gmail, `/api/quote-services` |
 | **Templates** | `/api/document-templates`, `/api/email-templates` |
 
 Validators: `lib/validators/index.ts`  
@@ -1152,6 +1241,9 @@ sequenceDiagram
 | PATCH | `/api/integrations/tickets/[id]` | `x-website-secret` |
 | PATCH | `/api/integrations/opportunities/[id]` | `x-website-secret` |
 | PATCH | `/api/integrations/accounts/[id]` | `x-website-secret` |
+| GET | `/api/integrations/opportunities` | `x-website-secret` |
+| POST | `/api/integrations/opportunities` | `x-website-secret` |
+| PATCH | `/api/integrations/opportunities/[id]` | `x-website-secret` |
 
 ### CRM (session) — 60+ routes
 

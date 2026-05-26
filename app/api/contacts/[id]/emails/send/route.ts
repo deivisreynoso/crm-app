@@ -89,13 +89,18 @@ export async function POST(req: NextRequest, context: RouteContext) {
       );
     }
 
-    const sent = await sendGmailMessage(workspaceOwnerId!, { to, subject, body: emailBody });
+    const sent = await sendGmailMessage(userId!, {
+      to,
+      subject,
+      body: emailBody,
+    });
 
     if (!sent) {
       return NextResponse.json(
         {
           error:
-            "Could not send email. Connect Gmail in Settings and ensure the Gmail API is enabled in Google Cloud.",
+            "Could not send email. Connect your Google Workspace or Gmail account in Settings → Integrations.",
+          needs_gmail_connect: true,
         },
         { status: 403 }
       );

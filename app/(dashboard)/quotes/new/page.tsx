@@ -1,0 +1,121 @@
+"use client";
+
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-shell";
+import { useDocumentTemplates } from "@/hooks/useDocumentTemplates";
+import { useCrmLocale } from "@/components/crm/crm-locale-provider";
+import axios from "axios";
+import type { CrmDocument, DocumentFormInput } from "@/types";
+import { formatApiError } from "@/lib/validation-errors";
+
+export default function NewQuotePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const contactId = searchParams.get("contact_id") ?? "";
+  const companyId = searchParams.get("company_id") ?? "";
+  const { dict } = useCrmLocale();
+  const q = dict.quotes;
+  const { data: templates = [] } = useDocumentTemplates();
+  const [title, setTitle] = useState("");
+  const [type, setType] = useState<DocumentFormInput["type"]>("estimate");
+  const [templateId, setTemplateId] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const template = templates.find((t) => t.id === templateId);
+      const { data } = await axios.post<CrmDocument>(
+        "/api/documents",
+        {
+          title: title.trim() || (q?.newQuote ?? "New quote"),
+          type,
+          content: template?.content ?? "",
+          status: "draft",
+          contact_id: contactId || undefined,
+          company_id: companyId || undefined,
+        },
+        { headers: { "Content-Type": "application/json" } }
+      );
+      router.push(`/quotes/${data.id}`);
+    } catch (err) {
+      setError(formatApiError(err, "Could not create quote"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="max-w-lg space-y-6">
+      <PageHeader title={q?.newQuote ?? "New quote"} description={q?.description} />
+      {error && (
+        <p className="text-sm text-[var(--error)] bg-red-500/10 border border-red-200 rounded-lg px-3 py-2">
+          {error}
+        </p>
+      )}
+      <form onSubmit={handleCreate} className="surface-card p-6 space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-heading mb-1">
+            {q?.quoteTitleLabel ?? "Title"}
+          </label>
+          <input
+            className="input-field w-full"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={q?.quoteTitlePlaceholder}
+          />
+          {q?.quoteTitleHint && (
+            <p className="text-xs text-body-muted mt-1">{q.quoteTitleHint}</p>
+          )}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-heading mb-1">Type</label>
+          <select
+            className="input-field w-full"
+            value={type}
+            onChange={(e) =>
+              setType(e.target.value as DocumentFormInput["type"])
+            }
+          >
+            <option value="estimate">Estimate</option>
+            <option value="proposal">Proposal</option>
+            <option value="contract">Contract</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-heading mb-1">
+            {q?.templates}
+          </label>
+          <select
+            className="input-field w-full"
+            value={templateId}
+            onChange={(e) => setTemplateId(e.target.value)}
+          >
+            <option value="">—</option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex gap-2 pt-2">
+          <Link href="/quotes">
+            <Button type="button" variant="outline">
+              Cancel
+            </Button>
+          </Link>
+          <Button type="submit" disabled={loading}>
+            Create
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}

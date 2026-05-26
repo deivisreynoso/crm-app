@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
+import { GMAIL_OAUTH_SCOPES } from "@/lib/google/gmail";
 import { getGoogleGmailRedirectUri } from "@/lib/google/oauth-config";
 
 /** Starts Gmail OAuth (uses same Google Cloud OAuth client as Calendar). */
@@ -24,11 +25,7 @@ export async function GET(req: NextRequest) {
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: "code",
-    scope: [
-      "https://www.googleapis.com/auth/gmail.send",
-      "https://www.googleapis.com/auth/gmail.readonly",
-      "https://www.googleapis.com/auth/userinfo.email",
-    ].join(" "),
+    scope: GMAIL_OAUTH_SCOPES.join(" "),
     access_type: "offline",
     prompt: "consent",
   });

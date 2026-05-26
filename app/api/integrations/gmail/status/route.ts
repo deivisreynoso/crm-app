@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
-import { createServerSideClient } from "@/lib/supabase";
 import {
-  checkGmailReadAccess,
-  getGoogleGmailConnectedEmail,
+  getGoogleGmailConnection,
   isGoogleGmailConfigured,
 } from "@/lib/google/gmail";
 import { getGoogleGmailRedirectUri } from "@/lib/google/oauth-config";
 
+/** Gmail / Workspace connection status for the signed-in user (per-user mailbox). */
 export async function GET(req: Request) {
   try {
-    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
+    const { userId, error } = await requireAuth();
     if (error) return error;
 
     const redirectUri = getGoogleGmailRedirectUri(req.url);
@@ -22,45 +21,21 @@ export async function GET(req: Request) {
         configured: false,
         redirect_uri: redirectUri,
         email: null,
+        read_access: false,
+        per_user: true,
       });
     }
 
-    const supabase = createServerSideClient();
-    const { data, error: dbError } = await supabase
-      .from("google_gmail_tokens")
-      .select("id, email_address")
-      .eq("user_id", workspaceOwnerId!)
-      .maybeSingle();
-
-    if (dbError) {
-      console.error("GET gmail status db error:", dbError.message);
-      const needsMigration = /does not exist|relation/i.test(dbError.message);
-      return NextResponse.json({
-        connected: false,
-        configured: true,
-        redirect_uri: redirectUri,
-        email: null,
-        storage_error: needsMigration
-          ? "Run migration 018_google_gmail_tokens.sql in Supabase, then connect again."
-          : dbError.message,
-      });
-    }
-
-    const connected = !!data?.id;
-    const email =
-      data?.email_address?.trim() ||
-      (connected ? await getGoogleGmailConnectedEmail(userId!) : null);
-
-    const read_access = connected
-      ? await checkGmailReadAccess(workspaceOwnerId!)
-      : false;
+    const connection = await getGoogleGmailConnection(userId!);
 
     return NextResponse.json({
-      connected,
+      connected: connection.connected,
       configured: true,
       redirect_uri: redirectUri,
-      email,
-      read_access,
+      email: connection.email,
+      read_access: connection.read_access,
+      per_user: true,
+      setup_path: "/api/integrations/google-workspace/setup",
     });
   } catch (err) {
     console.error("GET gmail status:", err);
@@ -68,6 +43,7 @@ export async function GET(req: Request) {
       connected: false,
       configured: false,
       email: null,
+      read_access: false,
     });
   }
 }

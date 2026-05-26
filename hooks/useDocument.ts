@@ -39,11 +39,22 @@ export function useGenerateDocumentPdf(id: string) {
   });
 }
 
-export function useSendDocument(id: string) {
+export type SendDocumentViaGmailInput = {
+  to?: string;
+  subject?: string;
+  body?: string;
+};
+
+export function useSendDocumentViaGmail(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (email?: string) =>
-      axios.post(`/api/documents/${id}/send`, email ? { email } : {}),
+    mutationFn: (input?: SendDocumentViaGmailInput) =>
+      axios.post<{
+        success: boolean;
+        message_id: string;
+        from_email: string | null;
+        pdf_file_name: string;
+      }>(`/api/documents/${id}/send-via-gmail`, input ?? {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["document", id] });
       queryClient.invalidateQueries({ queryKey: ["documents"] });

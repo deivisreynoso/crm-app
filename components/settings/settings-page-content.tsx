@@ -6,14 +6,36 @@ import { CustomFieldManager } from "@/components/custom-fields/custom-field-mana
 import { EmailTemplatesManager } from "@/components/settings/email-templates-manager";
 import { DuplicateReviewsPanel } from "@/components/settings/duplicate-reviews-panel";
 import { SettingsIntegrationsSection } from "@/components/settings/settings-integrations-section";
+import { GoogleWorkspaceSetup } from "@/components/settings/google-workspace-setup";
 import { TeamSettings } from "@/components/settings/team-settings";
 import { WorkspaceLeadsSettings } from "@/components/settings/workspace-leads-settings";
 import { BookingAvailabilitySettings } from "@/components/settings/booking-availability-settings";
+import { QuoteServicesSettings } from "@/components/settings/quote-services-settings";
+import { QuoteBrandingSettings } from "@/components/settings/quote-branding-settings";
+import { CrmLanguageSwitcher } from "@/components/crm/crm-language-switcher";
+import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { useWorkspaceContext } from "@/hooks/useWorkspaceContext";
 
+function LanguageSettingsCard() {
+  const { dict } = useCrmLocale();
+  return (
+    <Card padding="lg">
+      <h2 className="text-sm font-semibold text-heading mb-1">
+        {dict.settings?.language ?? "Platform language"}
+      </h2>
+      <p className="text-sm text-body-muted mb-4">
+        {dict.settings?.languageHelp ??
+          "Applies to CRM navigation and common labels."}
+      </p>
+      <CrmLanguageSwitcher />
+    </Card>
+  );
+}
+
 export function SettingsPageContent() {
+  const { dict } = useCrmLocale();
   const { data: ctx, isLoading } = useWorkspaceContext();
-  const isOwner = ctx?.isWorkspaceOwner ?? false;
+  const canManage = ctx?.canManage ?? false;
 
   if (isLoading) {
     return (
@@ -28,14 +50,30 @@ export function SettingsPageContent() {
       <PageHeader
         title="Settings"
         description={
-          isOwner
+          canManage
             ? "Integrations, templates, duplicates, team, and custom fields."
             : "Workspace preferences for your team account."
         }
       />
 
-      {isOwner && (
+      <LanguageSettingsCard />
+
+      <Card padding="lg">
+        <GoogleWorkspaceSetup />
+      </Card>
+
+      {canManage && (
         <>
+          <Card padding="lg">
+            <h2 className="text-sm font-semibold text-heading mb-2">
+              {dict.settings?.quoteBranding ?? "Quote branding"}
+            </h2>
+            <QuoteBrandingSettings />
+          </Card>
+          <Card padding="lg">
+            <h2 className="text-sm font-semibold text-heading mb-4">Quote services catalog</h2>
+            <QuoteServicesSettings />
+          </Card>
           <Card padding="lg">
             <h2 className="text-sm font-semibold text-heading mb-4">Booking availability</h2>
             <BookingAvailabilitySettings />
@@ -70,11 +108,11 @@ export function SettingsPageContent() {
         </>
       )}
 
-      {!isOwner && (
+      {!canManage && (
         <Card padding="lg">
           <p className="text-sm text-body-muted">
             You are signed in as a workspace teammate ({ctx?.role ?? "sales"}). CRM data
-            is shared with your team. Owner-only settings are managed by the account owner.
+            is shared with your team. Workspace settings are managed by the owner or an admin.
           </p>
         </Card>
       )}

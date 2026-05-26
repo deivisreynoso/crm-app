@@ -8,6 +8,10 @@ export interface WorkspaceSettings {
   default_currency: WorkspaceCurrency;
   default_sales_assignee?: string | null;
   booking_availability?: BookingAvailabilityConfig;
+  ui_locale?: "en" | "es";
+  quote_logo_storage_path?: string | null;
+  quote_logo_url?: string | null;
+  quote_company_name?: string | null;
   updated_at?: string;
 }
 
@@ -28,6 +32,7 @@ export function useUpdateWorkspaceSettings() {
       default_currency?: WorkspaceCurrency;
       default_sales_assignee?: string | null;
       booking_availability?: BookingAvailabilityConfig;
+      quote_company_name?: string;
     }) => axios.patch<WorkspaceSettings>("/api/settings", patch),
     onSuccess: (res) => {
       queryClient.setQueryData(["workspace-settings"], res.data);

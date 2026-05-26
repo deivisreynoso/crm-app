@@ -148,6 +148,7 @@ export interface User {
     expected_close_date?: string;
     notes?: string;
     tags?: string;
+    owner_id?: string;
     company_id?: string;
     custom_fields?: Record<string, unknown>;
   }
@@ -233,6 +234,31 @@ export interface User {
     custom_fields?: Record<string, unknown>;
   }
 
+  export interface QuoteService {
+    id: string;
+    user_id: string;
+    name: string;
+    description?: string | null;
+    unit_price: number;
+    currency: string;
+    active: boolean;
+    created_at: string;
+    updated_at: string;
+  }
+
+  export interface QuoteLineItem {
+    id: string;
+    document_id: string;
+    user_id: string;
+    service_id?: string | null;
+    description: string;
+    quantity: number;
+    unit_price: number;
+    line_total: number;
+    sort_order: number;
+    created_at: string;
+  }
+
   export interface CrmDocument {
     id: string;
     user_id: string;
@@ -241,6 +267,7 @@ export interface User {
     opportunity_id?: string | null;
     type: "contract" | "estimate" | "proposal" | "attachment";
     title: string;
+    quote_reference?: string | null;
     content?: string;
     file_url?: string;
     file_name?: string;
@@ -250,6 +277,13 @@ export interface User {
     status: "draft" | "sent" | "signed" | "accepted" | "rejected";
     valid_until?: string;
     signed_at?: string;
+    subtotal?: number;
+    tax_rate?: number;
+    tax_amount?: number;
+    total_amount?: number;
+    header_html?: string | null;
+    footer_html?: string | null;
+    line_items?: QuoteLineItem[];
     created_at: string;
     updated_at: string;
   }

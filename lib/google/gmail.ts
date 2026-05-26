@@ -1,6 +1,11 @@
 import { createServerSideClient } from "@/lib/supabase";
-
+import {
+  buildGmailRawMessage,
+  type GmailAttachment,
+} from "@/lib/google/gmail-attachments";
 import { getGoogleGmailRedirectUri } from "@/lib/google/oauth-config";
+
+export type { GmailAttachment };
 
 export function isGoogleGmailConfigured(): boolean {
   return Boolean(
@@ -10,6 +15,12 @@ export function isGoogleGmailConfigured(): boolean {
 
 export { getGoogleGmailRedirectUri };
 
+export const GMAIL_OAUTH_SCOPES = [
+  "https://www.googleapis.com/auth/gmail.send",
+  "https://www.googleapis.com/auth/gmail.readonly",
+  "https://www.googleapis.com/auth/userinfo.email",
+] as const;
+
 type TokenRow = {
   access_token: string | null;
   refresh_token: string | null;
@@ -17,7 +28,7 @@ type TokenRow = {
   email_address: string | null;
 };
 
-/** Returns a valid access token, refreshing when expired. */
+/** Returns a valid access token for the connected user, refreshing when expired. */
 export async function getGoogleGmailAccessToken(
   userId: string
 ): Promise<string | null> {
@@ -79,6 +90,34 @@ export async function getGoogleGmailAccessToken(
   return tokens.access_token;
 }
 
+export async function getGoogleGmailConnection(userId: string): Promise<{
+  connected: boolean;
+  email: string | null;
+  read_access: boolean;
+}> {
+  if (!isGoogleGmailConfigured()) {
+    return { connected: false, email: null, read_access: false };
+  }
+
+  const supabase = createServerSideClient();
+  const { data } = await supabase
+    .from("google_gmail_tokens")
+    .select("id, email_address")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const connected = !!data?.id;
+  if (!connected) {
+    return { connected: false, email: null, read_access: false };
+  }
+
+  const email =
+    data?.email_address?.trim() || (await getGoogleGmailConnectedEmail(userId));
+  const read_access = await checkGmailReadAccess(userId);
+
+  return { connected: true, email, read_access };
+}
+
 /** True when the stored token can list messages (gmail.readonly scope). */
 export async function checkGmailReadAccess(userId: string): Promise<boolean> {
   const accessToken = await getGoogleGmailAccessToken(userId);
@@ -105,60 +144,27 @@ export async function getGoogleGmailConnectedEmail(
   return data?.email_address?.trim() || null;
 }
 
-function encodeGmailRaw(raw: string): string {
-  return Buffer.from(raw)
-    .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-}
-
-function escapeHeaderValue(value: string): string {
-  return value.replace(/\r?\n/g, " ").trim();
-}
-
-export function buildGmailRawMessage(input: {
+export type GmailSendInput = {
   to: string;
   subject: string;
   body: string;
-  from?: string | null;
-}): string {
-  const to = escapeHeaderValue(input.to);
-  const subject = escapeHeaderValue(input.subject);
-  const from = input.from?.trim()
-    ? `From: ${escapeHeaderValue(input.from)}\r\n`
-    : "";
-
-  const isHtml = /<[a-z][\s\S]*>/i.test(input.body);
-  const contentType = isHtml
-    ? "text/html; charset=UTF-8"
-    : "text/plain; charset=UTF-8";
-
-  const raw = [
-    `${from}To: ${to}`,
-    `Subject: ${subject}`,
-    "MIME-Version: 1.0",
-    `Content-Type: ${contentType}`,
-    "",
-    input.body,
-  ].join("\r\n");
-
-  return encodeGmailRaw(raw);
-}
+  attachments?: GmailAttachment[];
+};
 
 export type GmailSendResult = {
   messageId: string;
   threadId?: string;
 };
 
+/** Send as the connected user (Workspace or Gmail). Each CRM user connects their own mailbox. */
 export async function sendGmailMessage(
-  userId: string,
-  input: { to: string; subject: string; body: string }
+  actorUserId: string,
+  input: GmailSendInput
 ): Promise<GmailSendResult | null> {
-  const accessToken = await getGoogleGmailAccessToken(userId);
+  const accessToken = await getGoogleGmailAccessToken(actorUserId);
   if (!accessToken) return null;
 
-  const fromEmail = await getGoogleGmailConnectedEmail(userId);
+  const fromEmail = await getGoogleGmailConnectedEmail(actorUserId);
   const raw = buildGmailRawMessage({ ...input, from: fromEmail });
 
   const res = await fetch(

@@ -9,7 +9,7 @@ import { getGoogleGmailRedirectUri } from "@/lib/google/oauth-config";
  * so Google re-prompts for send + read scopes.
  */
 export async function GET(req: NextRequest) {
-  const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
+  const { userId, error } = await requireAuth();
   if (error) return error;
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   const { data: row } = await supabase
     .from("google_gmail_tokens")
     .select("refresh_token, access_token")
-    .eq("user_id", workspaceOwnerId!)
+    .eq("user_id", userId!)
     .maybeSingle();
 
   const tokenToRevoke = row?.refresh_token ?? row?.access_token;
@@ -33,17 +33,15 @@ export async function GET(req: NextRequest) {
     await revokeGoogleToken(tokenToRevoke);
   }
 
-  await supabase.from("google_gmail_tokens").delete().eq("user_id", workspaceOwnerId!);
+  await supabase.from("google_gmail_tokens").delete().eq("user_id", userId!);
+
+  const { GMAIL_OAUTH_SCOPES } = await import("@/lib/google/gmail");
 
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: "code",
-    scope: [
-      "https://www.googleapis.com/auth/gmail.send",
-      "https://www.googleapis.com/auth/gmail.readonly",
-      "https://www.googleapis.com/auth/userinfo.email",
-    ].join(" "),
+    scope: GMAIL_OAUTH_SCOPES.join(" "),
     access_type: "offline",
     prompt: "consent",
   });

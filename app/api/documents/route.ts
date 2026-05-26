@@ -8,6 +8,12 @@ import {
   uploadToDocumentsBucket,
 } from "@/lib/storage/documents";
 import { formatValidationDetails } from "@/lib/validation-errors";
+import { isQuoteDocument, QUOTE_DOCUMENT_TYPES } from "@/lib/documents/kinds";
+import { getDefaultQuoteTitle } from "@/lib/crm/quote-pdf-labels";
+import {
+  allocateQuoteReference,
+  isGenericQuoteTitle,
+} from "@/lib/quotes/reference";
 
 export async function GET(req: NextRequest) {
   try {
@@ -25,9 +31,15 @@ export async function GET(req: NextRequest) {
     const contactId = params.get("contact_id");
     const companyId = params.get("company_id");
     const opportunityId = params.get("opportunity_id");
+    const kind = params.get("kind");
     if (contactId) query = query.eq("contact_id", contactId);
     if (companyId) query = query.eq("company_id", companyId);
     if (opportunityId) query = query.eq("opportunity_id", opportunityId);
+    if (kind === "quotes") {
+      query = query.in("type", [...QUOTE_DOCUMENT_TYPES]);
+    } else if (kind === "attachments") {
+      query = query.eq("type", "attachment");
+    }
 
     const { data, error: dbError } = await query;
     if (dbError) {
@@ -137,10 +149,28 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    let title = parsed.data.title.trim();
+    let quoteReference: string | null = null;
+
+    if (isQuoteDocument(parsed.data.type)) {
+      const { data: settings } = await supabase
+        .from("user_settings")
+        .select("ui_locale")
+        .eq("user_id", workspaceOwnerId!)
+        .maybeSingle();
+
+      const uiLocale = (settings?.ui_locale as string | null) ?? null;
+      quoteReference = await allocateQuoteReference(supabase, workspaceOwnerId!);
+      if (isGenericQuoteTitle(title)) {
+        title = getDefaultQuoteTitle(uiLocale, quoteReference);
+      }
+    }
+
     const record = {
-      ...buildDocumentRecord(parsed.data, workspaceOwnerId!, fileMeta),
+      ...buildDocumentRecord({ ...parsed.data, title }, workspaceOwnerId!, fileMeta),
       id: docId,
       storage_path: fileMeta?.storage_path ?? null,
+      quote_reference: quoteReference,
     };
 
     const { data, error: dbError } = await supabase
