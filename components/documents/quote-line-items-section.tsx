@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
@@ -22,6 +22,12 @@ function newDraftLine(serviceId?: string): DraftLine {
   return { key: crypto.randomUUID(), service_id: serviceId, quantity: "1" };
 }
 
+const EMPTY_LINES: QuoteLineItem[] = [];
+
+function draftLinesKey(lines: DraftLine[]): string {
+  return lines.map((l) => `${l.key}:${l.service_id ?? ""}:${l.quantity}`).join("|");
+}
+
 interface QuoteLineItemsSectionProps {
   documentId: string;
   initialLines?: QuoteLineItem[];
@@ -34,12 +40,13 @@ interface QuoteLineItemsSectionProps {
 
 export function QuoteLineItemsSection({
   documentId,
-  initialLines = [],
+  initialLines,
   initialTaxRate = 0,
   currency = "USD",
   onSaved,
   onDraftChange,
 }: QuoteLineItemsSectionProps) {
+  const serverLines = initialLines ?? EMPTY_LINES;
   const { dict } = useCrmLocale();
   const q = dict.quotes;
   const queryClient = useQueryClient();
@@ -57,12 +64,27 @@ export function QuoteLineItemsSection({
     return new Map(services.map((s) => [s.id, s]));
   }, [services]);
 
+  const serverLinesKey = useMemo(
+    () =>
+      serverLines
+        .map(
+          (l) =>
+            `${l.id}:${l.service_id ?? ""}:${l.quantity}:${l.sort_order}:${l.unit_price}`
+        )
+        .join("|"),
+    [serverLines]
+  );
+
   useEffect(() => {
     setLines(
-      initialLines.map((l) => ({ key: l.id, service_id: l.service_id ?? undefined, quantity: String(l.quantity) }))
+      serverLines.map((l) => ({
+        key: l.id,
+        service_id: l.service_id ?? undefined,
+        quantity: String(l.quantity),
+      }))
     );
     setTaxRate(String(initialTaxRate || 0));
-  }, [initialLines, initialTaxRate]);
+  }, [documentId, serverLinesKey, initialTaxRate, serverLines]);
 
   const subtotal = lines.reduce((sum, l) => {
     const q = Number(l.quantity) || 0;
@@ -73,8 +95,19 @@ export function QuoteLineItemsSection({
   const taxAmount = Math.round(subtotal * (rate / 100) * 100) / 100;
   const total = Math.round((subtotal + taxAmount) * 100) / 100;
 
+  const lastDraftKeyRef = useRef("");
+
+  useEffect(() => {
+    lastDraftKeyRef.current = "";
+  }, [documentId, serverLinesKey]);
+
   useEffect(() => {
     if (!onDraftChange) return;
+
+    const draftKey = `${draftLinesKey(lines)}|${rate}|${subtotal}|${taxAmount}|${total}|${services.length}`;
+    if (draftKey === lastDraftKeyRef.current) return;
+    lastDraftKeyRef.current = draftKey;
+
     const lineItems: QuoteLineItem[] = lines.map((l, idx) => {
       const svc = l.service_id ? servicesById.get(l.service_id) : undefined;
       const qty = Number(l.quantity) || 0;
@@ -90,7 +123,7 @@ export function QuoteLineItemsSection({
         unit_price: unit,
         line_total: lt,
         sort_order: idx,
-        created_at: new Date().toISOString(),
+        created_at: "",
       };
     });
     onDraftChange({
@@ -106,6 +139,7 @@ export function QuoteLineItemsSection({
     subtotal,
     taxAmount,
     total,
+    services.length,
     servicesById,
     documentId,
     onDraftChange,

@@ -27,7 +27,9 @@ import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import type { QuoteLineItemsDraft } from "@/lib/quotes/preview-draft";
 import { isQuoteDocument } from "@/lib/documents/kinds";
 import { formatApiError } from "@/lib/validation-errors";
-import type { CrmDocument } from "@/types";
+import type { CrmDocument, QuoteLineItem } from "@/types";
+
+const EMPTY_QUOTE_LINE_ITEMS: QuoteLineItem[] = [];
 
 interface DocumentEditorProps {
   documentId: string;
@@ -335,7 +337,7 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
 
               <QuoteLineItemsSection
                 documentId={documentId}
-                initialLines={doc.line_items}
+                initialLines={doc.line_items ?? EMPTY_QUOTE_LINE_ITEMS}
                 initialTaxRate={Number(doc.tax_rate) || 0}
                 currency={currency}
                 onDraftChange={setLineItemsDraft}
