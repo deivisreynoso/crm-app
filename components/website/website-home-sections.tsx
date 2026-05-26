@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { WebsiteWebchatEmbed } from "@/components/website/website-webchat-embed";
 import { WebsiteFaq } from "@/components/website/website-faq";
+import { WebsiteGoogleReviews } from "@/components/website/website-google-reviews";
 import { SubtleCta } from "@/components/website/subtle-cta";
 import { ChatOpenButton } from "@/components/website/chat-open-trigger";
 import { HeroMascot } from "@/components/website/hero-mascot";
@@ -255,6 +256,8 @@ export function WebsiteHomeSections({ lang, dict }: Props) {
           </div>
         </div>
       </section>
+
+      <WebsiteGoogleReviews dict={dict} />
 
       <WebsiteFaq dict={dict} />
 

@@ -3,13 +3,15 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
-import { Mail, Ticket } from "lucide-react";
+import { Mail, Star, Ticket } from "lucide-react";
+import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge, ticketPriorityVariant, ticketStatusVariant } from "@/components/ui/badge";
 import { ActivityPanel } from "@/components/contact/activity-panel";
 import { ContactEmailPanel } from "@/components/contact/contact-email-panel";
 import { SendEmailModal } from "@/components/contact/send-email-modal";
+import { RequestReviewModal } from "@/components/contact/request-review-modal";
 import { TicketForm } from "@/components/tickets/ticket-form";
 import { TicketOverview } from "@/components/tickets/ticket-overview";
 import { useTicket, useUpdateTicket } from "@/hooks/useTickets";
@@ -28,6 +30,9 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
   const [tab, setTab] = useState<TicketTab>("details");
   const [editing, setEditing] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const { dict } = useCrmLocale();
+  const r = dict.reviewRequest;
 
   const { data: ticket, isLoading, error } = useTicket(id);
   const updateTicket = useUpdateTicket(id);
@@ -64,6 +69,12 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
   const displaySubject = ticket.subject?.trim() || ticket.title;
   const linkedContact = ticket.contact;
   const contactEmail = linkedContact?.email?.trim() ?? "";
+  const isClosed = ticket.status === "closed";
+  const canRequestReview =
+    canWrite &&
+    linkedContact &&
+    contactEmail &&
+    !linkedContact.review_request_opt_out;
 
   const detailsPanel = (
     <TicketOverview ticket={ticket} onSaveField={handleSaveField} readOnly={!canWrite} />
@@ -111,6 +122,7 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
   return (
     <div className="space-y-6 w-full">
       {linkedContact && (
+        <>
         <SendEmailModal
           contact={{
             id: linkedContact.id,
@@ -129,6 +141,41 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
             void queryClient.invalidateQueries({ queryKey: ["ticket-notes", id] });
           }}
         />
+        <RequestReviewModal
+          contact={{
+            id: linkedContact.id,
+            first_name: linkedContact.first_name,
+            last_name: linkedContact.last_name,
+            email: linkedContact.email ?? "",
+            company: ticket.company?.name ?? undefined,
+            company_id: ticket.company_id ?? undefined,
+            review_request_opt_out: linkedContact.review_request_opt_out,
+          }}
+          ticketId={id}
+          companyName={ticket.company?.name}
+          open={reviewModalOpen}
+          onClose={() => setReviewModalOpen(false)}
+          onSent={() => {
+            void queryClient.invalidateQueries({ queryKey: ["ticket", id] });
+            void queryClient.invalidateQueries({ queryKey: ["ticket-notes", id] });
+            if (linkedContact.id) {
+              void queryClient.invalidateQueries({
+                queryKey: ["contact", linkedContact.id],
+              });
+            }
+          }}
+        />
+        </>
+      )}
+
+      {isClosed && canRequestReview && (
+        <div className="rounded-lg border border-[var(--secondary)]/30 bg-[var(--secondary)]/10 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p className="text-sm text-heading">{r?.ticketPrompt}</p>
+          <Button size="sm" onClick={() => setReviewModalOpen(true)}>
+            <Star className="h-4 w-4 mr-1.5" />
+            {r?.action}
+          </Button>
+        </div>
       )}
 
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
@@ -181,6 +228,16 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
             >
               <Mail className="h-4 w-4 mr-1.5" />
               Send email
+            </Button>
+          )}
+          {canRequestReview && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setReviewModalOpen(true)}
+            >
+              <Star className="h-4 w-4 mr-1.5" />
+              {r?.action}
             </Button>
           )}
           {canWrite && (

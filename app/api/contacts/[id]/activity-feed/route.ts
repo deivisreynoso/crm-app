@@ -111,7 +111,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
         source: "activity" as const,
         type: a.type,
         created_at: a.created_at,
-        is_system: ["system", "update", "created"].includes(a.type),
+        is_system: ["system", "update", "created", "review_request"].includes(a.type),
         ...emailFields,
       };
     });

@@ -31,6 +31,8 @@ import { contactToFormDefaults } from "@/lib/contact-payload";
 import type { ContactFormInput, Task } from "@/types";
 import { QuickActionBar } from "@/components/quick-actions/quick-action-bar";
 import { SendEmailModal } from "@/components/contact/send-email-modal";
+import { RequestReviewModal } from "@/components/contact/request-review-modal";
+import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
 import { ContactEmailPanel } from "@/components/contact/contact-email-panel";
 import { useContactEmails } from "@/hooks/useGmail";
 import { getInitials } from "@/lib/utils";
@@ -48,6 +50,8 @@ export default function ContactDetailPage({ params }: PageProps) {
   const [openTask, setOpenTask] = useState<Task | null>(null);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const { canWrite } = useWorkspaceCapabilities();
 
   const { data: contact, isLoading, error } = useContact(id);
   const updateContact = useUpdateContact(id);
@@ -220,6 +224,17 @@ export default function ContactDetailPage({ params }: PageProps) {
         }}
       />
 
+      <RequestReviewModal
+        contact={contact}
+        companyName={linkedAccount?.name}
+        open={reviewModalOpen}
+        onClose={() => setReviewModalOpen(false)}
+        onSent={() => {
+          void queryClient.invalidateQueries({ queryKey: ["contact", id] });
+          void queryClient.invalidateQueries({ queryKey: ["contact-activity-feed", id] });
+        }}
+      />
+
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div className="flex items-start gap-4 min-w-0">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-semibold">
@@ -240,8 +255,15 @@ export default function ContactDetailPage({ params }: PageProps) {
               phone={contact.phone}
               className="mt-3"
               onSendEmail={
-                contact.email?.trim()
+                contact.email?.trim() && canWrite
                   ? () => setEmailModalOpen(true)
+                  : undefined
+              }
+              onRequestReview={
+                contact.email?.trim() &&
+                canWrite &&
+                !contact.review_request_opt_out
+                  ? () => setReviewModalOpen(true)
                   : undefined
               }
               noteLoading={createNote.isPending}

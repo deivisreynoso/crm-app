@@ -19,7 +19,31 @@
     "quoteBrandingHelp": "El logo aparece en la vista previa y PDF. Tamaño recomendado: 400×120 px (PNG o WebP).",
     "companyName": "Nombre de empresa en cotizaciones",
     "uploadLogo": "Subir logo",
-    "removeLogo": "Quitar logo"
+    "removeLogo": "Quitar logo",
+    "reviewRequests": "Invitaciones de reseña en Google",
+    "reviewRequestsHelp": "Envía enlaces de reseña desde contactos y tickets cerrados por Gmail.",
+    "googleReviewsUrl": "Enlace de reseñas en Google",
+    "googleReviewsUrlHelp": "Enlace público donde el cliente deja su reseña (Perfil de Google).",
+    "reviewTemplate": "Plantilla de correo de invitación",
+    "reviewTemplateHelp": "Usa {{first_name}} y {{google_review_url}}. Crea una predeterminada o elige otra en Plantillas de correo.",
+    "createReviewTemplate": "Crear plantilla predeterminada",
+    "noReviewTemplate": "Sin plantilla vinculada — se usa texto integrado hasta que crees una.",
+    "saveReviewSettings": "Guardar configuración de reseñas"
+  },
+  "reviewRequest": {
+    "action": "Pedir reseña",
+    "title": "Pedir reseña en Google",
+    "previewHint": "Este correo se envía desde tu cuenta de Gmail conectada.",
+    "send": "Enviar invitación",
+    "sending": "Enviando…",
+    "optOut": "No pedir reseñas en Google",
+    "optOutHint": "Bloquea invitaciones de reseña para este contacto.",
+    "lastSent": "Invitación de reseña enviada",
+    "noEmail": "Agrega un correo para enviar la invitación de reseña.",
+    "optedOut": "Este contacto no desea invitaciones de reseña.",
+    "configureUrl": "Configura el enlace de reseñas en Ajustes primero.",
+    "ticketPrompt": "Este ticket está cerrado. ¿Enviar invitación de reseña al contacto vinculado?",
+    "gmailRequired": "Conecta Gmail en Ajustes para enviar invitaciones de reseña."
   },
   "quotes": {
     "title": "Cotizaciones",

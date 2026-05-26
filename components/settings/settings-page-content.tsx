@@ -12,6 +12,7 @@ import { WorkspaceLeadsSettings } from "@/components/settings/workspace-leads-se
 import { BookingAvailabilitySettings } from "@/components/settings/booking-availability-settings";
 import { QuoteServicesSettings } from "@/components/settings/quote-services-settings";
 import { QuoteBrandingSettings } from "@/components/settings/quote-branding-settings";
+import { GoogleReviewRequestSettings } from "@/components/settings/google-review-request-settings";
 import { CrmLanguageSwitcher } from "@/components/crm/crm-language-switcher";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { useWorkspaceContext } from "@/hooks/useWorkspaceContext";
@@ -85,6 +86,12 @@ export function SettingsPageContent() {
           <Card padding="lg">
             <h2 className="text-sm font-semibold text-heading mb-4">Integrations</h2>
             <SettingsIntegrationsSection />
+          </Card>
+          <Card padding="lg">
+            <h2 className="text-sm font-semibold text-heading mb-2">
+              {dict.settings?.reviewRequests ?? "Google review invitations"}
+            </h2>
+            <GoogleReviewRequestSettings />
           </Card>
           <Card padding="lg">
             <h2 className="text-sm font-semibold text-heading mb-4">Email templates</h2>

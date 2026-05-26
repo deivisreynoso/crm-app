@@ -51,6 +51,7 @@ export const contactSchema = z
     tags: optionalString,
     company_id: z.string().uuid().optional().or(z.literal('')),
     custom_fields: customFieldValuesSchema,
+    review_request_opt_out: z.boolean().optional(),
   })
   .refine((data) => !!(data.email?.trim() || data.phone?.trim()), {
     message: 'Email or phone is required',
@@ -86,6 +87,7 @@ export const contactPatchSchema = z.object({
   tags: optionalString,
   company_id: z.string().uuid().optional().or(z.literal('')),
   custom_fields: customFieldValuesSchema,
+  review_request_opt_out: z.boolean().optional(),
 });
 
 export const noteSchema = z.object({

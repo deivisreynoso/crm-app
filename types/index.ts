@@ -23,6 +23,7 @@ export interface User {
     status: 'lead' | 'active' | 'inactive' | 'prospect';
     tags?: string[];
     custom_fields?: Record<string, any>;
+    review_request_opt_out?: boolean;
     notes?: string;
     preferred_language?: string;
     website?: string;
@@ -39,6 +40,7 @@ export interface User {
     postal_code?: string;
     country?: string;
     timezone?: string;
+    review_requested_at?: string | null;
     created_at: string;
     updated_at: string;
   }
@@ -71,6 +73,7 @@ export interface User {
     timezone?: string;
     tags?: string;
     custom_fields?: Record<string, unknown>;
+    review_request_opt_out?: boolean;
   }
 
   export type ActivityType = 'call' | 'email' | 'meeting' | 'note';
@@ -221,6 +224,8 @@ export interface User {
       first_name: string;
       last_name: string;
       email?: string | null;
+      review_request_opt_out?: boolean;
+      review_requested_at?: string | null;
     } | null;
     company?: { id: string; name: string } | null;
   }

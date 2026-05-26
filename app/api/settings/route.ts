@@ -26,6 +26,15 @@ const settingsPatchSchema = z.object({
   booking_availability: bookingAvailabilityPatchSchema.optional(),
   ui_locale: z.enum(["en", "es"]).optional(),
   quote_company_name: z.string().max(120).optional().or(z.literal("")),
+  google_reviews_url: z
+    .string()
+    .max(2000)
+    .refine((v) => v === "" || /^https?:\/\//i.test(v), {
+      message: "Enter a valid URL starting with http:// or https://",
+    })
+    .optional()
+    .or(z.literal("")),
+  review_request_template_id: z.string().uuid().nullable().optional(),
 });
 
 async function loadSettings(workspaceOwnerId: string) {
@@ -33,7 +42,7 @@ async function loadSettings(workspaceOwnerId: string) {
   let { data, error: dbError } = await supabase
     .from("user_settings")
     .select(
-      "default_currency, default_sales_assignee, booking_availability, ui_locale, quote_logo_storage_path, quote_company_name, updated_at"
+      "default_currency, default_sales_assignee, booking_availability, ui_locale, quote_logo_storage_path, quote_company_name, google_reviews_url, review_request_template_id, updated_at"
     )
     .eq("user_id", workspaceOwnerId)
     .maybeSingle();
@@ -45,7 +54,7 @@ async function loadSettings(workspaceOwnerId: string) {
       .from("user_settings")
       .insert({ user_id: workspaceOwnerId, default_currency: "USD" })
       .select(
-      "default_currency, default_sales_assignee, booking_availability, ui_locale, quote_logo_storage_path, quote_company_name, updated_at"
+      "default_currency, default_sales_assignee, booking_availability, ui_locale, quote_logo_storage_path, quote_company_name, google_reviews_url, review_request_template_id, updated_at"
     )
       .single();
 
@@ -110,7 +119,9 @@ export async function PATCH(req: NextRequest) {
       parsed.data.default_sales_assignee === undefined &&
       parsed.data.booking_availability === undefined &&
       parsed.data.ui_locale === undefined &&
-      parsed.data.quote_company_name === undefined
+      parsed.data.quote_company_name === undefined &&
+      parsed.data.google_reviews_url === undefined &&
+      parsed.data.review_request_template_id === undefined
     ) {
       return NextResponse.json({ error: "No changes provided" }, { status: 400 });
     }
@@ -135,12 +146,18 @@ export async function PATCH(req: NextRequest) {
     if (parsed.data.quote_company_name !== undefined) {
       patch.quote_company_name = parsed.data.quote_company_name?.trim() || null;
     }
+    if (parsed.data.google_reviews_url !== undefined) {
+      patch.google_reviews_url = parsed.data.google_reviews_url?.trim() || null;
+    }
+    if (parsed.data.review_request_template_id !== undefined) {
+      patch.review_request_template_id = parsed.data.review_request_template_id;
+    }
 
     const { data, error: dbError } = await supabase
       .from("user_settings")
       .upsert(patch, { onConflict: "user_id" })
       .select(
-      "default_currency, default_sales_assignee, booking_availability, ui_locale, quote_logo_storage_path, quote_company_name, updated_at"
+      "default_currency, default_sales_assignee, booking_availability, ui_locale, quote_logo_storage_path, quote_company_name, google_reviews_url, review_request_template_id, updated_at"
     )
       .single();
 

@@ -35,6 +35,7 @@ const SYSTEM_TYPE_LABELS: Record<string, string> = {
   update: "Updated",
   created: "Created",
   task: "Task",
+  review_request: "Review invitation",
 };
 
 export function ActivityPanel({

@@ -8,7 +8,8 @@ export type ContactActivityType =
   | "note"
   | "system"
   | "update"
-  | "created";
+  | "created"
+  | "review_request";
 
 export async function logContactActivity(
   supabase: SupabaseClient,

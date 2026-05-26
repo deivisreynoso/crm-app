@@ -19,7 +19,31 @@
     "quoteBrandingHelp": "Logo appears on quote previews and PDFs. Recommended size: 400×120 px (PNG or WebP).",
     "companyName": "Company name on quotes",
     "uploadLogo": "Upload logo",
-    "removeLogo": "Remove logo"
+    "removeLogo": "Remove logo",
+    "reviewRequests": "Google review invitations",
+    "reviewRequestsHelp": "Send review links from contacts and closed tickets via Gmail.",
+    "googleReviewsUrl": "Google review link",
+    "googleReviewsUrlHelp": "Public link where customers leave a review (Google Business Profile).",
+    "reviewTemplate": "Invitation email template",
+    "reviewTemplateHelp": "Uses {{first_name}} and {{google_review_url}}. Create a default or pick any template in Email templates.",
+    "createReviewTemplate": "Create default template",
+    "noReviewTemplate": "No template linked — built-in copy is used until you create one.",
+    "saveReviewSettings": "Save review settings"
+  },
+  "reviewRequest": {
+    "action": "Request review",
+    "title": "Request Google review",
+    "previewHint": "This email is sent from your connected Gmail account.",
+    "send": "Send invitation",
+    "sending": "Sending…",
+    "optOut": "Do not ask for Google reviews",
+    "optOutHint": "Blocks review invitation sends for this contact.",
+    "lastSent": "Review invitation sent",
+    "noEmail": "Add an email address to send a review invitation.",
+    "optedOut": "This contact opted out of review invitations.",
+    "configureUrl": "Set a Google review link in Settings first.",
+    "ticketPrompt": "This ticket is closed. Send a Google review invitation to the linked contact?",
+    "gmailRequired": "Connect Gmail in Settings to send review invitations."
   },
   "quotes": {
     "title": "Quotes",

@@ -12,6 +12,8 @@ export interface WorkspaceSettings {
   quote_logo_storage_path?: string | null;
   quote_logo_url?: string | null;
   quote_company_name?: string | null;
+  google_reviews_url?: string | null;
+  review_request_template_id?: string | null;
   updated_at?: string;
 }
 
@@ -33,6 +35,8 @@ export function useUpdateWorkspaceSettings() {
       default_sales_assignee?: string | null;
       booking_availability?: BookingAvailabilityConfig;
       quote_company_name?: string;
+      google_reviews_url?: string;
+      review_request_template_id?: string | null;
     }) => axios.patch<WorkspaceSettings>("/api/settings", patch),
     onSuccess: (res) => {
       queryClient.setQueryData(["workspace-settings"], res.data);

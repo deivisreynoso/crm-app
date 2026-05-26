@@ -10,6 +10,7 @@ export const TEMPLATE_VARIABLES = [
   "currency",
   "duration",
   "valid_until",
+  "google_review_url",
 ] as const;
 
 export type TemplateVariable = (typeof TEMPLATE_VARIABLES)[number];
@@ -26,6 +27,7 @@ export interface TemplateContext {
   currency?: string;
   duration?: string;
   valid_until?: string;
+  google_review_url?: string;
 }
 
 export function interpolateTemplate(

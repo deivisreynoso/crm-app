@@ -138,6 +138,33 @@
     "platforms": ["Shopify", "WooCommerce", "Tiendanube", "Others with API"],
     "channels": ["WhatsApp", "Web chat", "Instagram DM", "Messenger", "Phone (voice)"]
   },
+  "reviews": {
+    "badge": "Google Reviews",
+    "title": "What clients say",
+    "subtitle": "Businesses we work with on automation, CRM, and customer experience.",
+    "ratingNote": "Rated 5 stars on Google",
+    "cta": "Read all reviews on Google",
+    "items": [
+      {
+        "name": "Store owner",
+        "role": "Shopify · Mexico",
+        "text": "They connected our store data with WhatsApp support. Our team spends far less time on order-status messages.",
+        "rating": 5
+      },
+      {
+        "name": "Operations lead",
+        "role": "WooCommerce · LATAM",
+        "text": "Clear discovery process, practical scope, and a system we can actually maintain—not a generic chatbot.",
+        "rating": 5
+      },
+      {
+        "name": "Founder",
+        "role": "eCommerce brand",
+        "text": "Fast responses to customers and better follow-up on abandoned carts. Support feels more organized.",
+        "rating": 5
+      }
+    ]
+  },
   "about": {
     "title": "About ClickIn 360",
     "subtitle": "We build systems—not hype chatbots.",

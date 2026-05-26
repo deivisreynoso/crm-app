@@ -103,6 +103,9 @@ export function buildContactUpdate(data: Partial<ContactFormData>) {
   if (data.custom_fields !== undefined) {
     record.custom_fields = data.custom_fields ?? {};
   }
+  if (data.review_request_opt_out !== undefined) {
+    record.review_request_opt_out = data.review_request_opt_out;
+  }
 
   return record;
 }

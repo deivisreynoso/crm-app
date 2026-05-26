@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, ListTodo, Mail, Phone, StickyNote } from "lucide-react";
+import { Copy, ListTodo, Mail, Phone, Star, StickyNote } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { useCopyToast } from "@/components/ui/copy-toast";
@@ -25,6 +25,7 @@ interface QuickActionBarProps {
   className?: string;
   /** Opens in-app Gmail compose instead of mailto: */
   onSendEmail?: () => void;
+  onRequestReview?: () => void;
   onAddNote?: (content: string) => Promise<void>;
   onAddTask?: (input: QuickTaskInput) => Promise<void>;
   onTaskCreated?: () => void;
@@ -37,6 +38,7 @@ export function QuickActionBar({
   phone,
   className,
   onSendEmail,
+  onRequestReview,
   onAddNote,
   onAddTask,
   onTaskCreated,
@@ -85,6 +87,13 @@ export function QuickActionBar({
             icon: Mail,
             href: `mailto:${email}`,
           }),
+    onRequestReview &&
+      email?.trim() && {
+        key: "review",
+        label: "Review",
+        icon: Star,
+        onClick: onRequestReview,
+      },
     email?.trim() && {
       key: "copy-email",
       label: "Copy email",

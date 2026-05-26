@@ -17,6 +17,8 @@ import { formatTimezone } from "@/lib/constants/contact-fields";
 import { formatApiError } from "@/lib/validation-errors";
 import { TagsChips } from "@/components/forms/tags-chips";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
+import { useCrmLocale } from "@/components/crm/crm-locale-provider";
+import { formatDateTime } from "@/lib/utils";
 import { useCompanies } from "@/hooks/useCompanies";
 import { EntityCustomFieldsOverview } from "@/components/custom-fields/entity-custom-fields-overview";
 import type { Contact, ContactFormInput } from "@/types";
@@ -28,6 +30,8 @@ interface ContactOverviewProps {
 
 export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) {
   const { canWrite } = useWorkspaceCapabilities();
+  const { dict } = useCrmLocale();
+  const r = dict.reviewRequest;
   const readOnly = !canWrite;
   const { data: companies = [], isLoading: companiesLoading } = useCompanies();
   const [country, setCountry] = useState(contact.country ?? "");
@@ -255,6 +259,34 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
             </div>
           </div>
         )}
+      </div>
+
+      <div className="border-t border-[var(--card-border)] pt-5 space-y-3">
+        {contact.review_requested_at && (
+          <p className="text-sm text-body-muted">
+            {r?.lastSent ?? "Review invitation sent"}:{" "}
+            <span className="text-heading font-medium">
+              {formatDateTime(contact.review_requested_at)}
+            </span>
+          </p>
+        )}
+        <label className="flex items-start gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            className="mt-1 rounded border-[var(--card-border)]"
+            checked={Boolean(contact.review_request_opt_out)}
+            disabled={readOnly}
+            onChange={(e) =>
+              void saveField({ review_request_opt_out: e.target.checked })
+            }
+          />
+          <span>
+            <span className="font-medium text-heading block">
+              {r?.optOut ?? "Do not ask for Google reviews"}
+            </span>
+            <span className="text-xs text-body-muted">{r?.optOutHint}</span>
+          </span>
+        </label>
       </div>
 
       <EntityCustomFieldsOverview
