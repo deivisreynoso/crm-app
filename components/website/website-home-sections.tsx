@@ -18,6 +18,7 @@ import { WebsiteWebchatEmbed } from "@/components/website/website-webchat-embed"
 import { WebsiteFaq } from "@/components/website/website-faq";
 import { SubtleCta } from "@/components/website/subtle-cta";
 import { ChatOpenButton } from "@/components/website/chat-open-trigger";
+import { HeroMascot } from "@/components/website/hero-mascot";
 import type { Locale, WebsiteDictionary } from "@/lib/website/i18n";
 
 type Props = { lang: Locale; dict: WebsiteDictionary };
@@ -28,7 +29,7 @@ export function WebsiteHomeSections({ lang, dict }: Props) {
   return (
     <>
       {/* Hero — primary CTAs */}
-      <section className="website-hero-glow text-white relative overflow-hidden min-h-[min(80vh,720px)] flex items-center">
+      <section className="website-hero-glow text-white relative overflow-hidden min-h-0 lg:min-h-[min(80vh,720px)] flex items-center">
         <div className="absolute inset-0 website-dot-grid opacity-[0.07] pointer-events-none" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-14 sm:py-20 w-full">
           <div className="grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
@@ -77,18 +78,7 @@ export function WebsiteHomeSections({ lang, dict }: Props) {
               </div>
             </div>
 
-            <div className="website-hero-image-area flex justify-center lg:justify-end website-float">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/website/hero-mascot.webp"
-                alt=""
-                width={800}
-                height={800}
-                fetchPriority="high"
-                decoding="async"
-                className="w-full max-w-[min(100%,360px)] lg:max-w-[400px] h-auto drop-shadow-2xl"
-              />
-            </div>
+            <HeroMascot />
           </div>
         </div>
       </section>
@@ -365,21 +355,23 @@ export function PackageCard({
     <article
       className={`website-card-lift flex h-full flex-col overflow-hidden rounded-3xl border shadow-[var(--shadow-md)] ${
         pkg.featured
-          ? "border-[var(--secondary)] ring-2 ring-[var(--secondary)]/25"
+          ? "border-[var(--secondary)]"
           : "border-[var(--card-border)]"
       } bg-[var(--card)]`}
     >
       {"image" in pkg && pkg.image ? (
-        <div className="website-offer-image-area aspect-[3/2] w-full flex items-center justify-center px-4 py-3 shrink-0">
+        <div className="aspect-[3/2] w-full shrink-0 overflow-hidden bg-[var(--card)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={pkg.image}
+            src={pkg.image.replace(/\.webp(\?.*)?$/, "-400.webp$1")}
+            srcSet={`${pkg.image.replace(/\.webp(\?.*)?$/, "-400.webp$1")} 400w, ${pkg.image} 600w`}
+            sizes="(max-width: 1024px) 346px, 400px"
             alt=""
             width={600}
             height={400}
             loading="lazy"
             decoding="async"
-            className="max-h-full max-w-full w-full h-full object-contain"
+            className="block h-full w-full object-contain object-center"
           />
         </div>
       ) : null}
@@ -390,7 +382,7 @@ export function PackageCard({
               {dict.offers.featuredBadge}
             </span>
           )}
-          <p className="text-xs font-bold uppercase tracking-wider text-[var(--secondary)]">
+          <p className="text-xs font-bold uppercase tracking-wider text-[var(--primary)]">
             {pkg.label}
           </p>
           <h3 className="text-lg sm:text-xl font-bold text-heading mt-1 leading-snug pr-24">

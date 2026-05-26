@@ -59,14 +59,24 @@ export default function ContactDetailPage({ params }: PageProps) {
   const createTask = useCreateContactTask(id);
   const { data: contactOpportunities = [] } = useOpportunities(undefined, id);
   const { data: contactTickets = [] } = useTickets({ contact_id: id });
-  const { data: contactDocuments = [] } = useDocuments({ contact_id: id });
+  const { data: contactQuotes = [] } = useDocuments({
+    contact_id: id,
+    kind: "quotes",
+  });
+  const { data: contactAttachments = [] } = useDocuments({
+    contact_id: id,
+    kind: "attachments",
+  });
   const { data: contactEvents = [] } = useCalendarEvents({ contact_id: id });
   const createTicket = useCreateTicket();
   const uploadDocument = useUploadDocument();
   const { data: linkedAccount } = useCompany(contact?.company_id ?? "");
 
   const relatedCount =
-    contactOpportunities.length + contactTickets.length + contactDocuments.length;
+    contactOpportunities.length +
+    contactTickets.length +
+    contactQuotes.length +
+    contactAttachments.length;
 
   function handleOpenTask(task: Task) {
     setOpenTask(task);
@@ -108,7 +118,8 @@ export default function ContactDetailPage({ params }: PageProps) {
       }}
       opportunities={contactOpportunities}
       tickets={contactTickets}
-      documents={contactDocuments}
+      quotes={contactQuotes}
+      attachments={contactAttachments}
       calendarEvents={contactEvents}
       onCreateTicket={async (data) => {
         await createTicket.mutateAsync({
@@ -121,6 +132,7 @@ export default function ContactDetailPage({ params }: PageProps) {
         await uploadDocument.mutateAsync({
           metadata: {
             ...meta,
+            type: "attachment",
             contact_id: id,
             company_id: contact.company_id ?? meta.company_id,
           },

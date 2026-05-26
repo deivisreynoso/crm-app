@@ -91,9 +91,9 @@ export function InlineEditableField({
   }
 
   return (
-    <div className={className}>
+    <div className={cn("min-w-0", className)}>
       <FieldLabel label={label} required={required} />
-      <dd className="mt-1">
+      <dd className="mt-1 min-w-0">
         {editing ? (
           <div className="space-y-1">
             {multiline ? (
@@ -151,7 +151,7 @@ export function InlineEditableField({
             type="button"
             onClick={() => setEditing(true)}
             className={cn(
-              "text-left text-sm font-medium rounded px-1 -mx-1 py-0.5 w-full",
+              "text-left text-sm font-medium rounded px-1 -mx-1 py-0.5 w-full min-w-0 max-w-full",
               "hover:bg-[var(--sidebar-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]",
               display ? "text-heading" : "text-body-muted font-normal"
             )}
@@ -161,14 +161,21 @@ export function InlineEditableField({
             ) : display ? (
               href ? (
                 <span
-                  className="underline"
+                  className="underline break-words"
                   onClick={(e) => e.stopPropagation()}
                   onKeyDown={(e) => e.stopPropagation()}
                 >
                   <a href={href}>{display}</a>
                 </span>
               ) : (
-                display
+                <span
+                  className={cn(
+                    "block max-w-full",
+                    multiline && "break-words whitespace-pre-wrap [overflow-wrap:anywhere]"
+                  )}
+                >
+                  {display}
+                </span>
               )
             ) : (
               placeholder

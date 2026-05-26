@@ -14,6 +14,8 @@ import {
 } from "@/hooks/useCompanies";
 import { useCreateTicket } from "@/hooks/useTickets";
 import { useUploadDocument } from "@/hooks/useDocuments";
+import { isQuoteDocument } from "@/lib/documents/kinds";
+import type { CrmDocument } from "@/types";
 
 type PageProps = { params: Promise<{ id: string }> };
 type MobileTab = "details" | "related";
@@ -47,6 +49,10 @@ export default function AccountDetailPage({ params }: PageProps) {
 
   const detailsPanel = <AccountOverview account={account} onSaveField={handleSaveField} />;
 
+  const relatedDocs = (related?.documents ?? []) as CrmDocument[];
+  const accountQuotes = relatedDocs.filter((d) => isQuoteDocument(d.type));
+  const accountAttachments = relatedDocs.filter((d) => d.type === "attachment");
+
   const relatedPanel = related ? (
     <EntityRelatedPanel
       showAccountContacts
@@ -54,14 +60,15 @@ export default function AccountDetailPage({ params }: PageProps) {
       contacts={related.contacts}
       opportunities={related.opportunities as never[]}
       tickets={related.tickets as never[]}
-      documents={related.documents as never[]}
+      quotes={accountQuotes}
+      attachments={accountAttachments}
       calendarEvents={related.calendar_events as never[]}
       onCreateTicket={async (data) => {
         await createTicket.mutateAsync({ ...data, company_id: id });
       }}
       onCreateDocument={async (meta, file) => {
         await uploadDocument.mutateAsync({
-          metadata: { ...meta, company_id: id },
+          metadata: { ...meta, type: "attachment", company_id: id },
           file,
         });
       }}

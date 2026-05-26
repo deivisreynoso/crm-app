@@ -29,6 +29,9 @@ export function WebsiteFooter({ lang, dict }: Props) {
             <Link href={`/${lang}/how-it-works`} className="text-white/80 hover:text-white transition-colors">
               {dict.footer.howItWorks}
             </Link>
+            <Link href={`/${lang}/services`} className="text-white/80 hover:text-white transition-colors">
+              {dict.footer.services}
+            </Link>
             <Link href={`/${lang}/offers`} className="text-white/80 hover:text-white transition-colors">
               {dict.nav.offers}
             </Link>
@@ -54,7 +57,7 @@ export function WebsiteFooter({ lang, dict }: Props) {
           <p>
             © {year} ClickIn 360 LLC. {dict.footer.rights}
           </p>
-          <Link href={`/${lang}#faq`} className="hover:text-white/80">
+          <Link href={`/${lang}/privacy`} className="hover:text-white/80">
             {dict.footer.privacy}
           </Link>
         </div>

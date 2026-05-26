@@ -20,6 +20,7 @@ export function buildOpportunityRecord(
     probability: data.probability ?? 50,
     expected_close_date: emptyToNull(data.expected_close_date),
     notes: emptyToNull(data.notes),
+    owner_id: data.owner_id?.trim() ? data.owner_id : null,
     tags: data.tags ? parseTagsInput(data.tags) : [],
     company_id: data.company_id?.trim() ? data.company_id : null,
     custom_fields: data.custom_fields ?? {},
@@ -40,6 +41,9 @@ export function buildOpportunityUpdate(data: Partial<OpportunityFormData>) {
     record.expected_close_date = emptyToNull(data.expected_close_date);
   }
   if (data.notes !== undefined) record.notes = emptyToNull(data.notes);
+  if (data.owner_id !== undefined) {
+    record.owner_id = data.owner_id?.trim() ? data.owner_id : null;
+  }
   if (data.tags !== undefined) {
     record.tags = data.tags ? parseTagsInput(data.tags) : [];
   }

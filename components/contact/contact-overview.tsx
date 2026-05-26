@@ -142,7 +142,7 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
             Populated by workflows and automation. Edit when needed.
           </p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 min-w-0">
           <InlineEditableField
             label="Platform"
             value={contact.platform}
@@ -167,6 +167,7 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
             value={contact.signals}
             placeholder="Intent, engagement"
             multiline
+            className="sm:col-span-2"
             onSave={save("signals")}
           />
           <InlineEditableField

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, requireWorkspaceOwner } from "@/lib/api/auth";
+import { requireAuth, requireWorkspaceManage } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { z } from "zod";
 import { humanizeDbError } from "@/lib/validation-errors";
@@ -9,7 +9,7 @@ import { sendEmail } from "@/lib/email/send";
 const addMemberSchema = z.object({
   email: z.string().email(),
   display_name: z.string().min(1).max(120).optional(),
-  role: z.enum(["sales", "viewer"]).optional(),
+  role: z.enum(["sales", "viewer", "admin"]).optional(),
 });
 
 async function upsertProfile(
@@ -100,11 +100,11 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, isWorkspaceOwner, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
-    const ownerError = requireWorkspaceOwner(isWorkspaceOwner);
-    if (ownerError) return ownerError;
+    const manageError = requireWorkspaceManage(role!, isWorkspaceOwner);
+    if (manageError) return manageError;
 
     const body = await req.json();
     const parsed = addMemberSchema.safeParse(body);
@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
       .from("team_members")
       .insert([
         {
-          owner_user_id: userId!,
+          owner_user_id: workspaceOwnerId!,
           email,
           display_name:
             parsed.data.display_name?.trim() || profile?.display_name || email,
@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
     if (!profile?.id) {
       try {
         const invite = await createTeamInvite({
-          ownerUserId: userId!,
+          ownerUserId: workspaceOwnerId!,
           email,
           displayName: parsed.data.display_name,
         });

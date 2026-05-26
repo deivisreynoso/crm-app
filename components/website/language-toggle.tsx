@@ -12,7 +12,7 @@ function FlagMexico({ className }: { className?: string }) {
     <svg viewBox="0 0 24 16" className={className} aria-hidden>
       <rect width="24" height="16" fill="#006847" rx="2" />
       <rect x="8" width="8" height="16" fill="#fff" />
-      <rect x="16" width="8" height="16" fill="#CE1126" rx="0 2 2 0" />
+      <rect x="16" width="8" height="16" fill="#CE1126" />
       <circle cx="12" cy="8" r="2.2" fill="#C6922B" opacity="0.9" />
     </svg>
   );
@@ -26,7 +26,7 @@ function FlagUSA({ className }: { className?: string }) {
       {[0, 1, 2, 3, 4, 5, 6].map((i) => (
         <rect key={i} y={i * 2.3} width="24" height="1.15" fill={i % 2 === 0 ? "#fff" : "transparent"} />
       ))}
-      <rect width="10" height="9" fill="#3C3B6E" rx="2 0 0 0" />
+      <rect width="10" height="9" fill="#3C3B6E" />
     </svg>
   );
 }

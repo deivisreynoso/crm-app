@@ -30,7 +30,7 @@ export default async function MarketingLayout({ children, params }: Props) {
   return (
     <div
       lang={lang}
-      className="min-h-screen flex flex-col bg-[var(--background)] text-[var(--foreground)] light"
+      className="marketing-site min-h-screen flex flex-col bg-[var(--background)] text-[var(--foreground)] light"
     >
       <WebsiteHeader lang={lang as Locale} dict={dict} />
       <main className="flex-1">{children}</main>

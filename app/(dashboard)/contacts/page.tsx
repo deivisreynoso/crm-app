@@ -38,6 +38,7 @@ import { formatDate } from "@/lib/utils";
 import { formatApiError } from "@/lib/validation-errors";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { SavedFiltersBar } from "@/components/filters/saved-filters-bar";
+import { ContactsImportExport } from "@/components/contacts/contacts-import-export";
 
 function ContactsPageContent() {
   const router = useRouter();
@@ -141,6 +142,18 @@ function ContactsPageContent() {
       )}
 
       <div className="surface-card p-4 space-y-3">
+        <ContactsImportExport
+          filters={{
+            search: search || undefined,
+            status: statusFilter || undefined,
+            createdFrom: createdFrom || undefined,
+            createdTo: createdTo || undefined,
+          }}
+          onImported={() => {
+            setPage(1);
+            router.refresh();
+          }}
+        />
         <SavedFiltersBar
           entityType="contact"
           currentConfig={{

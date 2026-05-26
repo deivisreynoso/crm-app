@@ -9,6 +9,9 @@ export type WorkspaceContext = {
   role: TeamRole;
   isWorkspaceOwner: boolean;
   actorUserId: string;
+  canWrite: boolean;
+  canManage: boolean;
+  isDemoViewer: boolean;
 };
 
 export function useWorkspaceContext() {

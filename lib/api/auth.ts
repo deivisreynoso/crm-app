@@ -2,6 +2,7 @@ import { getServerSession, type Session } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import {
+  canManageWorkspace,
   canWriteWorkspace,
   resolveWorkspaceContext,
   type TeamRole,
@@ -55,6 +56,16 @@ export async function requireAuth(): Promise<
 
 export function requireWorkspaceOwner(isWorkspaceOwner: boolean) {
   if (!isWorkspaceOwner) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  return null;
+}
+
+export function requireWorkspaceManage(
+  role: TeamRole,
+  isWorkspaceOwner: boolean
+) {
+  if (!canManageWorkspace(role, isWorkspaceOwner)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   return null;

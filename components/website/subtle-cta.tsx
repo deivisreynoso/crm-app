@@ -16,7 +16,7 @@ type Props = {
 
 export function SubtleCta({ lang, variant, label, className = "" }: Props) {
   const Icon = variant === "book" ? ArrowRight : MessageCircle;
-  const linkClass = `group inline-flex items-center gap-1.5 text-sm font-medium text-[var(--secondary)] hover:text-[var(--primary)] transition-colors ${className}`;
+  const linkClass = `website-link group inline-flex items-center gap-1.5 text-sm font-medium hover:text-[var(--primary)] transition-colors ${className}`;
 
   if (variant === "chat") {
     return (

@@ -1,18 +1,68 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FormLabel } from "@/components/ui/form-label";
 import { formatApiError } from "@/lib/validation-errors";
+import { useWorkspace } from "@/components/crm/workspace-provider";
 import axios from "axios";
+
+type MemberRole = "sales" | "viewer" | "admin";
+
+type TeamMember = {
+  id: string;
+  label: string;
+  email: string;
+  role?: string;
+};
+
+const ROLE_LABELS: Record<MemberRole, string> = {
+  sales: "Sales — full CRM",
+  admin: "Admin — owner access",
+  viewer: "Viewer — demo",
+};
+
+function isEditableRole(role: string | undefined): role is MemberRole {
+  return role === "sales" || role === "admin" || role === "viewer";
+}
 
 export function TeamSettings() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"sales" | "viewer">("sales");
+  const [role, setRole] = useState<MemberRole>("sales");
   const [msg, setMsg] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [membersLoading, setMembersLoading] = useState(true);
+  const [roleDraft, setRoleDraft] = useState<Record<string, MemberRole>>({});
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const { ctx } = useWorkspace();
+  const isOwner = ctx?.isWorkspaceOwner ?? false;
+
+  const loadMembers = useCallback(async () => {
+    setMembersLoading(true);
+    try {
+      const { data } = await axios.get<{ data: TeamMember[] }>("/api/team/members");
+      setMembers(data.data ?? []);
+      const drafts: Record<string, MemberRole> = {};
+      for (const m of data.data ?? []) {
+        if (isEditableRole(m.role)) drafts[m.id] = m.role;
+      }
+      setRoleDraft(drafts);
+    } catch {
+      setMembers([]);
+    } finally {
+      setMembersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadMembers();
+  }, [loadMembers]);
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -31,6 +81,7 @@ export function TeamSettings() {
       setEmail("");
       setName("");
       setRole("sales");
+      await loadMembers();
 
       if (data.invite_url) {
         setInviteUrl(data.invite_url);
@@ -47,6 +98,44 @@ export function TeamSettings() {
     }
   }
 
+  async function handleRoleSave(member: TeamMember) {
+    const nextRole = roleDraft[member.id];
+    if (!nextRole || nextRole === member.role) return;
+
+    setSavingId(member.id);
+    setError(null);
+    setMsg(null);
+    try {
+      await axios.patch(`/api/team/members/${member.id}`, { role: nextRole });
+      setMsg(`Updated role for ${member.email}.`);
+      await loadMembers();
+    } catch (err) {
+      setError(formatApiError(err, "Could not update role"));
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function handleDelete(member: TeamMember) {
+    const confirmed = window.confirm(
+      `Remove ${member.email} from this workspace? They will lose access immediately.`
+    );
+    if (!confirmed) return;
+
+    setDeletingId(member.id);
+    setError(null);
+    setMsg(null);
+    try {
+      await axios.delete(`/api/team/members/${member.id}`);
+      setMsg(`Removed ${member.email} from the team.`);
+      await loadMembers();
+    } catch (err) {
+      setError(formatApiError(err, "Could not remove teammate"));
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   async function copyInvite() {
     if (!inviteUrl) return;
     try {
@@ -57,56 +146,142 @@ export function TeamSettings() {
     }
   }
 
+  const teammates = members.filter((m) => m.role !== "owner");
+
   return (
-    <form onSubmit={handleAdd} className="space-y-3 max-w-lg">
-      <p className="text-sm text-body-muted">
-        Invite teammates by email. They receive a private registration link (valid 7 days).
-        Public registration is disabled — only invited users can create a CRM account.
-      </p>
-      {error && <p className="text-sm text-[var(--error)]">{error}</p>}
-      {msg && <p className="text-sm text-emerald-700">{msg}</p>}
-      {inviteUrl && (
-        <div className="rounded-lg border border-[var(--card-border)] bg-[var(--surface-subtle)] p-3 space-y-2">
-          <p className="text-xs font-medium text-heading">Registration link</p>
-          <p className="text-xs text-body-muted break-all font-mono">{inviteUrl}</p>
-          <Button type="button" size="sm" variant="outline" onClick={() => void copyInvite()}>
-            Copy link
-          </Button>
+    <div className="space-y-8 max-w-2xl">
+      {teammates.length > 0 || membersLoading ? (
+        <section className="space-y-3">
+          <div>
+            <h3 className="text-sm font-semibold text-heading">Team members</h3>
+            <p className="text-sm text-body-muted mt-1">
+              Change roles for existing teammates, or remove access. Only the workspace
+              owner can delete members. Admins have the same access as the owner; viewers
+              can explore without saving changes.
+            </p>
+          </div>
+
+          {membersLoading ? (
+            <p className="text-sm text-body-muted">Loading team…</p>
+          ) : (
+            <ul className="divide-y divide-[var(--card-border)] rounded-xl border border-[var(--card-border)] bg-[var(--surface-subtle)]">
+              {teammates.map((member) => {
+                const draft = roleDraft[member.id] ?? (member.role as MemberRole);
+                const dirty = isEditableRole(member.role) && draft !== member.role;
+                const busy = savingId === member.id || deletingId === member.id;
+                return (
+                  <li
+                    key={member.id}
+                    className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-heading truncate">
+                        {member.label}
+                      </p>
+                      <p className="text-xs text-body-muted truncate">{member.email}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      <select
+                        className="input-field text-sm min-w-[11rem]"
+                        value={draft}
+                        disabled={busy}
+                        onChange={(e) =>
+                          setRoleDraft((prev) => ({
+                            ...prev,
+                            [member.id]: e.target.value as MemberRole,
+                          }))
+                        }
+                      >
+                        {(Object.keys(ROLE_LABELS) as MemberRole[]).map((r) => (
+                          <option key={r} value={r}>
+                            {ROLE_LABELS[r]}
+                          </option>
+                        ))}
+                      </select>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={dirty ? "default" : "outline"}
+                        disabled={!dirty || busy}
+                        onClick={() => void handleRoleSave(member)}
+                      >
+                        {savingId === member.id ? "Saving…" : "Save"}
+                      </Button>
+                      {isOwner ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={busy}
+                          className="text-[var(--error)] border-[var(--error)]/30 hover:bg-[var(--error)]/5"
+                          onClick={() => void handleDelete(member)}
+                        >
+                          {deletingId === member.id ? "Removing…" : "Remove"}
+                        </Button>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      ) : null}
+
+      <form onSubmit={handleAdd} className="space-y-3">
+        <div>
+          <h3 className="text-sm font-semibold text-heading">Invite teammate</h3>
+          <p className="text-sm text-body-muted mt-1">
+            Invite by email. They receive a private registration link (valid 7 days).
+            Public registration is disabled — only invited users can create a CRM account.
+          </p>
         </div>
-      )}
-      <div>
-        <FormLabel>Email</FormLabel>
-        <input
-          type="email"
-          className="input-field w-full"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-      </div>
-      <div>
-        <FormLabel>Role</FormLabel>
-        <select
-          className="input-field w-full"
-          value={role}
-          onChange={(e) => setRole(e.target.value as "sales" | "viewer")}
-        >
-          <option value="sales">Sales — full CRM access</option>
-          <option value="viewer">Viewer — read-only (coming soon)</option>
-        </select>
-      </div>
-      <div>
-        <FormLabel>Display name</FormLabel>
-        <input
-          className="input-field w-full"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Optional"
-        />
-      </div>
-      <Button type="submit" size="sm">
-        Send invitation
-      </Button>
-    </form>
+        {error && <p className="text-sm text-[var(--error)]">{error}</p>}
+        {msg && <p className="text-sm text-emerald-700">{msg}</p>}
+        {inviteUrl && (
+          <div className="rounded-lg border border-[var(--card-border)] bg-[var(--surface-subtle)] p-3 space-y-2">
+            <p className="text-xs font-medium text-heading">Registration link</p>
+            <p className="text-xs text-body-muted break-all font-mono">{inviteUrl}</p>
+            <Button type="button" size="sm" variant="outline" onClick={() => void copyInvite()}>
+              Copy link
+            </Button>
+          </div>
+        )}
+        <div>
+          <FormLabel>Email</FormLabel>
+          <input
+            type="email"
+            className="input-field w-full"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <FormLabel>Role</FormLabel>
+          <select
+            className="input-field w-full"
+            value={role}
+            onChange={(e) => setRole(e.target.value as MemberRole)}
+          >
+            <option value="sales">Sales — full CRM (no settings)</option>
+            <option value="admin">Admin — same access as owner</option>
+            <option value="viewer">Viewer — demo (read-only, simulated saves)</option>
+          </select>
+        </div>
+        <div>
+          <FormLabel>Display name</FormLabel>
+          <input
+            className="input-field w-full"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Optional"
+          />
+        </div>
+        <Button type="submit" size="sm">
+          Send invitation
+        </Button>
+      </form>
+    </div>
   );
 }

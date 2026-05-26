@@ -1,6 +1,30 @@
 import { createServerSideClient } from "@/lib/supabase";
 
-export type TeamRole = "owner" | "sales" | "viewer";
+export type TeamRole = "owner" | "admin" | "sales" | "viewer";
+
+export type WorkspaceCapabilities = {
+  canWrite: boolean;
+  canManage: boolean;
+  isDemoViewer: boolean;
+};
+
+export function workspaceCapabilities(
+  role: TeamRole,
+  isWorkspaceOwner: boolean
+): WorkspaceCapabilities {
+  return {
+    canWrite: canWriteWorkspace(role),
+    canManage: canManageWorkspace(role, isWorkspaceOwner),
+    isDemoViewer: role === "viewer",
+  };
+}
+
+export function canManageWorkspace(
+  role: TeamRole,
+  isWorkspaceOwner: boolean
+): boolean {
+  return isWorkspaceOwner || role === "admin";
+}
 
 export type WorkspaceContext = {
   /** Authenticated user */
@@ -24,7 +48,13 @@ export async function resolveWorkspaceContext(
     .maybeSingle();
 
   if (membership?.owner_user_id) {
-    const memberRole = membership.role === "viewer" ? "viewer" : "sales";
+    const dbRole = membership.role as string;
+    const memberRole: TeamRole =
+      dbRole === "viewer"
+        ? "viewer"
+        : dbRole === "admin"
+          ? "admin"
+          : "sales";
     return {
       actorUserId,
       workspaceOwnerId: membership.owner_user_id,
@@ -42,7 +72,7 @@ export async function resolveWorkspaceContext(
 }
 
 export function canWriteWorkspace(role: TeamRole): boolean {
-  return role === "owner" || role === "sales";
+  return role === "owner" || role === "sales" || role === "admin";
 }
 
 export async function getWorkspaceWebsiteLeadsConfig(workspaceOwnerId: string) {

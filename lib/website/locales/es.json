@@ -6,6 +6,7 @@
   "nav": {
     "problem": "Problema",
     "solution": "Cómo funciona",
+    "services": "Servicios",
     "offers": "Ofertas",
     "platforms": "Plataformas",
     "about": "Nosotros",
@@ -83,7 +84,7 @@
         "label": "Oferta #2",
         "title": "ECOMMERCE + CRM + WHATSAPP + AI",
         "tagline": "Todo lo que necesitas para automatizar tu negocio, vender más y dar una mejor experiencia a tus clientes.",
-        "image": "/website/offer-2.webp",
+        "image": "/website/offer-2.webp?v=5",
         "featured": true,
         "includes": [
           "Implementación completa del sistema",
@@ -284,6 +285,7 @@
     "privacy": "Privacidad",
     "login": "Acceso CRM",
     "howItWorks": "Cómo funciona",
+    "services": "Servicios",
     "contact": "Contacto"
   },
   "pages": {
@@ -298,7 +300,190 @@
     "offers": {
       "title": "Paquetes eCommerce + CRM + WhatsApp",
       "description": "Ofertas actuales para automatizar ventas, soporte y seguimiento."
+    },
+    "services": {
+      "title": "Servicios — Apps, web, CRM y automatización | ClickIn 360",
+      "description": "Desarrollo de apps y sitios web, implementación CRM (HubSpot, GHL, Salesforce, Pipedrive) y automatización para equipos de ingresos."
+    },
+    "privacy": {
+      "title": "Política de privacidad — ClickIn 360",
+      "description": "Cómo ClickIn 360 LLC recopila, usa y protege la información personal en nuestro sitio y servicios."
     }
+  },
+  "privacyPage": {
+    "title": "Política de privacidad",
+    "intro": "ClickIn 360 LLC (\"ClickIn 360,\" \"nosotros\" o \"nuestro\") respeta tu privacidad. Esta política explica cómo recopilamos, usamos, divulgamos y protegemos la información personal cuando visitas nuestro sitio, usas el chat y la reserva de citas, o utilizas nuestros servicios de CRM y automatización.",
+    "lastUpdatedLabel": "Última actualización",
+    "lastUpdated": "26 de mayo de 2026",
+    "contactNote": "Para solicitudes o preguntas sobre privacidad, escríbenos a",
+    "contactEmail": "privacy@clickin360.com",
+    "sections": [
+      {
+        "id": "scope",
+        "title": "1. Alcance",
+        "paragraphs": [
+          "Esta política aplica a la información personal procesada a través de clickin360.com y páginas relacionadas, chat web, formularios de leads, flujos de reserva y la plataforma CRM ClickIn 360 cuando se proporciona a clientes y usuarios autorizados.",
+          "Si usas nuestros servicios en nombre de un cliente empresarial, ese cliente puede tener sus propias prácticas de privacidad sobre los datos que controla en el CRM. Esta política describe nuestras prácticas como operador del sitio y proveedor de servicios."
+        ]
+      },
+      {
+        "id": "collect",
+        "title": "2. Información que recopilamos",
+        "paragraphs": ["Podemos recopilar las siguientes categorías:"],
+        "list": [
+          "Datos de identidad y contacto (nombre, correo, teléfono, empresa)",
+          "Datos de cuenta y autenticación de usuarios del CRM",
+          "Comunicaciones (transcripciones de chat, formularios, mensajes de soporte)",
+          "Datos de reserva y calendario al agendar una llamada",
+          "Datos técnicos (IP, tipo de navegador, identificadores de dispositivo, páginas vistas)",
+          "Cookies y tecnologías similares (ver sección 9)"
+        ]
+      },
+      {
+        "id": "sources",
+        "title": "3. Cómo recopilamos información",
+        "paragraphs": [
+          "Recopilamos información directamente cuando envías formularios, chateas con nuestro asistente, reservas una reunión, te registras en el CRM o nos contactas.",
+          "También recopilamos información automáticamente mediante registros y analítica al usar el sitio, y desde integraciones que tú o tu organización autorizan (por ejemplo, correo o calendario)."
+        ]
+      },
+      {
+        "id": "use",
+        "title": "4. Cómo usamos la información",
+        "paragraphs": ["Usamos la información personal para:"],
+        "list": [
+          "Proveer, operar y mejorar el sitio y los servicios",
+          "Responder consultas, calificar leads y agendar llamadas de descubrimiento",
+          "Entregar funciones de CRM, automatización e integraciones a clientes",
+          "Enviar avisos del servicio y, cuando corresponda, comunicaciones de marketing",
+          "Monitorear seguridad, prevenir fraude y hacer cumplir nuestros términos",
+          "Cumplir obligaciones legales y resolver disputas"
+        ]
+      },
+      {
+        "id": "legal-bases",
+        "title": "5. Bases legales (cuando aplica)",
+        "paragraphs": [
+          "Si te encuentras en el Espacio Económico Europeo, Reino Unido o jurisdicciones similares, procesamos datos según: (a) ejecución de contrato o pasos previos; (b) intereses legítimos (mejorar servicios y seguridad), equilibrados con tus derechos; (c) consentimiento cuando se requiera; y (d) cumplimiento de obligaciones legales."
+        ]
+      },
+      {
+        "id": "sharing",
+        "title": "6. Cómo compartimos información",
+        "paragraphs": [
+          "No vendemos tu información personal. Podemos compartirla con proveedores que nos ayudan con hosting, correo, analítica o funciones de IA y automatización, bajo contratos con salvaguardas adecuadas.",
+          "Podemos divulgar información si la ley lo exige, para proteger derechos y seguridad, o en fusiones o adquisiciones, con aviso cuando sea legalmente requerido."
+        ]
+      },
+      {
+        "id": "transfers",
+        "title": "7. Transferencias internacionales",
+        "paragraphs": [
+          "Podemos procesar y almacenar información en Estados Unidos y otros países donde operamos nosotros o nuestros proveedores. Cuando transferimos datos internacionalmente, usamos salvaguardas apropiadas como cláusulas contractuales estándar cuando la ley lo exige."
+        ]
+      },
+      {
+        "id": "retention",
+        "title": "8. Conservación de datos",
+        "paragraphs": [
+          "Conservamos la información solo el tiempo necesario para los fines descritos, requisitos legales y contables, y resolución de disputas. Los plazos varían según el tipo de dato y acuerdos con clientes."
+        ]
+      },
+      {
+        "id": "cookies",
+        "title": "9. Cookies y analítica",
+        "paragraphs": [
+          "Usamos cookies para recordar preferencias (como idioma), mantener sesiones seguras y entender el uso del sitio. Puedes controlarlas en tu navegador. Desactivar algunas puede afectar la funcionalidad."
+        ]
+      },
+      {
+        "id": "security",
+        "title": "10. Seguridad",
+        "paragraphs": [
+          "Implementamos medidas administrativas, técnicas y organizativas para proteger la información. Ningún método de transmisión o almacenamiento es 100% seguro."
+        ]
+      },
+      {
+        "id": "rights",
+        "title": "11. Tus derechos y opciones",
+        "paragraphs": [
+          "Según tu ubicación, puedes tener derechos de acceso, rectificación, supresión, limitación, portabilidad u oposición. También puedes retirar el consentimiento cuando el tratamiento se base en él.",
+          "Para ejercer derechos, escríbenos al correo indicado. Podemos verificar tu identidad. También puedes presentar una queja ante una autoridad de control."
+        ]
+      },
+      {
+        "id": "children",
+        "title": "12. Privacidad de menores",
+        "paragraphs": [
+          "Nuestros servicios no están dirigidos a menores de 16 años y no recopilamos información de menores de forma consciente. Si crees que lo hicimos, contáctanos para eliminarla."
+        ]
+      },
+      {
+        "id": "third-party",
+        "title": "13. Enlaces de terceros",
+        "paragraphs": [
+          "El sitio puede enlazar a servicios de terceros. Sus prácticas de privacidad se rigen por sus propias políticas."
+        ]
+      },
+      {
+        "id": "changes",
+        "title": "14. Cambios a esta política",
+        "paragraphs": [
+          "Podemos actualizar esta política periódicamente. Publicaremos la versión revisada en esta página y actualizaremos la fecha de \"Última actualización\". Los cambios materiales pueden comunicarse por el sitio o por correo cuando corresponda."
+        ]
+      }
+    ]
+  },
+  "servicesPage": {
+    "badge": "Servicios profesionales",
+    "title": "Construye, integra y automatiza lo que tu negocio usa cada día",
+    "subtitle": "Desde apps para clientes hasta rollouts de CRM y flujos automatizados—diseñamos para adopción, resultados medibles y entregas claras a tu equipo.",
+    "ctaPrimary": "Agendar llamada de descubrimiento",
+    "ctaSecondary": "Chatear con IA",
+    "items": [
+      {
+        "title": "Desarrollo de aplicaciones",
+        "summary": "Apps móviles nativas y multiplataforma alineadas con tu marca, APIs y calendario de releases.",
+        "points": [
+          "Discovery de producto y MVPs acotados",
+          "iOS, Android y React Native",
+          "Auth, pagos y notificaciones push seguras",
+          "Soporte de publicación en tiendas"
+        ]
+      },
+      {
+        "title": "Desarrollo web",
+        "summary": "Sitios y web apps de alta conversión, rápidos, con SEO y CTAs claros.",
+        "points": [
+          "Landings y sitios multi-idioma",
+          "CMS headless y sistemas de componentes",
+          "Core Web Vitals y accesibilidad",
+          "Analytics, formularios y leads al CRM"
+        ]
+      },
+      {
+        "title": "Implementación CRM",
+        "summary": "HubSpot, GoHighLevel, Salesforce y Pipedrive configurados según cómo vendes y atiendes.",
+        "points": [
+          "Diseño de pipelines, campos y automatizaciones",
+          "Migración y deduplicación de datos",
+          "Capacitación y playbooks de adopción",
+          "Integraciones con email, calendario y cobros"
+        ]
+      },
+      {
+        "title": "Implementación de automatización",
+        "summary": "n8n, webhooks y flujos con IA que eliminan trabajo manual sin romper cumplimiento.",
+        "points": [
+          "Ruteo de leads, SLAs y notificaciones",
+          "WhatsApp, email e integraciones de tienda",
+          "Manejo de errores, logs y reintentos",
+          "Documentación que operaciones puede mantener"
+        ]
+      }
+    ],
+    "outroTitle": "¿No sabes por dónde empezar?",
+    "outroBody": "Agenda una llamada corta de descubrimiento. Mapeamos tu stack, prioridades y un alcance realista para la fase uno—sin compromiso."
   },
   "login": {
     "inviteOnly": "El CRM es solo por invitación.",

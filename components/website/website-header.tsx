@@ -22,6 +22,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { href: "#problem", key: "problem", anchor: true },
   { href: "/how-it-works", key: "solution" },
+  { href: "/services", key: "services" },
   { href: "/offers", key: "offers" },
   { href: "#platforms", key: "platforms", anchor: true },
   { href: "/about", key: "about" },
@@ -49,16 +50,16 @@ export function WebsiteHeader({ lang, dict }: Props) {
             <Image
               src="/brand/logo-light.png"
               alt="ClickIn 360"
-              width={180}
-              height={48}
+              width={940}
+              height={788}
               className="h-9 sm:h-10 w-auto dark:hidden"
               priority
             />
             <Image
               src="/brand/logo-dark.png"
               alt="ClickIn 360"
-              width={180}
-              height={48}
+              width={940}
+              height={788}
               className="h-9 sm:h-10 w-auto hidden dark:block"
               priority
             />

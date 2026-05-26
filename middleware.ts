@@ -1,6 +1,19 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import {
+  isApiWriteMethod,
+  isPublicApiRoute,
+  workspaceManageForbidden,
+  workspaceOwnerOnlyForbidden,
+  workspaceWriteForbidden,
+} from "@/lib/api/workspace-guards";
+import { resolveWorkspaceContext } from "@/lib/team/workspace";
+import { isLocale } from "@/lib/website/i18n";
+import {
+  LOCALE_COOKIE,
+  LOCALE_COOKIE_MAX_AGE,
+} from "@/lib/website/locale-cookie";
 
 const CRM_PROTECTED = [
   "/dashboard",
@@ -15,6 +28,8 @@ const CRM_PROTECTED = [
   "/analytics",
   "/account",
   "/settings",
+  "/quotes",
+  "/attachments",
 ];
 
 function isCrmProtected(pathname: string) {
@@ -32,12 +47,64 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (isCrmProtected(pathname)) {
-    const token = await getToken({
-      req,
-      secret: process.env.NEXTAUTH_SECRET,
+  const localeSeg = pathname.match(/^\/(en|es)(\/|$)/);
+  if (localeSeg && isLocale(localeSeg[1])) {
+    const res = NextResponse.next();
+    res.cookies.set(LOCALE_COOKIE, localeSeg[1], {
+      path: "/",
+      maxAge: LOCALE_COOKIE_MAX_AGE,
+      sameSite: "lax",
     });
+    return res;
+  }
 
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+
+  if (pathname.startsWith("/api/") && isApiWriteMethod(req.method)) {
+    if (!isPublicApiRoute(pathname)) {
+      const userId =
+        (token as { id?: string; sub?: string } | null)?.id ??
+        (token as { sub?: string } | null)?.sub;
+      if (!userId) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+
+      const workspace = await resolveWorkspaceContext(userId);
+
+      if (
+        workspaceOwnerOnlyForbidden(
+          workspace.isWorkspaceOwner,
+          pathname,
+          req.method
+        )
+      ) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+
+      if (
+        workspaceManageForbidden(
+          workspace.role,
+          workspace.isWorkspaceOwner,
+          pathname,
+          req.method
+        )
+      ) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+
+      if (workspaceWriteForbidden(workspace.role, pathname, req.method)) {
+        return NextResponse.json(
+          { error: "Forbidden", demo: workspace.role === "viewer" },
+          { status: 403 }
+        );
+      }
+    }
+  }
+
+  if (isCrmProtected(pathname)) {
     if (!token) {
       const signIn = new URL("/login", req.url);
       signIn.searchParams.set("callbackUrl", pathname);
@@ -75,5 +142,10 @@ export const config = {
     "/account/:path*",
     "/settings",
     "/settings/:path*",
+    "/quotes",
+    "/quotes/:path*",
+    "/attachments",
+    "/attachments/:path*",
+    "/api/:path*",
   ],
 };

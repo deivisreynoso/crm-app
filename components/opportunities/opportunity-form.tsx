@@ -8,6 +8,7 @@ import { useContacts } from "@/hooks/useContacts";
 import { useCompanies } from "@/hooks/useCompanies";
 import { useCustomFields } from "@/hooks/useCustomFields";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import axios from "axios";
 import { normalizeCustomFieldValues } from "@/lib/custom-fields/normalize";
 import {
   EntityCustomFieldsForm,
@@ -55,6 +56,10 @@ export function OpportunityForm({
   );
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [tags, setTags] = useState(initial?.tags ?? "");
+  const [ownerId, setOwnerId] = useState(initial?.owner_id ?? "");
+  const [teamMembers, setTeamMembers] = useState<
+    { id: string; label: string }[]
+  >([]);
   const [probability, setProbability] = useState(
     initial?.probability?.toString() ?? "50"
   );
@@ -66,6 +71,14 @@ export function OpportunityForm({
     useCustomFields("opportunity");
   const { data: workspaceSettings } = useWorkspaceSettings();
   const defaultCurrency = workspaceSettings?.default_currency ?? "USD";
+
+  useEffect(() => {
+    void axios
+      .get<{ data: { id: string; label: string }[] }>("/api/team/members")
+      .then((res) => {
+        setTeamMembers(res.data.data ?? []);
+      });
+  }, []);
 
   useEffect(() => {
     setCustomFields(normalizeCustomFieldValues(initial?.custom_fields));
@@ -82,6 +95,7 @@ export function OpportunityForm({
     }
     if (initial?.notes !== undefined) setNotes(initial.notes ?? "");
     if (initial?.tags !== undefined) setTags(initial.tags ?? "");
+    if (initial?.owner_id !== undefined) setOwnerId(initial.owner_id ?? "");
     if (initial?.probability !== undefined) {
       setProbability(initial.probability?.toString() ?? "50");
     }
@@ -107,6 +121,7 @@ export function OpportunityForm({
       probability: Number(probability) || 50,
       notes: notes || undefined,
       tags: tags || undefined,
+      owner_id: ownerId || undefined,
       custom_fields: customFields,
     });
   }
@@ -202,6 +217,24 @@ export function OpportunityForm({
           ))}
         </select>
       </div>
+
+      {teamMembers.length > 0 && (
+        <div>
+          <FormLabel>Owner</FormLabel>
+          <select
+            value={ownerId}
+            onChange={(e) => setOwnerId(e.target.value)}
+            className="input-field"
+          >
+            <option value="">— Default —</option>
+            {teamMembers.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div>
         <FormLabel>Tags</FormLabel>
