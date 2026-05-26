@@ -6,12 +6,14 @@ interface TagsChipsProps {
   tags: string[];
   onChange: (tags: string[]) => void;
   placeholder?: string;
+  readOnly?: boolean;
 }
 
 export function TagsChips({
   tags,
   onChange,
   placeholder = "Type a tag and press Enter",
+  readOnly,
 }: TagsChipsProps) {
   const [draft, setDraft] = useState("");
 
@@ -40,17 +42,20 @@ export function TagsChips({
             className="inline-flex items-center gap-1 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20 px-2.5 py-1 text-xs font-medium"
           >
             {name}
-            <button
-              type="button"
-              className="hover:text-[var(--error)] leading-none"
-              onClick={() => removeTag(name)}
-              aria-label={`Remove ${name}`}
-            >
-              ×
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                className="hover:text-[var(--error)] leading-none"
+                onClick={() => removeTag(name)}
+                aria-label={`Remove ${name}`}
+              >
+                ×
+              </button>
+            )}
           </span>
         ))}
       </div>
+      {!readOnly && (
       <div className="flex gap-2">
         <input
           type="text"
@@ -73,7 +78,10 @@ export function TagsChips({
           Add tag
         </button>
       </div>
+      )}
+      {!readOnly && (
       <p className="text-xs text-body-muted">Press Enter or Add tag for each label.</p>
+      )}
     </div>
   );
 }

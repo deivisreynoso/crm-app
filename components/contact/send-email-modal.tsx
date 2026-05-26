@@ -5,7 +5,11 @@ import Link from "next/link";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { useEmailTemplates } from "@/hooks/useEmailTemplates";
-import { useGmailStatus, useSendContactEmail } from "@/hooks/useGmail";
+import {
+  useGmailStatus,
+  useSendContactEmail,
+  useSendTicketEmail,
+} from "@/hooks/useGmail";
 import {
   buildTemplateContext,
   interpolateTemplate,
@@ -18,6 +22,7 @@ interface SendEmailModalProps {
     Contact,
     "id" | "first_name" | "last_name" | "email" | "phone" | "company" | "company_id"
   >;
+  ticketId?: string;
   companyName?: string | null;
   open: boolean;
   onClose: () => void;
@@ -26,6 +31,7 @@ interface SendEmailModalProps {
 
 export function SendEmailModal({
   contact,
+  ticketId,
   companyName,
   open,
   onClose,
@@ -33,7 +39,9 @@ export function SendEmailModal({
 }: SendEmailModalProps) {
   const { data: gmailStatus, isLoading: statusLoading } = useGmailStatus();
   const { data: templates = [] } = useEmailTemplates();
-  const sendEmail = useSendContactEmail(contact.id);
+  const sendContactEmail = useSendContactEmail(contact.id);
+  const sendTicketEmail = useSendTicketEmail(ticketId ?? "");
+  const sendEmail = ticketId ? sendTicketEmail : sendContactEmail;
 
   const [to, setTo] = useState(contact.email ?? "");
   const [subject, setSubject] = useState("");

@@ -1,6 +1,7 @@
 import { createServerSideClient } from "@/lib/supabase";
 
-export async function getDashboardStats(userId: string) {
+/** Aggregate CRM counts for the workspace tenant (owner's data). */
+export async function getDashboardStats(workspaceOwnerId: string) {
   const supabase = createServerSideClient();
 
   const now = new Date();
@@ -12,25 +13,25 @@ export async function getDashboardStats(userId: string) {
     supabase
       .from("contacts")
       .select("*", { count: "exact", head: true })
-      .eq("user_id", userId),
+      .eq("user_id", workspaceOwnerId),
     supabase
       .from("opportunities")
       .select("*", { count: "exact", head: true })
-      .eq("user_id", userId),
+      .eq("user_id", workspaceOwnerId),
     supabase
       .from("tickets")
       .select("*", { count: "exact", head: true })
-      .eq("user_id", userId)
+      .eq("user_id", workspaceOwnerId)
       .in("status", ["open", "in_progress", "on_hold"]),
     supabase
       .from("tasks")
       .select("*", { count: "exact", head: true })
-      .eq("user_id", userId)
+      .eq("user_id", workspaceOwnerId)
       .in("status", ["open", "in_progress"]),
     supabase
       .from("calendar_events")
       .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
+      .eq("user_id", workspaceOwnerId)
       .gte("start_time", now.toISOString())
       .lte("start_time", weekAhead.toISOString()),
   ]);
@@ -38,7 +39,7 @@ export async function getDashboardStats(userId: string) {
   const { data: contactRows } = await supabase
     .from("contacts")
     .select("status")
-    .eq("user_id", userId);
+    .eq("user_id", workspaceOwnerId);
 
   const statuses = contactRows ?? [];
 

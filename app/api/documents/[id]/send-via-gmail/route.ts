@@ -16,6 +16,7 @@ import { logEmailContactActivity } from "@/lib/activities/log-email-activity";
 import { uploadToDocumentsBucket } from "@/lib/storage/documents";
 import { triggerN8NWebhook } from "@/lib/n8n";
 import { getQuoteEmailDefaults } from "@/lib/crm/quote-pdf-labels";
+import { ensureAcceptToken, quoteAcceptPublicUrl } from "@/lib/quotes/accept-token";
 import { ensureQuoteReference } from "@/lib/quotes/reference";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -117,10 +118,27 @@ export async function POST(req: NextRequest, context: RouteContext) {
         quote_reference: doc.quote_reference as string | null,
       }));
 
+    const acceptToken = await ensureAcceptToken(supabase, {
+      id: doc.id,
+      type: doc.type as string,
+      accept_token: doc.accept_token as string | null,
+    });
+    const acceptUrl = acceptToken ? quoteAcceptPublicUrl(acceptToken) : null;
+    const acceptLinkBlock = acceptUrl
+      ? uiLocale === "es"
+        ? `\n\nAceptar o rechazar en línea:\n${acceptUrl}`
+        : `\n\nAccept or decline online:\n${acceptUrl}`
+      : "";
+
     const subject =
       parsed.data.subject?.trim() ||
       `${emailDefaults.subjectPrefix} ${quoteRef ?? (doc.title as string)}`;
-    const emailBody = parsed.data.body?.trim() || emailDefaults.body;
+    const baseBody = parsed.data.body?.trim() || emailDefaults.body;
+    const emailBody = acceptLinkBlock
+      ? baseBody.includes(acceptUrl!)
+        ? baseBody
+        : `${baseBody}${acceptLinkBlock}`
+      : baseBody;
 
     const { buffer, fileName } = await generateDocumentPdfBuffer(
       supabase,
@@ -184,6 +202,8 @@ export async function POST(req: NextRequest, context: RouteContext) {
       .from("documents")
       .update({
         status: "sent",
+        sent_at: (doc.sent_at as string | null) ?? sentAt,
+        accept_token: acceptToken,
         storage_path: uploaded.storagePath,
         file_url: uploaded.fileUrl,
         file_name: fileName,

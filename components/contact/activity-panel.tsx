@@ -16,7 +16,7 @@ interface ActivityPanelProps {
   notes?: Note[];
   isLoading?: boolean;
   isAdding: boolean;
-  onAdd: (input: { content: string; activity_type: ActivityType }) => Promise<void>;
+  onAdd?: (input: { content: string; activity_type: ActivityType }) => Promise<void>;
 }
 
 function notesToFeedItems(notes: Note[]): ActivityFeedItem[] {
@@ -50,7 +50,7 @@ export function ActivityPanel({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!content.trim()) return;
+    if (!onAdd || !content.trim()) return;
     await onAdd({ content: content.trim(), activity_type: activityType });
     setContent("");
   }
@@ -74,6 +74,7 @@ export function ActivityPanel({
 
   return (
     <div className="space-y-6">
+      {onAdd && (
       <form
         onSubmit={handleSubmit}
         className="space-y-3 p-4 rounded-lg border border-[var(--card-border)] bg-[var(--surface-subtle)]"
@@ -110,6 +111,7 @@ export function ActivityPanel({
           Log activity
         </Button>
       </form>
+      )}
 
       {isLoading ? (
         <p className="text-sm text-body-muted text-center py-8">Loading activity…</p>

@@ -21,6 +21,7 @@ export function useUpdateDocument(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["document", id] });
       queryClient.invalidateQueries({ queryKey: ["documents"] });
+      queryClient.invalidateQueries({ queryKey: ["quote-analytics"] });
     },
   });
 }
@@ -35,6 +36,7 @@ export function useGenerateDocumentPdf(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["document", id] });
       queryClient.invalidateQueries({ queryKey: ["documents"] });
+      queryClient.invalidateQueries({ queryKey: ["quote-analytics"] });
     },
   });
 }
@@ -58,6 +60,7 @@ export function useSendDocumentViaGmail(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["document", id] });
       queryClient.invalidateQueries({ queryKey: ["documents"] });
+      queryClient.invalidateQueries({ queryKey: ["quote-analytics"] });
     },
   });
 }

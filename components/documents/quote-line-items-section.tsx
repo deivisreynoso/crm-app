@@ -36,6 +36,7 @@ interface QuoteLineItemsSectionProps {
   onSaved?: () => void;
   /** Keeps quote preview in sync while editing (before Save line items). */
   onDraftChange?: (draft: QuoteLineItemsDraft) => void;
+  readOnly?: boolean;
 }
 
 export function QuoteLineItemsSection({
@@ -45,6 +46,7 @@ export function QuoteLineItemsSection({
   currency = "USD",
   onSaved,
   onDraftChange,
+  readOnly,
 }: QuoteLineItemsSectionProps) {
   const serverLines = initialLines ?? EMPTY_LINES;
   const { dict } = useCrmLocale();
@@ -195,6 +197,54 @@ export function QuoteLineItemsSection({
     lines.length > 0 &&
     lines.every((l) => !!l.service_id) &&
     lines.every((l) => (Number(l.quantity) || 0) > 0);
+
+  if (readOnly) {
+    const viewSubtotal = serverLines.reduce(
+      (sum, l) => sum + (Number(l.line_total) || 0),
+      0
+    );
+    const viewRate = Number(initialTaxRate) || 0;
+    const viewTax =
+      Math.round(viewSubtotal * (viewRate / 100) * 100) / 100;
+    const viewTotal = Math.round((viewSubtotal + viewTax) * 100) / 100;
+
+    return (
+      <div className="surface-card p-4 space-y-4">
+        <h3 className="text-sm font-semibold text-heading">{q?.addProducts}</h3>
+        {serverLines.length === 0 ? (
+          <p className="text-sm text-body-muted">{q?.noLineItems}</p>
+        ) : (
+          <ul className="space-y-2 text-sm">
+            {serverLines.map((l) => (
+              <li
+                key={l.id}
+                className="flex justify-between gap-4 border-b border-[var(--card-border)] pb-2"
+              >
+                <span className="text-heading">{l.description || "—"}</span>
+                <span className="text-body-muted shrink-0">
+                  {l.quantity} × {formatCurrency(Number(l.unit_price) || 0, currency)} ={" "}
+                  {formatCurrency(Number(l.line_total) || 0, currency)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="text-sm text-right space-y-1 pt-2 border-t border-[var(--card-border)]">
+          <p>
+            {q?.subtotal}: {formatCurrency(viewSubtotal, currency)}
+          </p>
+          {viewRate > 0 && (
+            <p>
+              {q?.tax} ({viewRate}%): {formatCurrency(viewTax, currency)}
+            </p>
+          )}
+          <p className="font-semibold text-heading">
+            {q?.total}: {formatCurrency(viewTotal, currency)}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="surface-card p-4 space-y-4">

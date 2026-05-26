@@ -932,6 +932,14 @@ PATCH triggers `opportunity.updated`; DELETE triggers `opportunity.deleted`.
 
 #### `GET|POST /api/tickets/[id]/notes`
 
+#### Ticket email (Gmail; requires linked contact with email)
+
+| Method | Path | Notes |
+|--------|------|--------|
+| `GET` | `/api/tickets/[id]/emails` | Thread for ticket contact (`ticket_id` set on send, or unscoped contact mail) |
+| `POST` | `/api/tickets/[id]/emails/sync` | Same as contact sync for the linked contact |
+| `POST` | `/api/tickets/[id]/emails/send` | Body same as `POST /api/contacts/[id]/emails/send`; tags `ticket_id` on save |
+
 ---
 
 ### 9.6 Companies (accounts)

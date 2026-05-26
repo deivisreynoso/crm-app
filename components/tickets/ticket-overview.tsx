@@ -19,9 +19,10 @@ import type { Ticket, TicketFormInput } from "@/types";
 interface TicketOverviewProps {
   ticket: Ticket;
   onSaveField: (patch: Partial<TicketFormInput>) => Promise<void>;
+  readOnly?: boolean;
 }
 
-export function TicketOverview({ ticket, onSaveField }: TicketOverviewProps) {
+export function TicketOverview({ ticket, onSaveField, readOnly }: TicketOverviewProps) {
   const { data: companies = [] } = useCompanies();
   const { data: contactsData } = useContacts(1, 200);
   const contacts = contactsData?.data ?? [];
@@ -56,6 +57,7 @@ export function TicketOverview({ ticket, onSaveField }: TicketOverviewProps) {
         options={accountOptions}
         placeholder="Link account"
         onChange={async (id) => onSaveField({ company_id: id || undefined })}
+        disabled={readOnly}
       />
       <AssociationSelect
         label="Contact"
@@ -63,12 +65,14 @@ export function TicketOverview({ ticket, onSaveField }: TicketOverviewProps) {
         options={contactOptions}
         placeholder="Link contact"
         onChange={async (id) => onSaveField({ contact_id: id || undefined })}
+        disabled={readOnly}
       />
 
       <InlineSelectField
         label="Status"
         value={ticket.status}
         options={TICKET_STATUSES}
+        readOnly={readOnly}
         onSave={async (v) =>
           onSaveField({
             status: v as Ticket["status"],
@@ -79,6 +83,7 @@ export function TicketOverview({ ticket, onSaveField }: TicketOverviewProps) {
         label="Priority"
         value={ticket.priority}
         options={TICKET_PRIORITIES}
+        readOnly={readOnly}
         onSave={async (v) =>
           onSaveField({
             priority: v as Ticket["priority"],
@@ -90,6 +95,7 @@ export function TicketOverview({ ticket, onSaveField }: TicketOverviewProps) {
         value={ticket.category}
         options={TICKET_CATEGORIES}
         allowEmpty
+        readOnly={readOnly}
         onSave={async (v) => onSaveField({ category: v || undefined })}
       />
 
@@ -98,6 +104,7 @@ export function TicketOverview({ ticket, onSaveField }: TicketOverviewProps) {
         value={displaySubject}
         required
         className="sm:col-span-2"
+        readOnly={readOnly}
         onSave={async (value) => {
           await onSaveField({ subject: value, title: value });
         }}
@@ -107,6 +114,7 @@ export function TicketOverview({ ticket, onSaveField }: TicketOverviewProps) {
         value={ticket.description}
         multiline
         className="sm:col-span-2"
+        readOnly={readOnly}
         onSave={async (v) => onSaveField({ description: v || undefined })}
       />
 
@@ -143,6 +151,7 @@ export function TicketOverview({ ticket, onSaveField }: TicketOverviewProps) {
         <dd>
           <TagsChips
             tags={ticket.tags ?? []}
+            readOnly={readOnly}
             onChange={(next) => void onSaveField({ tags: next.join(", ") })}
           />
         </dd>
@@ -152,6 +161,7 @@ export function TicketOverview({ ticket, onSaveField }: TicketOverviewProps) {
     <EntityCustomFieldsOverview
       entityType="ticket"
       values={ticket.custom_fields}
+      readOnly={readOnly}
       onSave={async (custom_fields) => onSaveField({ custom_fields })}
     />
     </div>

@@ -23,6 +23,7 @@ interface InlineSelectFieldProps {
   className?: string;
   allowEmpty?: boolean;
   emptyLabel?: string;
+  readOnly?: boolean;
   onSave: (value: string) => Promise<void>;
 }
 
@@ -45,6 +46,7 @@ export function InlineSelectField({
   className,
   allowEmpty,
   emptyLabel = "— None —",
+  readOnly,
   onSave,
 }: InlineSelectFieldProps) {
   const items = normalizeOptions(options);
@@ -85,7 +87,7 @@ export function InlineSelectField({
       <select
         value={localValue}
         onChange={(e) => void handleChange(e.target.value)}
-        disabled={saving}
+        disabled={saving || readOnly}
         className={cn(
           "input-field text-sm font-medium w-full min-h-[2.5rem]",
           !localValue && "text-body-muted",

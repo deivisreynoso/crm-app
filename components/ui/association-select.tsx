@@ -12,6 +12,7 @@ interface AssociationSelectProps {
   required?: boolean;
   className?: string;
   allowEmpty?: boolean;
+  disabled?: boolean;
   onChange: (id: string) => Promise<void>;
 }
 
@@ -23,6 +24,7 @@ export function AssociationSelect({
   required,
   className,
   allowEmpty = true,
+  disabled = false,
   onChange,
 }: AssociationSelectProps) {
   const [localValue, setLocalValue] = useState(value);
@@ -64,7 +66,7 @@ export function AssociationSelect({
       <select
         value={localValue}
         onChange={(e) => void handleChange(e.target.value)}
-        disabled={saving || options.length === 0}
+        disabled={disabled || saving || options.length === 0}
         className={cn(
           "input-field text-sm font-medium w-full min-h-[2.5rem]",
           !localValue && "text-body-muted",

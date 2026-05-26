@@ -39,6 +39,7 @@ import { formatApiError } from "@/lib/validation-errors";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { SavedFiltersBar } from "@/components/filters/saved-filters-bar";
 import { ContactsImportExport } from "@/components/contacts/contacts-import-export";
+import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
 
 function ContactsPageContent() {
   const router = useRouter();
@@ -75,6 +76,7 @@ function ContactsPageContent() {
   });
   const { data: companies = [] } = useCompanies();
   const companyMap = Object.fromEntries(companies.map((c) => [c.id, c.name]));
+  const { canWrite } = useWorkspaceCapabilities();
   const createContact = useCreateContact();
   const deleteContact = useDeleteContact();
 
@@ -114,9 +116,11 @@ function ContactsPageContent() {
         title="Contacts"
         description="Manage your customer relationships"
         actions={
-          <Button onClick={() => setShowForm((v) => !v)}>
-            {showForm ? "Cancel" : "Add Contact"}
-          </Button>
+          canWrite ? (
+            <Button onClick={() => setShowForm((v) => !v)}>
+              {showForm ? "Cancel" : "Add Contact"}
+            </Button>
+          ) : undefined
         }
       />
 
@@ -142,6 +146,7 @@ function ContactsPageContent() {
       )}
 
       <div className="surface-card p-4 space-y-3">
+        {canWrite && (
         <ContactsImportExport
           filters={{
             search: search || undefined,
@@ -154,6 +159,7 @@ function ContactsPageContent() {
             router.refresh();
           }}
         />
+        )}
         <SavedFiltersBar
           entityType="contact"
           currentConfig={{
@@ -295,7 +301,7 @@ function ContactsPageContent() {
                   <DataTableCell align="right">
                     <ListActions
                       viewHref={`/contacts/${contact.id}`}
-                      onDelete={async () => {
+                      onDelete={canWrite ? async () => {
                         const ok = await confirm({
                           title: "Delete contact?",
                           description: `${contact.first_name} ${contact.last_name} will be permanently removed. This cannot be undone.`,
@@ -308,7 +314,7 @@ function ContactsPageContent() {
                         } catch (err: unknown) {
                           alert(apiErrorMessage(err));
                         }
-                      }}
+                      } : undefined}
                       deleteDisabled={deleteContact.isPending}
                     />
                   </DataTableCell>

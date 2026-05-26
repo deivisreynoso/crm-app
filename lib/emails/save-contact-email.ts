@@ -5,6 +5,7 @@ export type ContactEmailDirection = "outbound" | "inbound";
 export type ContactEmailRecord = {
   user_id: string;
   contact_id: string;
+  ticket_id?: string | null;
   direction: ContactEmailDirection;
   gmail_message_id: string;
   gmail_thread_id?: string | null;
@@ -23,6 +24,7 @@ export async function saveContactEmail(
     {
       user_id: record.user_id,
       contact_id: record.contact_id,
+      ticket_id: record.ticket_id ?? null,
       direction: record.direction,
       gmail_message_id: record.gmail_message_id,
       gmail_thread_id: record.gmail_thread_id ?? null,

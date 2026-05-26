@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getDashboardStats } from "@/lib/dashboard-stats";
+import { resolveWorkspaceContext } from "@/lib/team/workspace";
 import { getGreeting, getUserDisplayName } from "@/lib/user-display";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
@@ -18,9 +19,10 @@ import {
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
-  const userId = (session?.user as { id?: string } | undefined)?.id;
-  const stats = userId
-    ? await getDashboardStats(userId)
+  const actorId = (session?.user as { id?: string } | undefined)?.id;
+  const workspace = actorId ? await resolveWorkspaceContext(actorId) : null;
+  const stats = workspace
+    ? await getDashboardStats(workspace.workspaceOwnerId)
     : {
         contacts: 0,
         opportunities: 0,

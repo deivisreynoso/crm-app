@@ -2,32 +2,39 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Ticket } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Mail, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge, ticketPriorityVariant, ticketStatusVariant } from "@/components/ui/badge";
 import { ActivityPanel } from "@/components/contact/activity-panel";
+import { ContactEmailPanel } from "@/components/contact/contact-email-panel";
+import { SendEmailModal } from "@/components/contact/send-email-modal";
 import { TicketForm } from "@/components/tickets/ticket-form";
 import { TicketOverview } from "@/components/tickets/ticket-overview";
 import { useTicket, useUpdateTicket } from "@/hooks/useTickets";
 import { useTicketNotes, useCreateTicketNote } from "@/hooks/useTicketNotes";
+import { useTicketEmails } from "@/hooks/useGmail";
+import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
 import { formatServiceTicketLabel } from "@/lib/service-ticket-number";
 import type { TicketFormInput } from "@/types";
 
 type PageProps = { params: Promise<{ id: string }> };
-type TicketTab = "details" | "activity";
+type TicketTab = "details" | "emails" | "activity";
 
 export default function ServiceTicketDetailPage({ params }: PageProps) {
   const { id } = use(params);
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<TicketTab>("details");
   const [editing, setEditing] = useState(false);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
 
   const { data: ticket, isLoading, error } = useTicket(id);
   const updateTicket = useUpdateTicket(id);
   const { data: notes = [] } = useTicketNotes(id);
+  const { data: ticketEmails = [] } = useTicketEmails(id);
   const createNote = useCreateTicketNote(id);
+  const { canWrite } = useWorkspaceCapabilities();
 
   async function handleUpdate(data: TicketFormInput) {
     await updateTicket.mutateAsync(data);
@@ -55,23 +62,75 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
 
   const headerLabel = formatServiceTicketLabel(ticket.ticket_number);
   const displaySubject = ticket.subject?.trim() || ticket.title;
+  const linkedContact = ticket.contact;
+  const contactEmail = linkedContact?.email?.trim() ?? "";
 
   const detailsPanel = (
-    <TicketOverview ticket={ticket} onSaveField={handleSaveField} />
+    <TicketOverview ticket={ticket} onSaveField={handleSaveField} readOnly={!canWrite} />
+  );
+
+  const emailsPanel = linkedContact ? (
+    <ContactEmailPanel
+      contact={{
+        id: linkedContact.id,
+        first_name: linkedContact.first_name,
+        last_name: linkedContact.last_name,
+        email: linkedContact.email ?? "",
+      }}
+      ticketId={id}
+      onOpenFullCompose={
+        canWrite && contactEmail ? () => setEmailModalOpen(true) : undefined
+      }
+    />
+  ) : (
+    <p className="text-sm text-body-muted py-6 text-center">
+      Link a contact to this ticket to send and sync email with the customer.
+    </p>
   );
 
   const activityPanel = (
     <ActivityPanel
       notes={notes}
       isAdding={createNote.isPending}
-      onAdd={async (input) => {
-        await createNote.mutateAsync(input);
-      }}
+      onAdd={
+        canWrite
+          ? async (input) => {
+              await createNote.mutateAsync(input);
+            }
+          : undefined
+      }
     />
   );
 
+  const tabs = [
+    { id: "details" as const, label: "Details" },
+    { id: "emails" as const, label: "Emails", count: ticketEmails.length },
+    { id: "activity" as const, label: "Activity", count: notes.length },
+  ];
+
   return (
     <div className="space-y-6 w-full">
+      {linkedContact && (
+        <SendEmailModal
+          contact={{
+            id: linkedContact.id,
+            first_name: linkedContact.first_name,
+            last_name: linkedContact.last_name,
+            email: linkedContact.email ?? "",
+            company: ticket.company?.name ?? undefined,
+            company_id: ticket.company_id ?? undefined,
+          }}
+          ticketId={id}
+          companyName={ticket.company?.name}
+          open={emailModalOpen}
+          onClose={() => setEmailModalOpen(false)}
+          onSent={() => {
+            void queryClient.invalidateQueries({ queryKey: ["ticket-emails", id] });
+            void queryClient.invalidateQueries({ queryKey: ["ticket-notes", id] });
+          }}
+        />
+      )}
+
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div className="flex items-start gap-4 min-w-0">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)] text-white">
@@ -97,12 +156,38 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
               </Badge>
               {ticket.category && <Badge variant="neutral">{ticket.category}</Badge>}
             </div>
+            {linkedContact && (
+              <p className="text-sm text-body-muted mt-2">
+                Contact:{" "}
+                <Link
+                  href={`/contacts/${linkedContact.id}`}
+                  className="text-[var(--secondary)] hover:underline"
+                >
+                  {linkedContact.first_name} {linkedContact.last_name}
+                </Link>
+                {contactEmail && (
+                  <span className="text-body-muted"> · {contactEmail}</span>
+                )}
+              </p>
+            )}
           </div>
         </div>
-        <div className="flex gap-2 shrink-0">
-          <Button variant="outline" size="sm" onClick={() => setEditing((v) => !v)}>
-            {editing ? "Cancel" : "Edit"}
-          </Button>
+        <div className="flex flex-wrap gap-2 shrink-0">
+          {canWrite && contactEmail && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEmailModalOpen(true)}
+            >
+              <Mail className="h-4 w-4 mr-1.5" />
+              Send email
+            </Button>
+          )}
+          {canWrite && (
+            <Button variant="outline" size="sm" onClick={() => setEditing((v) => !v)}>
+              {editing ? "Cancel" : "Edit"}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -134,26 +219,36 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
               <h2 className="text-sm font-semibold text-heading mb-5">Details</h2>
               {detailsPanel}
             </Card>
-            <Card className="xl:col-span-7" padding="lg">
-              <h2 className="text-sm font-semibold text-heading mb-5">
-                Activity
-                {notes.length > 0 && (
-                  <span className="ml-2 text-body-muted font-normal">({notes.length})</span>
-                )}
-              </h2>
-              {activityPanel}
-            </Card>
+            <div className="xl:col-span-7 space-y-6">
+              <Card padding="lg">
+                <h2 className="text-sm font-semibold text-heading mb-5">
+                  Emails
+                  {ticketEmails.length > 0 && (
+                    <span className="ml-2 text-body-muted font-normal">
+                      ({ticketEmails.length})
+                    </span>
+                  )}
+                </h2>
+                {emailsPanel}
+              </Card>
+              <Card padding="lg">
+                <h2 className="text-sm font-semibold text-heading mb-5">
+                  Activity
+                  {notes.length > 0 && (
+                    <span className="ml-2 text-body-muted font-normal">
+                      ({notes.length})
+                    </span>
+                  )}
+                </h2>
+                {activityPanel}
+              </Card>
+            </div>
           </div>
 
           <Card className="xl:hidden" padding="none">
             <div className="px-6 pt-4 border-b border-[var(--card-border)]">
               <nav className="flex gap-6" aria-label="Ticket sections">
-                {(
-                  [
-                    { id: "details" as const, label: "Details" },
-                    { id: "activity" as const, label: "Activity", count: notes.length },
-                  ] as const
-                ).map((t) => (
+                {tabs.map((t) => (
                   <button
                     key={t.id}
                     type="button"
@@ -165,7 +260,7 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
                     }`}
                   >
                     {t.label}
-                    {"count" in t && t.count > 0 && (
+                    {(t.count ?? 0) > 0 && (
                       <span className="ml-1 text-body-muted">({t.count})</span>
                     )}
                   </button>
@@ -174,6 +269,7 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
             </div>
             <div className="p-6">
               {tab === "details" && detailsPanel}
+              {tab === "emails" && emailsPanel}
               {tab === "activity" && activityPanel}
             </div>
           </Card>

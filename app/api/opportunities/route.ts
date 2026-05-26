@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth";
+import { requireAuth, requireWorkspaceWrite } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { opportunitySchema } from "@/lib/validators";
 import { buildOpportunityRecord } from "@/lib/opportunity-payload";
@@ -38,6 +38,9 @@ export async function POST(req: NextRequest) {
     const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
+    const writeError = requireWorkspaceWrite(role!);
+    if (writeError) return writeError;
+
     const body = await req.json();
     const parsed = opportunitySchema.safeParse(body);
 
@@ -49,7 +52,7 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServerSideClient();
-    const payload = buildOpportunityRecord(parsed.data, userId!);
+    const payload = buildOpportunityRecord(parsed.data, workspaceOwnerId!);
 
     if (!payload.company_id && parsed.data.contact_id) {
       const { data: contact } = await supabase

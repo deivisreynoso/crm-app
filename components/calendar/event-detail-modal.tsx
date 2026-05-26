@@ -16,8 +16,8 @@ interface EventDetailModalProps {
   event: CalendarEvent | null;
   contactName?: string;
   onClose: () => void;
-  onEdit: () => void;
-  onDelete: () => Promise<void>;
+  onEdit?: () => void;
+  onDelete?: () => Promise<void>;
   deleteLoading?: boolean;
 }
 
@@ -74,10 +74,14 @@ export function EventDetailModal({
           {event.description && (
             <p className="whitespace-pre-wrap text-heading">{event.description}</p>
           )}
+          {(onEdit || onDelete) && (
           <div className="flex flex-wrap gap-2 pt-2">
+            {onEdit && (
             <Button size="sm" variant="outline" onClick={onEdit}>
               Edit
             </Button>
+            )}
+            {onDelete && (
             <Button
               size="sm"
               variant="outline"
@@ -86,7 +90,9 @@ export function EventDetailModal({
             >
               Delete
             </Button>
+            )}
           </div>
+          )}
         </div>
       </Modal>
       <ConfirmDialog
@@ -97,7 +103,7 @@ export function EventDetailModal({
         destructive
         loading={deleteLoading}
         onConfirm={async () => {
-          await onDelete();
+          await onDelete?.();
           setConfirmDelete(false);
           onClose();
         }}

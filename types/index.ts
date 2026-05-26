@@ -216,7 +216,12 @@ export interface User {
     created_at: string;
     resolved_at?: string;
     updated_at: string;
-    contact?: { id: string; first_name: string; last_name: string } | null;
+    contact?: {
+      id: string;
+      first_name: string;
+      last_name: string;
+      email?: string | null;
+    } | null;
     company?: { id: string; name: string } | null;
   }
 
@@ -268,6 +273,12 @@ export interface User {
     type: "contract" | "estimate" | "proposal" | "attachment";
     title: string;
     quote_reference?: string | null;
+    accept_token?: string | null;
+    sent_at?: string | null;
+    accepted_at?: string | null;
+    rejected_at?: string | null;
+    response_name?: string | null;
+    response_email?: string | null;
     content?: string;
     file_url?: string;
     file_name?: string;

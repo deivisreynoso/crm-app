@@ -21,6 +21,7 @@ import { INDUSTRIES } from "@/lib/constants/industries";
 import { useCompanies, useCreateCompany, useDeleteCompany } from "@/hooks/useCompanies";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { SavedFiltersBar } from "@/components/filters/saved-filters-bar";
+import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
 
 export default function AccountsPage() {
   const [search, setSearch] = useState("");
@@ -29,6 +30,7 @@ export default function AccountsPage() {
     search: search || undefined,
     industry: industryFilter || undefined,
   });
+  const { canWrite } = useWorkspaceCapabilities();
   const createCompany = useCreateCompany();
   const deleteCompany = useDeleteCompany();
   const { confirm, dialogProps } = useConfirmDialog();
@@ -58,9 +60,11 @@ export default function AccountsPage() {
         title="Accounts"
         description="Companies you do business with — parent of contacts, service tickets, and deals"
         actions={
-          <Button size="sm" onClick={() => setModalOpen(true)}>
-            New account
-          </Button>
+          canWrite ? (
+            <Button size="sm" onClick={() => setModalOpen(true)}>
+              New account
+            </Button>
+          ) : undefined
         }
       />
 
@@ -138,7 +142,7 @@ export default function AccountsPage() {
                   <DataTableCell align="right">
                     <ListActions
                       viewHref={`/accounts/${c.id}`}
-                      onDelete={async () => {
+                      onDelete={canWrite ? async () => {
                         const ok = await confirm({
                           title: "Delete account?",
                           description: `“${c.name}” will be permanently removed. Linked contacts will be unlinked.`,
@@ -147,7 +151,7 @@ export default function AccountsPage() {
                         });
                         if (!ok) return;
                         await deleteCompany.mutateAsync(c.id);
-                      }}
+                      } : undefined}
                     />
                   </DataTableCell>
                 </DataTableRow>

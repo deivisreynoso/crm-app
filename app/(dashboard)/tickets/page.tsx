@@ -28,6 +28,7 @@ import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { SavedFiltersBar } from "@/components/filters/saved-filters-bar";
 import { formatDate } from "@/lib/utils";
 import { formatApiError } from "@/lib/validation-errors";
+import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
 
 export default function ServiceTicketsPage() {
   const [statusFilter, setStatusFilter] = useState("");
@@ -42,6 +43,7 @@ export default function ServiceTicketsPage() {
     ...(createdFrom ? { created_from: createdFrom } : {}),
     ...(createdTo ? { created_to: createdTo } : {}),
   });
+  const { canWrite } = useWorkspaceCapabilities();
   const createTicket = useCreateTicket();
   const deleteTicket = useDeleteTicket();
 
@@ -52,9 +54,11 @@ export default function ServiceTicketsPage() {
         title={SERVICE_TICKET_OBJECT.plural}
         description="Support requests linked to accounts and contacts"
         actions={
-          <Button size="sm" onClick={() => setModalOpen(true)}>
-            + New service ticket
-          </Button>
+          canWrite ? (
+            <Button size="sm" onClick={() => setModalOpen(true)}>
+              + New service ticket
+            </Button>
+          ) : undefined
         }
       />
 
@@ -192,7 +196,7 @@ export default function ServiceTicketsPage() {
                   <DataTableCell align="right">
                     <ListActions
                       viewHref={`/tickets/${t.id}`}
-                      onDelete={async () => {
+                      onDelete={canWrite ? async () => {
                         const ok = await confirm({
                           title: "Delete service ticket?",
                           description:
@@ -202,7 +206,7 @@ export default function ServiceTicketsPage() {
                         });
                         if (!ok) return;
                         await deleteTicket.mutateAsync(t.id);
-                      }}
+                      } : undefined}
                     />
                   </DataTableCell>
                 </DataTableRow>

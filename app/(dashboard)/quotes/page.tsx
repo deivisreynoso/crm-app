@@ -10,6 +10,8 @@ import { useDocuments, useDeleteDocument } from "@/hooks/useDocuments";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { formatCurrency } from "@/lib/utils";
 import { useState } from "react";
+import { QuoteAnalyticsPanel } from "@/components/quotes/quote-analytics-panel";
+import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
 
 type Tab = "all" | "templates";
 
@@ -18,6 +20,7 @@ export default function QuotesPage() {
   const q = dict.quotes;
   const a = dict.actions;
   const [tab, setTab] = useState<Tab>("all");
+  const { canWrite } = useWorkspaceCapabilities();
   const { data: quotes = [], isLoading } = useDocuments({ kind: "quotes" });
   const deleteDoc = useDeleteDocument();
 
@@ -27,7 +30,7 @@ export default function QuotesPage() {
         title={q?.title ?? "Quotes"}
         description={q?.description}
         actions={
-          tab === "all" ? (
+          tab === "all" && canWrite ? (
             <Link href="/quotes/new">
               <Button size="sm">{q?.newQuote ?? "New quote"}</Button>
             </Link>
@@ -60,6 +63,8 @@ export default function QuotesPage() {
       {tab === "templates" ? (
         <TemplateEditor />
       ) : (
+        <>
+        <QuoteAnalyticsPanel />
         <div className="surface-card overflow-hidden">
           {isLoading ? (
             <p className="p-6 text-body-muted">…</p>
@@ -134,6 +139,7 @@ export default function QuotesPage() {
                             <FileDown className="h-4 w-4" />
                           </a>
                         )}
+                        {canWrite && (
                         <button
                           type="button"
                           className="p-2 rounded-md hover:bg-[var(--sidebar-hover)] text-[var(--error)]"
@@ -143,6 +149,7 @@ export default function QuotesPage() {
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -151,6 +158,7 @@ export default function QuotesPage() {
             </table>
           )}
         </div>
+        </>
       )}
     </div>
   );

@@ -20,12 +20,14 @@ interface EntityCustomFieldsOverviewProps {
   entityType: CustomFieldDefinition["entity_type"];
   values: Record<string, unknown> | null | undefined;
   onSave: (custom_fields: CustomFieldValues) => Promise<void>;
+  readOnly?: boolean;
 }
 
 export function EntityCustomFieldsOverview({
   entityType,
   values: valuesProp,
   onSave,
+  readOnly,
 }: EntityCustomFieldsOverviewProps) {
   const { data: fieldsData, isLoading } = useCustomFields(entityType);
   const fields = fieldsData ?? EMPTY_FIELDS;
@@ -69,6 +71,7 @@ export function EntityCustomFieldsOverview({
   }
 
   async function handleChange(next: CustomFieldValues) {
+    if (readOnly) return;
     const pruned = pruneCustomFieldValues(next, fields);
     setValues(pruned);
     setError(null);
@@ -96,12 +99,27 @@ export function EntityCustomFieldsOverview({
       {error && (
         <p className="text-sm text-[var(--error)] mb-3">{error}</p>
       )}
+      {readOnly ? (
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+          {fields.map((f) => (
+            <div key={f.id}>
+              <dt className="text-body-muted text-xs">
+                {f.field_name.replace(/_/g, " ")}
+              </dt>
+              <dd className="text-heading mt-0.5">
+                {String(values[f.field_name] ?? "—")}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
       <EntityCustomFieldsForm
         fields={fields}
         isLoading={isLoading}
         values={values}
         onChange={(next) => void handleChange(next)}
       />
+      )}
     </div>
   );
 }

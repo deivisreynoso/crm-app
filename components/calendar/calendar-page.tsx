@@ -18,8 +18,10 @@ import { shiftMonth } from "@/lib/calendar/utils";
 import { GoogleCalendarBanner } from "@/components/calendar/google-calendar-banner";
 import { useContacts } from "@/hooks/useContacts";
 import type { CalendarEvent } from "@/types";
+import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
 
 export function CalendarPage() {
+  const { canWrite } = useWorkspaceCapabilities();
   const [month, setMonth] = useState(() => new Date());
   const [createOpen, setCreateOpen] = useState(false);
   const [createDate, setCreateDate] = useState<Date | undefined>();
@@ -52,6 +54,7 @@ export function CalendarPage() {
         title="Calendar"
         description="Schedule meetings with contacts — Zoom, Meet, in person, and more"
         actions={
+          canWrite ? (
           <Button
             size="sm"
             onClick={() => {
@@ -62,6 +65,7 @@ export function CalendarPage() {
           >
             New meeting
           </Button>
+          ) : undefined
         }
       />
 
@@ -100,11 +104,15 @@ export function CalendarPage() {
         <CalendarMonthView
           month={month}
           events={events}
-          onSelectDate={(day) => {
-            setEditing(null);
-            setCreateDate(day);
-            setCreateOpen(true);
-          }}
+          onSelectDate={
+            canWrite
+              ? (day) => {
+                  setEditing(null);
+                  setCreateDate(day);
+                  setCreateOpen(true);
+                }
+              : undefined
+          }
           onSelectEvent={setSelected}
         />
       )}
@@ -135,14 +143,22 @@ export function CalendarPage() {
             : undefined
         }
         onClose={() => setSelected(null)}
-        onEdit={() => {
-          setEditing(selected);
-          setSelected(null);
-          setCreateOpen(true);
-        }}
-        onDelete={async () => {
-          if (selected) await deleteEvent.mutateAsync(selected.id);
-        }}
+        onEdit={
+          canWrite
+            ? () => {
+                setEditing(selected);
+                setSelected(null);
+                setCreateOpen(true);
+              }
+            : undefined
+        }
+        onDelete={
+          canWrite
+            ? async () => {
+                if (selected) await deleteEvent.mutateAsync(selected.id);
+              }
+            : undefined
+        }
         deleteLoading={deleteEvent.isPending}
       />
     </div>

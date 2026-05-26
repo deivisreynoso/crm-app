@@ -56,10 +56,19 @@ export function PhoneInput({
 export function PhoneInputInline({
   value,
   onSave,
+  readOnly,
 }: {
   value?: string | null;
   onSave: (value: string) => Promise<void>;
+  readOnly?: boolean;
 }) {
+  if (readOnly) {
+    return (
+      <p className="text-sm font-medium text-heading min-h-[2.5rem] flex items-center">
+        {value?.trim() || "—"}
+      </p>
+    );
+  }
   return (
     <PhoneInput
       value={value ?? ""}

@@ -9,7 +9,10 @@ import {
   useContactEmails,
   useGmailStatus,
   useSendContactEmail,
+  useSendTicketEmail,
   useSyncContactEmails,
+  useSyncTicketEmails,
+  useTicketEmails,
   type ContactEmailMessage,
 } from "@/hooks/useGmail";
 import { formatApiError } from "@/lib/validation-errors";
@@ -17,6 +20,7 @@ import type { Contact } from "@/types";
 
 interface ContactEmailPanelProps {
   contact: Pick<Contact, "id" | "email" | "first_name" | "last_name">;
+  ticketId?: string;
   onOpenFullCompose?: () => void;
 }
 
@@ -37,12 +41,21 @@ function groupByThread(messages: ContactEmailMessage[]) {
 
 export function ContactEmailPanel({
   contact,
+  ticketId,
   onOpenFullCompose,
 }: ContactEmailPanelProps) {
   const { data: gmailStatus } = useGmailStatus();
-  const { data: messages = [], isLoading } = useContactEmails(contact.id);
-  const syncEmails = useSyncContactEmails(contact.id);
-  const sendEmail = useSendContactEmail(contact.id);
+  const contactEmailsQuery = useContactEmails(contact.id);
+  const ticketEmailsQuery = useTicketEmails(ticketId ?? "");
+  const { data: messages = [], isLoading } = ticketId
+    ? ticketEmailsQuery
+    : contactEmailsQuery;
+  const syncContactEmails = useSyncContactEmails(contact.id);
+  const syncTicketEmails = useSyncTicketEmails(ticketId ?? "");
+  const syncEmails = ticketId ? syncTicketEmails : syncContactEmails;
+  const sendContactEmail = useSendContactEmail(contact.id);
+  const sendTicketEmail = useSendTicketEmail(ticketId ?? "");
+  const sendEmail = ticketId ? sendTicketEmail : sendContactEmail;
 
   const [replyBody, setReplyBody] = useState("");
   const [replySubject, setReplySubject] = useState("");
@@ -113,7 +126,9 @@ export function ContactEmailPanel({
   if (!contactEmail) {
     return (
       <p className="text-sm text-body-muted py-6 text-center">
-        Add an email address to this contact to send and sync messages.
+        {ticketId
+          ? "The linked contact has no email address. Add one on the contact record to send and sync messages for this ticket."
+          : "Add an email address to this contact to send and sync messages."}
       </p>
     );
   }

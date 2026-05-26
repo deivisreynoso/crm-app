@@ -86,3 +86,63 @@ export function useSyncContactEmails(contactId: string) {
     },
   });
 }
+
+export function useTicketEmails(ticketId: string) {
+  return useQuery({
+    queryKey: ["ticket-emails", ticketId],
+    queryFn: async () => {
+      const { data } = await axios.get<{ data: ContactEmailMessage[] }>(
+        `/api/tickets/${ticketId}/emails`
+      );
+      return data.data;
+    },
+    enabled: Boolean(ticketId),
+  });
+}
+
+export function useSendTicketEmail(ticketId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: GmailSendInput) => {
+      if (!ticketId) {
+        return Promise.reject(new Error("Missing ticket id"));
+      }
+      return axios.post(`/api/tickets/${ticketId}/emails/send`, input);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["ticket-emails", ticketId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["ticket-notes", ticketId],
+      });
+    },
+  });
+}
+
+export function useSyncTicketEmails(ticketId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => {
+      if (!ticketId) {
+        return Promise.reject(new Error("Missing ticket id"));
+      }
+      return axios.post<{
+        synced: number;
+        listed?: number;
+        contact_email?: string;
+        hint?: string;
+        error?: string;
+        needs_reauth?: boolean;
+      }>(`/api/tickets/${ticketId}/emails/sync`);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["ticket-emails", ticketId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["ticket-notes", ticketId],
+      });
+    },
+  });
+}

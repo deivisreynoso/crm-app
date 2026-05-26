@@ -15,6 +15,7 @@ interface PipelineBoardProps {
   onDelete: (opportunity: OpportunityWithContact) => void;
   isMoving?: boolean;
   deletingId?: string | null;
+  readOnly?: boolean;
 }
 
 function contactName(opp: OpportunityWithContact) {
@@ -29,6 +30,7 @@ export function PipelineBoard({
   onEdit,
   onDelete,
   deletingId,
+  readOnly,
 }: PipelineBoardProps) {
   const stages = sortStages(pipeline.stages as PipelineStage[]);
 
@@ -63,15 +65,23 @@ export function PipelineBoard({
           <div
             key={stage.id}
             className="flex-shrink-0 w-72 bg-[var(--background)] rounded-lg flex flex-col min-h-[min(80vh,800px)] max-h-[min(90vh,1000px)] border border-[var(--card-border)]"
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.dataTransfer.dropEffect = "move";
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              const id = e.dataTransfer.getData("application/opportunity-id");
-              if (id) void onMoveStage(id, stage.id);
-            }}
+            onDragOver={
+              readOnly
+                ? undefined
+                : (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                  }
+            }
+            onDrop={
+              readOnly
+                ? undefined
+                : (e) => {
+                    e.preventDefault();
+                    const id = e.dataTransfer.getData("application/opportunity-id");
+                    if (id) void onMoveStage(id, stage.id);
+                  }
+            }
           >
             <div className="p-3 border-b border-[var(--card-border)] bg-[var(--card)] rounded-t-lg shrink-0">
               <h3 className="font-semibold text-sm text-heading">
@@ -86,13 +96,20 @@ export function PipelineBoard({
               {cards.map((opp) => (
                 <div
                   key={opp.id}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData("application/opportunity-id", opp.id);
-                    e.dataTransfer.effectAllowed = "move";
-                  }}
-                  className="bg-white border border-slate-200 rounded-md p-3 cursor-grab active:cursor-grabbing shadow-sm group/card relative"
+                  draggable={!readOnly}
+                  onDragStart={
+                    readOnly
+                      ? undefined
+                      : (e) => {
+                          e.dataTransfer.setData("application/opportunity-id", opp.id);
+                          e.dataTransfer.effectAllowed = "move";
+                        }
+                  }
+                  className={`bg-white border border-slate-200 rounded-md p-3 shadow-sm group/card relative ${
+                    readOnly ? "" : "cursor-grab active:cursor-grabbing"
+                  }`}
                 >
+                  {!readOnly && (
                   <button
                     type="button"
                     onClick={(e) => {
@@ -106,10 +123,12 @@ export function PipelineBoard({
                   >
                     <Trash2 className="h-3.5 w-3.5" strokeWidth={1.75} />
                   </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => onEdit(opp)}
-                    className="text-left w-full pr-6"
+                    onClick={() => !readOnly && onEdit(opp)}
+                    disabled={readOnly}
+                    className={`text-left w-full ${readOnly ? "" : "pr-6"}`}
                   >
                     <p className="font-medium text-sm text-slate-900">
                       {opp.title}
@@ -164,7 +183,11 @@ export function PipelineBoard({
             .filter((o) => !stages.find((s) => s.id === o.stage))
             .map((opp) => (
               <div key={opp.id} className="text-sm mb-2">
-                <button type="button" onClick={() => onEdit(opp)}>
+                <button
+                  type="button"
+                  onClick={() => !readOnly && onEdit(opp)}
+                  disabled={readOnly}
+                >
                   {opp.title}
                 </button>
                 <span className="text-xs text-slate-500 block">

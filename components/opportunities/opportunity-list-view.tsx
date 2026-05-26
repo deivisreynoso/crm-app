@@ -20,6 +20,7 @@ interface OpportunityListViewProps {
   onEdit: (opp: OpportunityWithContact) => void;
   onDelete: (opp: OpportunityWithContact) => void;
   deletingId?: string | null;
+  readOnly?: boolean;
 }
 
 export function OpportunityListView({
@@ -27,6 +28,7 @@ export function OpportunityListView({
   onEdit,
   onDelete,
   deletingId,
+  readOnly,
 }: OpportunityListViewProps) {
   if (opportunities.length === 0) {
     return (
@@ -45,13 +47,18 @@ export function OpportunityListView({
           <DataTableHeadCell>Stage</DataTableHeadCell>
           <DataTableHeadCell>Value</DataTableHeadCell>
           <DataTableHeadCell>Updated</DataTableHeadCell>
+          {!readOnly && (
           <DataTableHeadCell align="right">Actions</DataTableHeadCell>
+          )}
         </tr>
       </DataTableHead>
       <DataTableBody>
         {opportunities.map((opp) => (
           <DataTableRow key={opp.id}>
             <DataTableCell>
+              {readOnly ? (
+                <span className="font-medium text-heading">{opp.title}</span>
+              ) : (
               <button
                 type="button"
                 onClick={() => onEdit(opp)}
@@ -59,6 +66,7 @@ export function OpportunityListView({
               >
                 {opp.title}
               </button>
+              )}
             </DataTableCell>
             <DataTableCell>
               {opp.contact ? (
@@ -85,6 +93,7 @@ export function OpportunityListView({
                 {formatDate(opp.updated_at)}
               </span>
             </DataTableCell>
+            {!readOnly && (
             <DataTableCell align="right">
               <div className="flex items-center justify-end gap-1">
                 <button
@@ -101,6 +110,7 @@ export function OpportunityListView({
                 />
               </div>
             </DataTableCell>
+            )}
           </DataTableRow>
         ))}
       </DataTableBody>

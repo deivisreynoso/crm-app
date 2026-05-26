@@ -8,7 +8,7 @@ import type { CalendarEvent } from "@/types";
 interface CalendarMonthViewProps {
   month: Date;
   events: CalendarEvent[];
-  onSelectDate: (date: Date) => void;
+  onSelectDate?: (date: Date) => void;
   onSelectEvent: (event: CalendarEvent) => void;
 }
 
@@ -43,13 +43,20 @@ export function CalendarMonthView({
           const inMonth = isSameMonth(day, month);
           const today = isSameDay(day, new Date());
 
+          const Cell = onSelectDate ? "button" : "div";
+
           return (
-            <button
+            <Cell
               key={day.toISOString()}
-              type="button"
-              onClick={() => onSelectDate(day)}
+              {...(onSelectDate
+                ? {
+                    type: "button" as const,
+                    onClick: () => onSelectDate(day),
+                  }
+                : {})}
               className={cn(
-                "min-h-[88px] p-1.5 border-b border-r border-[var(--card-border)] text-left transition-colors hover:bg-[var(--sidebar-hover)]",
+                "min-h-[88px] p-1.5 border-b border-r border-[var(--card-border)] text-left transition-colors",
+                onSelectDate && "hover:bg-[var(--sidebar-hover)]",
                 !inMonth && "bg-[var(--background)]/60 opacity-50",
                 today && "ring-1 ring-inset ring-[var(--secondary)]"
               )}
@@ -92,7 +99,7 @@ export function CalendarMonthView({
                   </span>
                 )}
               </div>
-            </button>
+            </Cell>
           );
         })}
       </div>

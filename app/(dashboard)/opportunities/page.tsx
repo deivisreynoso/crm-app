@@ -29,6 +29,7 @@ import {
 import { DEFAULT_PIPELINE_STAGES } from "@/lib/constants/pipelines";
 import { formatTagsForInput } from "@/lib/tags";
 import type { OpportunityFormInput, OpportunityWithContact } from "@/types";
+import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
 
 type Panel = "none" | "create" | "edit" | "pipeline" | "newPipeline";
 type ViewMode = "board" | "list";
@@ -78,6 +79,7 @@ export default function OpportunitiesPage() {
   const moveStage = useMoveOpportunityStage(selectedPipelineId);
   const deleteOpportunity = useDeleteOpportunity(selectedPipelineId);
   const deletePipeline = useDeletePipeline();
+  const { canWrite, canManage } = useWorkspaceCapabilities();
 
   useEffect(() => {
     if (pipelines.length && !selectedPipelineId) {
@@ -201,6 +203,7 @@ export default function OpportunitiesPage() {
         description="Drag deals between stages on your pipeline board"
         actions={
           <>
+            {canManage && (
             <Button
               variant="outline"
               size="sm"
@@ -209,6 +212,8 @@ export default function OpportunitiesPage() {
             >
               Manage pipeline
             </Button>
+            )}
+            {canManage && (
             <Button
               variant="outline"
               size="sm"
@@ -217,6 +222,8 @@ export default function OpportunitiesPage() {
             >
               New pipeline
             </Button>
+            )}
+            {canWrite && (
             <Button
               size="sm"
               onClick={() => {
@@ -227,6 +234,7 @@ export default function OpportunitiesPage() {
             >
               Add opportunity
             </Button>
+            )}
           </>
         }
       />
@@ -457,6 +465,7 @@ export default function OpportunitiesPage() {
               onMoveStage={handleMoveStage}
               onEdit={openEdit}
               onDelete={requestDelete}
+              readOnly={!canWrite}
               deletingId={
                 deleteOpportunity.isPending ? deletingOpportunity?.id ?? null : null
               }
@@ -468,6 +477,7 @@ export default function OpportunitiesPage() {
               opportunities={opportunities}
               onEdit={openEdit}
               onDelete={requestDelete}
+              readOnly={!canWrite}
               deletingId={
                 deleteOpportunity.isPending ? deletingOpportunity?.id ?? null : null
               }

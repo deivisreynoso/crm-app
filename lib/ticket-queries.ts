@@ -8,7 +8,7 @@ export async function enrichTicket(ticket: Record<string, unknown>) {
   if (ticket.contact_id) {
     const { data } = await supabase
       .from("contacts")
-      .select("id, first_name, last_name")
+      .select("id, first_name, last_name, email")
       .eq("id", ticket.contact_id as string)
       .maybeSingle();
     contact = data;

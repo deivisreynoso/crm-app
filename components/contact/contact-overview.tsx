@@ -16,6 +16,7 @@ import {
 import { formatTimezone } from "@/lib/constants/contact-fields";
 import { formatApiError } from "@/lib/validation-errors";
 import { TagsChips } from "@/components/forms/tags-chips";
+import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
 import { useCompanies } from "@/hooks/useCompanies";
 import { EntityCustomFieldsOverview } from "@/components/custom-fields/entity-custom-fields-overview";
 import type { Contact, ContactFormInput } from "@/types";
@@ -26,6 +27,8 @@ interface ContactOverviewProps {
 }
 
 export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) {
+  const { canWrite } = useWorkspaceCapabilities();
+  const readOnly = !canWrite;
   const { data: companies = [], isLoading: companiesLoading } = useCompanies();
   const [country, setCountry] = useState(contact.country ?? "");
   const [showAddress, setShowAddress] = useState(false);
@@ -75,12 +78,12 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
-        <InlineEditableField label="Email" value={contact.email} onSave={save("email")} />
+        <InlineEditableField label="Email" value={contact.email} readOnly={readOnly} onSave={save("email")} />
         <div>
           <label className="text-[11px] font-semibold uppercase tracking-wide text-body-muted mb-1 block">
             Phone
           </label>
-          <PhoneInputInline value={contact.phone} onSave={save("phone")} />
+          <PhoneInputInline value={contact.phone} readOnly={readOnly} onSave={save("phone")} />
         </div>
 
         <AssociationSelect
@@ -89,6 +92,7 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
           options={accountOptions}
           placeholder={companiesLoading ? "Loading accounts…" : "Link to account"}
           onChange={async (id) => saveField({ company_id: id })}
+          disabled={readOnly}
         />
 
         <InlineSelectField
@@ -97,6 +101,7 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
           options={JOB_TITLE_OPTIONS}
           allowEmpty
           emptyLabel="— Select —"
+          readOnly={readOnly}
           onSave={save("title")}
         />
 
@@ -109,6 +114,7 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
             { value: "active", label: "Active" },
             { value: "inactive", label: "Inactive" },
           ]}
+          readOnly={readOnly}
           onSave={async (v) =>
             saveField({ status: v as Contact["status"] })
           }
@@ -120,17 +126,11 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
           </label>
           <TagsChips
             tags={contact.tags ?? []}
+            readOnly={readOnly}
             onChange={(next) => void saveField({ tags: next.join(", ") })}
           />
         </div>
 
-        <InlineEditableField
-          label="About"
-          value={contact.notes}
-          multiline
-          className="sm:col-span-2"
-          onSave={save("notes")}
-        />
       </div>
 
       <div className="rounded-lg border border-[var(--card-border)] bg-[var(--surface-subtle)] p-4 space-y-4">
@@ -147,6 +147,7 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
             label="Platform"
             value={contact.platform}
             placeholder="e.g. Shopify, WooCommerce"
+            readOnly={readOnly}
             onSave={save("platform")}
           />
           <InlineEditableField
@@ -154,12 +155,14 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
             value={contact.friction_area}
             placeholder="Not set yet"
             multiline
+            readOnly={readOnly}
             onSave={save("friction_area")}
           />
           <InlineEditableField
             label="Communication channels"
             value={contact.communication_channels}
             placeholder="e.g. email, WhatsApp"
+            readOnly={readOnly}
             onSave={save("communication_channels")}
           />
           <InlineEditableField
@@ -168,6 +171,7 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
             placeholder="Intent, engagement"
             multiline
             className="sm:col-span-2"
+            readOnly={readOnly}
             onSave={save("signals")}
           />
           <InlineEditableField
@@ -175,6 +179,7 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
             value={contact.ai_summary}
             placeholder="Summary from automation"
             multiline
+            readOnly={readOnly}
             onSave={save("ai_summary")}
           />
         </div>
@@ -202,6 +207,7 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
               options={COUNTRIES.map((c) => ({ value: c.code, label: c.name }))}
               allowEmpty
               emptyLabel="— Select —"
+              readOnly={readOnly}
               onSave={handleCountryChange}
             />
             {states.length > 0 ? (
@@ -211,12 +217,14 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
                 options={states.map((s) => ({ value: s.name, label: s.name }))}
                 allowEmpty
                 emptyLabel="— Select —"
+                readOnly={readOnly}
                 onSave={handleStateChange}
               />
             ) : (
               <InlineEditableField
                 label="State / Province"
                 value={contact.state}
+                readOnly={readOnly}
                 onSave={handleStateChange}
               />
             )}
@@ -224,7 +232,8 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
             <InlineEditableField
               label="Postal code"
               value={contact.postal_code}
-              onSave={save("postal_code")}
+              readOnly={readOnly}
+            onSave={save("postal_code")}
             />
             <div>
               <label className="text-[11px] font-semibold uppercase tracking-wide text-body-muted mb-1 block">
@@ -251,6 +260,7 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
       <EntityCustomFieldsOverview
         entityType="contact"
         values={contact.custom_fields}
+        readOnly={readOnly}
         onSave={async (custom_fields) => saveField({ custom_fields })}
       />
     </div>

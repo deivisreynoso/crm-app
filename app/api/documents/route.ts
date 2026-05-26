@@ -13,6 +13,7 @@ import { getDefaultQuoteTitle } from "@/lib/crm/quote-pdf-labels";
 import {
   allocateQuoteReference,
   isGenericQuoteTitle,
+  isQuoteReferenceConflict,
 } from "@/lib/quotes/reference";
 
 export async function GET(req: NextRequest) {
@@ -166,18 +167,43 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const record = {
+    let record = {
       ...buildDocumentRecord({ ...parsed.data, title }, workspaceOwnerId!, fileMeta),
       id: docId,
       storage_path: fileMeta?.storage_path ?? null,
       quote_reference: quoteReference,
     };
 
-    const { data, error: dbError } = await supabase
-      .from("documents")
-      .insert([record])
-      .select()
-      .single();
+    let data = null as Record<string, unknown> | null;
+    let dbError: { message: string } | null = null;
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      if (isQuoteDocument(parsed.data.type) && attempt > 0) {
+        quoteReference = await allocateQuoteReference(supabase, workspaceOwnerId!);
+        if (isGenericQuoteTitle(parsed.data.title.trim())) {
+          const { data: settings } = await supabase
+            .from("user_settings")
+            .select("ui_locale")
+            .eq("user_id", workspaceOwnerId!)
+            .maybeSingle();
+          title = getDefaultQuoteTitle(
+            (settings?.ui_locale as string | null) ?? null,
+            quoteReference
+          );
+        }
+        record = {
+          ...record,
+          title,
+          quote_reference: quoteReference,
+        };
+      }
+
+      const result = await supabase.from("documents").insert([record]).select().single();
+      data = result.data;
+      dbError = result.error;
+      if (!dbError) break;
+      if (!isQuoteReferenceConflict(dbError.message) || attempt >= 4) break;
+    }
 
     if (dbError) {
       console.error("POST document db:", dbError);
@@ -188,7 +214,9 @@ export async function POST(req: NextRequest) {
           ? "Run migration 005_object_associations.sql (attachment type)."
           : dbError.message.includes("storage_path")
             ? "Run migration 007_document_storage_path.sql."
-            : undefined;
+            : isQuoteReferenceConflict(dbError.message)
+              ? "Quote reference conflict. Try again or contact support."
+              : undefined;
       return NextResponse.json(
         { error: dbError.message, hint },
         { status: 500 }

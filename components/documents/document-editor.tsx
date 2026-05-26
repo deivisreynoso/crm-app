@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { FileDown, FileText, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { VariablePalette } from "@/components/documents/variable-palette";
 import { DocumentVersionHistory } from "@/components/documents/document-version-history";
 import { QuoteLineItemsSection } from "@/components/documents/quote-line-items-section";
 import { QuotePreview } from "@/components/documents/quote-preview";
+import { QuoteAcceptLinkPanel } from "@/components/documents/quote-accept-link-panel";
 import { SendQuoteEmailModal } from "@/components/documents/send-quote-email-modal";
 import { insertAtTextareaCursor } from "@/lib/documents/insert-at-cursor";
 import {
@@ -24,6 +26,7 @@ import {
   interpolateTemplate,
 } from "@/lib/documents/template-variables";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
+import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
 import type { QuoteLineItemsDraft } from "@/lib/quotes/preview-draft";
 import { isQuoteDocument } from "@/lib/documents/kinds";
 import { formatApiError } from "@/lib/validation-errors";
@@ -38,9 +41,12 @@ interface DocumentEditorProps {
 
 export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProps) {
   const { dict } = useCrmLocale();
+  const { canWrite } = useWorkspaceCapabilities();
   const q = dict.quotes;
   const actions = dict.actions;
+  const readOnly = !canWrite;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const queryClient = useQueryClient();
   const { data: doc, isLoading, error } = useDocument(documentId);
   const updateDoc = useUpdateDocument(documentId);
   const generatePdf = useGenerateDocumentPdf(documentId);
@@ -191,10 +197,12 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
             ← {q?.title ?? "Quotes"}
           </Link>
           <input
-            className="flex-1 min-w-[12rem] text-lg font-semibold text-heading bg-transparent border-0 focus:outline-none"
+            className="flex-1 min-w-[12rem] text-lg font-semibold text-heading bg-transparent border-0 focus:outline-none disabled:opacity-80"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            onBlur={() => title !== doc.title && void save({ title })}
+            onBlur={() => !readOnly && title !== doc.title && void save({ title })}
+            disabled={readOnly}
+            readOnly={readOnly}
           />
           <DocumentStatusBadge status={doc.status} />
           <div className="flex flex-wrap items-center gap-2 ml-auto">
@@ -209,6 +217,7 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
                 {toast.text}
               </span>
             )}
+            {canWrite && (
             <Button
               variant="outline"
               size="sm"
@@ -225,6 +234,8 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
             >
               {actions?.save ?? "Save"}
             </Button>
+            )}
+            {canWrite && (
             <Button
               variant="outline"
               size="sm"
@@ -233,6 +244,8 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
               <Mail className="h-4 w-4 mr-1.5" />
               Send via email
             </Button>
+            )}
+            {canWrite && (
             <Button
               size="sm"
               disabled={generatePdf.isPending}
@@ -255,6 +268,7 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
               <FileDown className="h-4 w-4 mr-1.5" />
               Generate PDF
             </Button>
+            )}
           </div>
         </header>
 
@@ -273,7 +287,9 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
                     <select
                       className="input-field w-full"
                       value={contactId}
+                      disabled={readOnly}
                       onChange={(e) => {
+                        if (readOnly) return;
                         setContactId(e.target.value);
                         void save({ contact_id: e.target.value || undefined });
                       }}
@@ -295,11 +311,15 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
                       type="date"
                       className="input-field w-full"
                       value={validUntil ? validUntil.slice(0, 10) : ""}
+                      disabled={readOnly}
+                      readOnly={readOnly}
                       onChange={(e) => {
+                        if (readOnly) return;
                         const next = e.target.value;
                         setValidUntil(next);
                       }}
                       onBlur={() =>
+                        !readOnly &&
                         void save({ valid_until: validUntil || undefined })
                       }
                     />
@@ -312,7 +332,11 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
                     <select
                       className="input-field w-full"
                       value={doc.status}
-                      onChange={(e) => void save({ status: e.target.value as CrmDocument["status"] })}
+                      disabled={readOnly}
+                      onChange={(e) =>
+                        !readOnly &&
+                        void save({ status: e.target.value as CrmDocument["status"] })
+                      }
                     >
                       <option value="draft">Draft</option>
                       <option value="sent">Sent</option>
@@ -324,13 +348,17 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
                 </div>
               </section>
 
+              <QuoteAcceptLinkPanel doc={doc} readOnly={readOnly} />
+
               <section className="surface-card p-4 space-y-3">
                 <h3 className="text-sm font-semibold text-heading">{q?.notes}</h3>
                 <textarea
                   className="input-field w-full min-h-[96px]"
                   value={content}
+                  readOnly={readOnly}
+                  disabled={readOnly}
                   onChange={(e) => setContent(e.target.value)}
-                  onBlur={() => void save({ content: textField(content) })}
+                  onBlur={() => !readOnly && void save({ content: textField(content) })}
                   placeholder={q?.messageToCustomer}
                 />
               </section>
@@ -340,6 +368,7 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
                 initialLines={doc.line_items ?? EMPTY_QUOTE_LINE_ITEMS}
                 initialTaxRate={Number(doc.tax_rate) || 0}
                 currency={currency}
+                readOnly={readOnly}
                 onDraftChange={setLineItemsDraft}
                 onSaved={() => {
                   setLineItemsDraft(null);
@@ -358,8 +387,10 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
                   <textarea
                     className="input-field w-full text-sm min-h-[80px]"
                     value={footerHtml}
+                    readOnly={readOnly}
+                    disabled={readOnly}
                     onChange={(e) => setFooterHtml(e.target.value)}
-                    onBlur={() => void save({ footer_html: textField(footerHtml) })}
+                    onBlur={() => !readOnly && void save({ footer_html: textField(footerHtml) })}
                     placeholder="Terms, payment details…"
                   />
                 </div>
@@ -388,7 +419,11 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
           defaultTo={linkedContact?.email}
           open={sendEmailOpen}
           onClose={() => setSendEmailOpen(false)}
-          onSent={() => setToast({ text: "Quote sent via email", ok: true })}
+          onSent={() => {
+            setToast({ text: "Quote sent via email", ok: true });
+            void queryClient.invalidateQueries({ queryKey: ["document", documentId] });
+            void queryClient.invalidateQueries({ queryKey: ["quote-analytics"] });
+          }}
         />
       </div>
     );
@@ -404,10 +439,12 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
           ← {dict.attachments?.title ?? "Attachments"}
         </Link>
         <input
-          className="flex-1 min-w-[12rem] text-lg font-semibold text-heading bg-transparent border-0 focus:outline-none"
+          className="flex-1 min-w-[12rem] text-lg font-semibold text-heading bg-transparent border-0 focus:outline-none disabled:opacity-80"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          onBlur={() => title !== doc.title && void save({ title })}
+          onBlur={() => !readOnly && title !== doc.title && void save({ title })}
+          disabled={readOnly}
+          readOnly={readOnly}
         />
         <DocumentStatusBadge status={doc.status} />
         <div className="flex flex-wrap items-center gap-2 ml-auto">
@@ -429,6 +466,7 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
           >
             Preview
           </Button>
+          {canWrite && (
           <Button
             variant="outline"
             size="sm"
@@ -444,6 +482,8 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
           >
             {actions?.save ?? "Save"}
           </Button>
+          )}
+          {canWrite && (
           <Button
             size="sm"
             disabled={generatePdf.isPending}
@@ -465,12 +505,13 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
             <FileDown className="h-4 w-4 mr-1.5" />
             Generate PDF
           </Button>
+          )}
         </div>
       </header>
 
       <div className="flex flex-1 min-h-0">
         <aside className="w-64 shrink-0 border-r border-[var(--card-border)] bg-[var(--background)] p-4 overflow-y-auto space-y-4">
-          <VariablePalette onInsert={insertVariable} />
+          {!readOnly && <VariablePalette onInsert={insertVariable} />}
           <div>
             <label className="text-[10px] font-semibold uppercase text-body-muted block mb-1">
               Link contact (for autofill)
@@ -478,7 +519,9 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
             <select
               className="input-field text-xs w-full"
               value={contactId}
+              disabled={readOnly}
               onChange={(e) => {
+                if (readOnly) return;
                 setContactId(e.target.value);
                 void save({ contact_id: e.target.value || undefined });
               }}
@@ -497,10 +540,14 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
             </p>
             <DocumentVersionHistory
               documentId={documentId}
-              onRestore={(text) => {
-                setContent(text);
-                void save({ content: text });
-              }}
+              onRestore={
+                readOnly
+                  ? undefined
+                  : (text) => {
+                      setContent(text);
+                      void save({ content: text });
+                    }
+              }
             />
           </div>
         </aside>
@@ -562,6 +609,8 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
                 ref={textareaRef}
                 className="w-full min-h-[440px] bg-white shadow-[var(--shadow-md)] rounded-lg border border-[var(--card-border)] p-8 text-sm text-slate-800 leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-[var(--secondary)]"
                 value={content}
+                readOnly={readOnly}
+                disabled={readOnly}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="Write or paste your document. Drag variables from the left into the text…"
               />

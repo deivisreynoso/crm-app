@@ -10,6 +10,7 @@ import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import axios from "axios";
 import type { CrmDocument, DocumentFormInput } from "@/types";
 import { formatApiError } from "@/lib/validation-errors";
+import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
 
 export default function NewQuotePage() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function NewQuotePage() {
   const contactId = searchParams.get("contact_id") ?? "";
   const companyId = searchParams.get("company_id") ?? "";
   const { dict } = useCrmLocale();
+  const { canWrite } = useWorkspaceCapabilities();
   const q = dict.quotes;
   const { data: templates = [] } = useDocumentTemplates();
   const [title, setTitle] = useState("");
@@ -49,6 +51,23 @@ export default function NewQuotePage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (!canWrite) {
+    return (
+      <div className="max-w-lg space-y-4">
+        <PageHeader title={q?.newQuote ?? "New quote"} description={q?.description} />
+        <p className="text-sm text-body-muted">
+          Your account has view-only access.
+        </p>
+        <Link
+          href="/quotes"
+          className="inline-flex items-center justify-center rounded-md border border-[var(--card-border)] px-3 py-1.5 text-sm font-medium text-heading hover:bg-[var(--sidebar-hover)]"
+        >
+          Back to quotes
+        </Link>
+      </div>
+    );
   }
 
   return (

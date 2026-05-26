@@ -9,6 +9,7 @@ const PUBLIC_API_PREFIXES = [
   "/api/leads/",
   "/api/website/",
   "/api/team/invites/",
+  "/api/quotes/public/",
 ];
 
 /** Integration APIs authenticated by shared secret, not session role */

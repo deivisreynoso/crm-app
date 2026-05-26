@@ -50,7 +50,7 @@ export function ListActions({
   deleteLabel,
 }: {
   viewHref: string;
-  onDelete: () => void;
+  onDelete?: () => void;
   deleteDisabled?: boolean;
   viewLabel?: string;
   deleteLabel?: string;
@@ -58,7 +58,9 @@ export function ListActions({
   return (
     <div className="flex items-center justify-end gap-1">
       <ListViewAction href={viewHref} label={viewLabel} />
-      <ListDeleteAction onClick={onDelete} disabled={deleteDisabled} label={deleteLabel} />
+      {onDelete && (
+        <ListDeleteAction onClick={onDelete} disabled={deleteDisabled} label={deleteLabel} />
+      )}
     </div>
   );
 }
