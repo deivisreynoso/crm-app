@@ -1,7 +1,7 @@
 "use client";
 
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
-import { formatEventRange, locationColor } from "@/lib/calendar/utils";
+import { calendarEventColor, formatEventRange } from "@/lib/calendar/utils";
 
 interface UpcomingEventsProps {
   contactId: string;
@@ -37,7 +37,7 @@ export function UpcomingEvents({ contactId, onSelect }: UpcomingEventsProps) {
             <div className="flex items-center gap-2">
               <span
                 className="h-2 w-2 rounded-full shrink-0"
-                style={{ background: locationColor(ev.location_type) }}
+                style={{ background: calendarEventColor(ev) }}
               />
               <span className="text-sm font-medium text-heading">{ev.title}</span>
             </div>

@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useState } from "react";
 import {
+  calendarEventColor,
   formatEventRange,
+  isAppointmentEvent,
   isUrlLocation,
-  locationColor,
   LOCATION_TYPES,
 } from "@/lib/calendar/utils";
 import type { CalendarEvent } from "@/types";
@@ -34,23 +35,32 @@ export function EventDetailModal({
   if (!event) return null;
 
   const locLabel = LOCATION_TYPES.find((t) => t.value === event.location_type)?.label;
+  const appointment = isAppointmentEvent(event);
 
   return (
     <>
       <Modal open={!!event} onClose={onClose} title={event.title}>
         <div className="space-y-4 text-sm">
-          <p className="text-body-muted">{formatEventRange(event.start_time, event.end_time)}</p>
+          <p className="flex items-center gap-2 text-body-muted">
+            <span
+              className="h-2.5 w-2.5 rounded-full shrink-0"
+              style={{ background: calendarEventColor(event) }}
+            />
+            {appointment ? "Website appointment" : "Meeting"}
+            {" · "}
+            {formatEventRange(event.start_time, event.end_time)}
+          </p>
           {contactName && (
             <p>
               <span className="text-body-muted">Contact: </span>
               <span className="text-heading font-medium">{contactName}</span>
             </p>
           )}
-          {event.location_type && (
+          {event.location_type && !appointment && (
             <p className="flex items-center gap-2">
               <span
                 className="h-2.5 w-2.5 rounded-full shrink-0"
-                style={{ background: locationColor(event.location_type) }}
+                style={{ background: calendarEventColor(event) }}
               />
               <span className="text-body-muted">{locLabel}</span>
             </p>

@@ -385,6 +385,7 @@ export interface User {
     end_time: string;
     location?: string;
     location_type?: "physical" | "zoom" | "google_meet" | "teams" | "other" | null;
+    event_kind?: "meeting" | "appointment";
     google_event_id?: string;
     is_synced?: boolean;
     created_at: string;

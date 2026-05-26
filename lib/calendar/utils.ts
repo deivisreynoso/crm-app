@@ -59,6 +59,36 @@ export function locationColor(type?: string | null) {
   return LOCATION_TYPES.find((t) => t.value === type)?.color ?? "#6b7280";
 }
 
+/** Website / discovery-call bookings — distinct from location-based meeting colors */
+export const APPOINTMENT_EVENT_COLOR = "#e11d48";
+
+export type CalendarEventKind = "meeting" | "appointment";
+
+export function isAppointmentEvent(event: {
+  event_kind?: CalendarEventKind | string | null;
+  description?: string | null;
+  title?: string;
+}): boolean {
+  if (event.event_kind === "appointment") return true;
+  if (event.event_kind === "meeting") return false;
+  const desc = event.description ?? "";
+  const title = event.title ?? "";
+  return (
+    desc.includes("Booked via website") ||
+    /^Discovery call\s*[—–-]/i.test(title)
+  );
+}
+
+export function calendarEventColor(event: {
+  event_kind?: CalendarEventKind | string | null;
+  location_type?: string | null;
+  description?: string | null;
+  title?: string;
+}): string {
+  if (isAppointmentEvent(event)) return APPOINTMENT_EVENT_COLOR;
+  return locationColor(event.location_type);
+}
+
 export function getMonthGrid(anchor: Date) {
   const start = startOfWeek(startOfMonth(anchor), { weekStartsOn: 0 });
   const end = endOfWeek(endOfMonth(anchor), { weekStartsOn: 0 });

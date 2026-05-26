@@ -27,7 +27,11 @@ import {
   useDeleteCalendarEvent,
   useUpdateCalendarEvent,
 } from "@/hooks/useCalendar";
-import { formatEventRange, LOCATION_TYPES } from "@/lib/calendar/utils";
+import {
+  calendarEventColor,
+  formatEventRange,
+  LOCATION_TYPES,
+} from "@/lib/calendar/utils";
 import type {
   CalendarEvent,
   CompanyRelated,
@@ -367,8 +371,14 @@ export function EntityRelatedPanel({
                     onClick={() => setSelectedCalendarEvent(e)}
                     className="w-full text-left text-sm border border-[var(--card-border)] rounded-md px-3 py-2 bg-[var(--card)] hover:bg-[var(--sidebar-hover)] transition-colors"
                   >
-                    <p className="font-medium text-[var(--foreground)]">{e.title}</p>
-                    <p className="text-xs text-[var(--muted)] mt-0.5">{whenWhere}</p>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="h-2 w-2 rounded-full shrink-0"
+                        style={{ background: calendarEventColor(e) }}
+                      />
+                      <p className="font-medium text-[var(--foreground)]">{e.title}</p>
+                    </div>
+                    <p className="text-xs text-[var(--muted)] mt-0.5 pl-4">{whenWhere}</p>
                   </button>
                 </li>
               );

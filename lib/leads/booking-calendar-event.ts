@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { insertWithColumnFallback } from "@/lib/api/strip-insert";
 import {
   slotToDate,
   type BookingAvailabilityConfig,
@@ -43,28 +44,31 @@ export async function createBookingCalendarEvent(
   const tz =
     input.calendar.timezone?.trim() || input.config.timezone.replace(/_/g, " ");
 
-  const { data, error } = await supabase
-    .from("calendar_events")
-    .insert([
-      {
-        user_id: workspaceOwnerId,
-        contact_id: input.contactId,
-        opportunity_id: input.opportunityId,
-        title: `Discovery call — ${label}`,
-        description: `Booked via website (${tz}).`,
-        start_time: start.toISOString(),
-        end_time: end.toISOString(),
-        location: "Video call",
-        is_synced: false,
-        updated_at: new Date().toISOString(),
-      },
-    ])
-    .select("id")
-    .single();
+  const row = {
+    user_id: workspaceOwnerId,
+    contact_id: input.contactId,
+    opportunity_id: input.opportunityId,
+    title: `Discovery call — ${label}`,
+    description: `Booked via website (${tz}).`,
+    start_time: start.toISOString(),
+    end_time: end.toISOString(),
+    location: "Video call",
+    event_kind: "appointment" as const,
+    is_synced: false,
+    updated_at: new Date().toISOString(),
+  };
 
-  if (error || !data?.id) {
+  const { data, error } = await insertWithColumnFallback(
+    (payload) =>
+      supabase.from("calendar_events").insert([payload]).select("id").single(),
+    row,
+    ["event_kind", "updated_at"]
+  );
+
+  const created = data as { id?: string } | null;
+  if (error || !created?.id) {
     throw new Error(error?.message ?? "Failed to create calendar event");
   }
 
-  return data.id as string;
+  return created.id;
 }

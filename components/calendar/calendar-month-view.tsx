@@ -2,7 +2,7 @@
 
 import { format, isSameDay, isSameMonth } from "date-fns";
 import { cn } from "@/lib/utils";
-import { getMonthGrid, locationColor } from "@/lib/calendar/utils";
+import { calendarEventColor, getMonthGrid } from "@/lib/calendar/utils";
 import type { CalendarEvent } from "@/types";
 
 interface CalendarMonthViewProps {
@@ -87,7 +87,7 @@ export function CalendarMonthView({
                     }}
                     className="block truncate text-[10px] font-medium px-1 py-0.5 rounded text-white"
                     style={{
-                      background: locationColor(ev.location_type),
+                      background: calendarEventColor(ev),
                     }}
                   >
                     {ev.title}
