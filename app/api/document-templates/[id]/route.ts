@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { documentTemplateSchema } from "@/lib/validators";
+import { coerceQuoteDocumentType } from "@/lib/documents/kinds";
 import { formatValidationDetails } from "@/lib/validation-errors";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -26,7 +27,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       updated_at: new Date().toISOString(),
     };
     if (parsed.data.name !== undefined) updates.name = parsed.data.name;
-    if (parsed.data.type !== undefined) updates.type = parsed.data.type;
+    if (parsed.data.type !== undefined) {
+      updates.type = coerceQuoteDocumentType(parsed.data.type);
+    }
     if (parsed.data.content !== undefined) {
       updates.content = parsed.data.content?.trim() || null;
     }

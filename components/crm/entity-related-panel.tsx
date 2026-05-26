@@ -26,7 +26,7 @@ import {
   useCreateCalendarEvent,
   useDeleteCalendarEvent,
   useUpdateCalendarEvent,
-} from "@/hooks/useCalendar";
+} from "@/hooks/useCalendarEvents";
 import {
   calendarEventColor,
   formatEventRange,
@@ -245,7 +245,8 @@ export function EntityRelatedPanel({
                     {d.title}
                   </Link>
                   <p className="text-xs text-[var(--muted)]">
-                    {d.type} · {d.status}
+                    {d.quote_reference ? `${d.quote_reference} · ` : ""}
+                    {d.status}
                     {d.total_amount != null && Number(d.total_amount) > 0
                       ? ` · ${formatCurrency(Number(d.total_amount))}`
                       : ""}

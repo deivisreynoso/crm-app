@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { documentTemplateSchema } from "@/lib/validators";
+import { coerceQuoteDocumentType } from "@/lib/documents/kinds";
 import { formatValidationDetails } from "@/lib/validation-errors";
 
 export async function GET() {
@@ -54,7 +55,9 @@ export async function POST(req: NextRequest) {
       .insert({
         user_id: workspaceOwnerId!,
         name: parsed.data.name,
-        type: parsed.data.type ?? null,
+        type: parsed.data.type
+          ? coerceQuoteDocumentType(parsed.data.type)
+          : null,
         content: parsed.data.content?.trim() || null,
         updated_at: new Date().toISOString(),
       })

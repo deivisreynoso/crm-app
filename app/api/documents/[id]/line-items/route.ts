@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth";
+import { requireAuth, requireWorkspaceWrite } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { quoteLineItemsPutSchema } from "@/lib/validators";
 import { replaceQuoteLineItems } from "@/lib/quotes/sync-line-items";
@@ -53,8 +53,10 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
 export async function PUT(req: NextRequest, context: RouteContext) {
   try {
-    const { workspaceOwnerId, error } = await requireAuth();
+    const { workspaceOwnerId, role, error } = await requireAuth();
     if (error) return error;
+    const writeError = requireWorkspaceWrite(role!);
+    if (writeError) return writeError;
 
     const { id } = await context.params;
     const parsed = quoteLineItemsPutSchema.safeParse(await req.json());

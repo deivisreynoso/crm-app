@@ -5,6 +5,10 @@ import {
   opportunitySchema,
   moveOpportunityStageSchema,
 } from "@/lib/validators";
+import {
+  assertParentsInWorkspace,
+  workspaceParentForbidden,
+} from "@/lib/api/assert-workspace-parents";
 import { buildOpportunityUpdate } from "@/lib/opportunity-payload";
 import { attachContactToOpportunity } from "@/lib/opportunity-queries";
 import { triggerN8NWebhook } from "@/lib/n8n";
@@ -76,6 +80,15 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     const supabase = createServerSideClient();
+    if (!isStageOnlyUpdate(body)) {
+      const parentCheck = await assertParentsInWorkspace(supabase, workspaceOwnerId!, {
+        contact_id: updates.contact_id as string | null | undefined,
+        company_id: updates.company_id as string | null | undefined,
+      });
+      const parentError = workspaceParentForbidden(parentCheck);
+      if (parentError) return parentError;
+    }
+
     const { data, error: dbError } = await supabase
       .from("opportunities")
       .update({ ...updates, updated_at: new Date().toISOString() })

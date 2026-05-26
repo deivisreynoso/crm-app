@@ -8,7 +8,15 @@ import {
   uploadToDocumentsBucket,
 } from "@/lib/storage/documents";
 import { formatValidationDetails } from "@/lib/validation-errors";
-import { isQuoteDocument, QUOTE_DOCUMENT_TYPES } from "@/lib/documents/kinds";
+import {
+  assertParentsInWorkspace,
+  workspaceParentForbidden,
+} from "@/lib/api/assert-workspace-parents";
+import {
+  coerceQuoteDocumentType,
+  isQuoteDocument,
+  QUOTE_DOCUMENT_TYPES,
+} from "@/lib/documents/kinds";
 import { getDefaultQuoteTitle } from "@/lib/crm/quote-pdf-labels";
 import {
   allocateQuoteReference,
@@ -33,6 +41,12 @@ export async function GET(req: NextRequest) {
     const companyId = params.get("company_id");
     const opportunityId = params.get("opportunity_id");
     const kind = params.get("kind");
+    const resolveFileUrls = params.get("resolve_file_urls") === "1";
+    const page = Math.max(1, Number(params.get("page") || "1"));
+    const limit = Math.min(200, Math.max(1, Number(params.get("limit") || "100")));
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
     if (contactId) query = query.eq("contact_id", contactId);
     if (companyId) query = query.eq("company_id", companyId);
     if (opportunityId) query = query.eq("opportunity_id", opportunityId);
@@ -42,7 +56,7 @@ export async function GET(req: NextRequest) {
       query = query.eq("type", "attachment");
     }
 
-    const { data, error: dbError } = await query;
+    const { data, error: dbError, count } = await query.range(from, to);
     if (dbError) {
       console.error("GET /api/documents db:", dbError);
       return NextResponse.json(
@@ -55,18 +69,26 @@ export async function GET(req: NextRequest) {
     }
 
     const rows = data ?? [];
-    const enriched = await Promise.all(
-      rows.map(async (row) => {
-        const file_url = await resolveDocumentFileUrl(
-          supabase,
-          row.storage_path as string | undefined,
-          row.file_url as string | undefined
-        );
-        return { ...row, file_url: file_url ?? row.file_url };
-      })
-    );
+    let enriched = rows;
+    if (resolveFileUrls) {
+      enriched = await Promise.all(
+        rows.map(async (row) => {
+          const file_url = await resolveDocumentFileUrl(
+            supabase,
+            row.storage_path as string | undefined,
+            row.file_url as string | undefined
+          );
+          return { ...row, file_url: file_url ?? row.file_url };
+        })
+      );
+    }
 
-    return NextResponse.json({ data: enriched });
+    return NextResponse.json({
+      data: enriched,
+      total: count ?? enriched.length,
+      page,
+      limit,
+    });
   } catch (err) {
     console.error("GET /api/documents error:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -107,7 +129,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const createPayload = {
+      ...parsed.data,
+      type: coerceQuoteDocumentType(parsed.data.type) as typeof parsed.data.type,
+    };
+
     const supabase = createServerSideClient();
+    const parentCheck = await assertParentsInWorkspace(
+      supabase,
+      workspaceOwnerId!,
+      createPayload
+    );
+    const parentError = workspaceParentForbidden(parentCheck);
+    if (parentError) return parentError;
+
     const docId = crypto.randomUUID();
 
     let fileMeta:
@@ -124,7 +159,7 @@ export async function POST(req: NextRequest) {
       try {
         const uploaded = await uploadToDocumentsBucket(
           supabase,
-          userId!,
+          workspaceOwnerId!,
           docId,
           file
         );
@@ -150,10 +185,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    let title = parsed.data.title.trim();
+    let title = createPayload.title.trim();
     let quoteReference: string | null = null;
 
-    if (isQuoteDocument(parsed.data.type)) {
+    if (isQuoteDocument(createPayload.type)) {
       const { data: settings } = await supabase
         .from("user_settings")
         .select("ui_locale")
@@ -168,7 +203,7 @@ export async function POST(req: NextRequest) {
     }
 
     let record = {
-      ...buildDocumentRecord({ ...parsed.data, title }, workspaceOwnerId!, fileMeta),
+      ...buildDocumentRecord({ ...createPayload, title }, workspaceOwnerId!, fileMeta),
       id: docId,
       storage_path: fileMeta?.storage_path ?? null,
       quote_reference: quoteReference,
@@ -178,9 +213,9 @@ export async function POST(req: NextRequest) {
     let dbError: { message: string } | null = null;
 
     for (let attempt = 0; attempt < 5; attempt++) {
-      if (isQuoteDocument(parsed.data.type) && attempt > 0) {
+      if (isQuoteDocument(createPayload.type) && attempt > 0) {
         quoteReference = await allocateQuoteReference(supabase, workspaceOwnerId!);
-        if (isGenericQuoteTitle(parsed.data.title.trim())) {
+        if (isGenericQuoteTitle(createPayload.title.trim())) {
           const { data: settings } = await supabase
             .from("user_settings")
             .select("ui_locale")

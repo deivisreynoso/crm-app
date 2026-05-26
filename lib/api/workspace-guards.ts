@@ -40,6 +40,14 @@ export function isViewerWriteAllowed(pathname: string) {
   );
 }
 
+const WORKSPACE_MANAGE_WRITE_PREFIXES = [
+  "/api/settings",
+  "/api/custom-fields",
+  "/api/email-templates",
+  "/api/document-templates",
+  "/api/duplicate-reviews",
+];
+
 export function requiresWorkspaceManage(pathname: string, method: string) {
   const m = method.toUpperCase();
   if (m === "GET" || m === "HEAD") return false;
@@ -47,6 +55,16 @@ export function requiresWorkspaceManage(pathname: string, method: string) {
   if (pathname === "/api/settings" && m === "PATCH") return true;
   if (pathname === "/api/team/members" && m === "POST") return true;
   if (/^\/api\/team\/members\/[^/]+$/.test(pathname) && m === "PATCH") return true;
+  if (pathname === "/api/pipelines/seed" && m === "POST") return false;
+  if (pathname === "/api/pipelines" && m === "POST") return true;
+  if (/^\/api\/pipelines\/[^/]+$/.test(pathname) && m !== "GET") return true;
+  /** Catalog CRUD in Settings; quote line items use POST /api/quote-services (write role). */
+  if (/^\/api\/quote-services\/[^/]+$/.test(pathname) && m !== "GET") return true;
+  if (
+    WORKSPACE_MANAGE_WRITE_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+  ) {
+    return true;
+  }
   return false;
 }
 

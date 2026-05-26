@@ -7,7 +7,9 @@ export function usePipelines() {
     queryKey: ["pipelines"],
     queryFn: async () => {
       const { data } = await axios.get<{ data: Pipeline[] }>("/api/pipelines");
-      return data.data;
+      if (data.data.length > 0) return data.data;
+      const seeded = await axios.post<{ data: Pipeline[] }>("/api/pipelines/seed");
+      return seeded.data.data;
     },
   });
 }

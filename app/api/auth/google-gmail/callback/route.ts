@@ -69,6 +69,7 @@ export async function GET(req: NextRequest) {
   const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
   const supabase = createServerSideClient();
 
+  /** Per-user mailbox (unlike Calendar, which uses workspace owner id). */
   const { error: dbError } = await supabase.from("google_gmail_tokens").upsert(
     {
       user_id: userId,

@@ -4,6 +4,10 @@ import { createServerSideClient } from "@/lib/supabase";
 import { ticketPatchSchema } from "@/lib/validators";
 import { buildTicketUpdate } from "@/lib/ticket-payload";
 import { enrichTicket } from "@/lib/ticket-queries";
+import {
+  assertParentsInWorkspace,
+  workspaceParentForbidden,
+} from "@/lib/api/assert-workspace-parents";
 import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
 import { ticketDisplayLabel } from "@/lib/service-ticket-number";
 import { createNotification } from "@/lib/notifications/create-notification";
@@ -55,6 +59,13 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     const supabase = createServerSideClient();
+    const parentCheck = await assertParentsInWorkspace(supabase, workspaceOwnerId!, {
+      contact_id: parsed.data.contact_id,
+      company_id: parsed.data.company_id,
+    });
+    const parentError = workspaceParentForbidden(parentCheck);
+    if (parentError) return parentError;
+
     const { data, error: dbError } = await supabase
       .from("tickets")
       .update({ ...buildTicketUpdate(parsed.data), updated_at: new Date().toISOString() })

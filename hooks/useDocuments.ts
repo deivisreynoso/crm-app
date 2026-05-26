@@ -13,12 +13,16 @@ export function useDocuments(filters?: {
   company_id?: string;
   opportunity_id?: string;
   kind?: "quotes" | "attachments";
+  resolve_file_urls?: boolean;
 }) {
   return useQuery({
     queryKey: ["documents", filters],
     queryFn: async () => {
       const { data } = await axios.get<{ data: CrmDocument[] }>("/api/documents", {
-        params: filters,
+        params: {
+          ...filters,
+          ...(filters?.resolve_file_urls ? { resolve_file_urls: "1" } : {}),
+        },
       });
       return data.data;
     },

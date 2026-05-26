@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth";
+import { requireAuth, requireWorkspaceManage } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { z } from "zod";
 import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
@@ -66,8 +66,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
 export async function DELETE(_req: NextRequest, context: RouteContext) {
   try {
-    const { workspaceOwnerId, error } = await requireAuth();
+    const { workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
+    const manageError = requireWorkspaceManage(role!, isWorkspaceOwner);
+    if (manageError) return manageError;
 
     const { id } = await context.params;
     const supabase = createServerSideClient();

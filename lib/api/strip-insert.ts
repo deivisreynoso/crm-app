@@ -1,3 +1,5 @@
+import { logDroppedOptionalColumn } from "@/lib/api/column-fallback";
+
 /** Retry Supabase insert without columns that may not exist yet in the DB. */
 export async function insertWithColumnFallback<T extends Record<string, unknown>>(
   insertFn: (row: T) => PromiseLike<{ data: unknown; error: { message: string } | null }>,
@@ -13,6 +15,7 @@ export async function insertWithColumnFallback<T extends Record<string, unknown>
       error!.message.includes(String(key))
     );
     if (!missing) break;
+    logDroppedOptionalColumn("insert", String(missing));
     const { [missing]: _removed, ...rest } = current;
     current = rest as T;
     optionalKeys = optionalKeys.filter((k) => k !== missing);

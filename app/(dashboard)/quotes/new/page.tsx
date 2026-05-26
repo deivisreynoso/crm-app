@@ -8,7 +8,8 @@ import { PageHeader } from "@/components/ui/page-shell";
 import { useDocumentTemplates } from "@/hooks/useDocumentTemplates";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import axios from "axios";
-import type { CrmDocument, DocumentFormInput } from "@/types";
+import { QUOTE_DOCUMENT_CREATE_TYPE } from "@/lib/documents/kinds";
+import type { CrmDocument } from "@/types";
 import { formatApiError } from "@/lib/validation-errors";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
 
@@ -22,7 +23,6 @@ export default function NewQuotePage() {
   const q = dict.quotes;
   const { data: templates = [] } = useDocumentTemplates();
   const [title, setTitle] = useState("");
-  const [type, setType] = useState<DocumentFormInput["type"]>("estimate");
   const [templateId, setTemplateId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +37,7 @@ export default function NewQuotePage() {
         "/api/documents",
         {
           title: title.trim() || (q?.newQuote ?? "New quote"),
-          type,
+          type: QUOTE_DOCUMENT_CREATE_TYPE,
           content: template?.content ?? "",
           status: "draft",
           contact_id: contactId || undefined,
@@ -92,20 +92,6 @@ export default function NewQuotePage() {
           {q?.quoteTitleHint && (
             <p className="text-xs text-body-muted mt-1">{q.quoteTitleHint}</p>
           )}
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-heading mb-1">Type</label>
-          <select
-            className="input-field w-full"
-            value={type}
-            onChange={(e) =>
-              setType(e.target.value as DocumentFormInput["type"])
-            }
-          >
-            <option value="estimate">Estimate</option>
-            <option value="proposal">Proposal</option>
-            <option value="contract">Contract</option>
-          </select>
         </div>
         <div>
           <label className="block text-sm font-medium text-heading mb-1">

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { contactsToCsv } from "@/lib/contacts/csv";
 import { createServerSideClient } from "@/lib/supabase";
+import { ilikePattern } from "@/lib/api/sanitize-search";
 import { humanizeDbError } from "@/lib/validation-errors";
 
 const MAX_EXPORT = 10_000;
@@ -38,8 +39,9 @@ export async function GET(req: NextRequest) {
         query = query.lte("created_at", `${createdTo}T23:59:59.999Z`);
       }
       if (search) {
+        const pattern = ilikePattern(search);
         query = query.or(
-          `first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%,company.ilike.%${search}%`
+          `first_name.ilike.${pattern},last_name.ilike.${pattern},email.ilike.${pattern},company.ilike.${pattern}`
         );
       }
 

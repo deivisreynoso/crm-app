@@ -53,7 +53,7 @@ export async function POST(_req: NextRequest, context: RouteContext) {
 
     const uploaded = await uploadToDocumentsBucket(
       supabase,
-      userId!,
+      workspaceOwnerId!,
       `${id}-pdf`,
       file
     );

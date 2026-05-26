@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { pipelineSchema } from "@/lib/validators";
-import { DEFAULT_PIPELINE_STAGES } from "@/lib/constants/pipelines";
 
 export async function GET() {
   try {
@@ -10,7 +9,7 @@ export async function GET() {
     if (error) return error;
 
     const supabase = createServerSideClient();
-    let { data, error: dbError } = await supabase
+    const { data, error: dbError } = await supabase
       .from("pipelines")
       .select("*")
       .eq("user_id", workspaceOwnerId!)
@@ -18,24 +17,7 @@ export async function GET() {
 
     if (dbError) throw dbError;
 
-    if (!data?.length) {
-      const { data: created, error: createError } = await supabase
-        .from("pipelines")
-        .insert([
-          {
-            user_id: workspaceOwnerId,
-            name: "Sales Pipeline",
-            stages: DEFAULT_PIPELINE_STAGES,
-          },
-        ])
-        .select()
-        .single();
-
-      if (createError) throw createError;
-      data = [created];
-    }
-
-    return NextResponse.json({ data });
+    return NextResponse.json({ data: data ?? [] });
   } catch (err) {
     console.error("GET /api/pipelines error:", err);
     return NextResponse.json(

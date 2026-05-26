@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { z } from "zod";
+import { ilikePattern } from "@/lib/api/sanitize-search";
 
 const companySchema = z.object({
   name: z.string().min(1),
@@ -23,13 +24,17 @@ export async function GET(req: NextRequest) {
     if (error) return error;
 
     const params = new URL(req.url).searchParams;
-    const search = params.get("search")?.trim().toLowerCase();
+    const search = params.get("search")?.trim();
     const industry = params.get("industry")?.trim();
+    const page = Math.max(1, Number(params.get("page") || "1"));
+    const limit = Math.min(500, Math.max(1, Number(params.get("limit") || "200")));
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
 
     const supabase = createServerSideClient();
     let query = supabase
       .from("companies")
-      .select("*")
+      .select("*", { count: "exact" })
       .eq("user_id", workspaceOwnerId!)
       .order("name", { ascending: true });
 
@@ -37,20 +42,21 @@ export async function GET(req: NextRequest) {
       query = query.eq("industry", industry);
     }
 
-    const { data, error: dbError } = await query;
+    if (search) {
+      const pattern = ilikePattern(search);
+      query = query.or(`name.ilike.${pattern},website.ilike.${pattern}`);
+    }
+
+    const { data, error: dbError, count } = await query.range(from, to);
 
     if (dbError) throw dbError;
 
-    let rows = data ?? [];
-    if (search) {
-      rows = rows.filter(
-        (c) =>
-          c.name?.toLowerCase().includes(search) ||
-          c.website?.toLowerCase().includes(search)
-      );
-    }
-
-    return NextResponse.json({ data: rows });
+    return NextResponse.json({
+      data: data ?? [],
+      total: count ?? 0,
+      page,
+      limit,
+    });
   } catch (err) {
     console.error("GET /api/companies error:", err);
     return NextResponse.json(

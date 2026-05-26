@@ -9,7 +9,7 @@ export async function getCurrentUser() {
   const session = await getCurrentSession();
   if (!session?.user) return null;
   return {
-    id: (session.user as any).id,
+    id: session.user.id,
     email: session.user.email,
     name: session.user.name,
   };

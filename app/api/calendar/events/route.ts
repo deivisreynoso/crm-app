@@ -4,6 +4,10 @@ import { createServerSideClient } from "@/lib/supabase";
 import { calendarEventSchema } from "@/lib/validators";
 import { formatValidationDetails } from "@/lib/validation-errors";
 import { insertWithColumnFallback } from "@/lib/api/strip-insert";
+import {
+  assertParentsInWorkspace,
+  workspaceParentForbidden,
+} from "@/lib/api/assert-workspace-parents";
 import { createGoogleCalendarEvent } from "@/lib/google/calendar";
 
 function emptyToNull(value: string | undefined): string | null {
@@ -73,6 +77,14 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServerSideClient();
+    const parentCheck = await assertParentsInWorkspace(
+      supabase,
+      workspaceOwnerId!,
+      parsed.data
+    );
+    const parentError = workspaceParentForbidden(parentCheck);
+    if (parentError) return parentError;
+
     const row = {
       user_id: workspaceOwnerId!,
       contact_id: parsed.data.contact_id?.trim() || null,

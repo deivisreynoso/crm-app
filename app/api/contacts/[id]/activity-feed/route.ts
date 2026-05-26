@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
+import { verifyContactInWorkspace } from "@/lib/contacts/verify-contact-ownership";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -50,24 +51,13 @@ function mapActivityContent(
   return { content: description ?? "" };
 }
 
-async function verifyContactOwnership(userId: string, contactId: string) {
-  const supabase = createServerSideClient();
-  const { data } = await supabase
-    .from("contacts")
-    .select("id")
-    .eq("id", contactId)
-    .eq("user_id", userId)
-    .single();
-  return !!data;
-}
-
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
     const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id: contactId } = await context.params;
-    if (!(await verifyContactOwnership(workspaceOwnerId!, contactId))) {
+    if (!(await verifyContactInWorkspace(workspaceOwnerId!, contactId))) {
       return NextResponse.json({ error: "Contact not found" }, { status: 404 });
     }
 

@@ -105,9 +105,11 @@ export default function QuotesPage() {
                       >
                         {d.title}
                       </Link>
-                      <p className="text-xs text-body-muted capitalize mt-0.5">
-                        {d.type}
-                      </p>
+                      {d.quote_reference && (
+                        <p className="text-xs text-body-muted mt-0.5">
+                          {q?.ref} {d.quote_reference}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <DocumentStatusBadge status={d.status} />

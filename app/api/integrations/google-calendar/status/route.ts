@@ -4,6 +4,7 @@ import { createServerSideClient } from "@/lib/supabase";
 import { isGoogleCalendarConfigured } from "@/lib/google/calendar";
 import { getGoogleOAuthEnvStatus } from "@/lib/google/oauth-config";
 
+/** Calendar OAuth tokens are stored per workspace owner (shared team calendar). */
 export async function GET(req: Request) {
   try {
     const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();

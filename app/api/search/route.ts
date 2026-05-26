@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
+import { ilikePattern } from "@/lib/api/sanitize-search";
 import { createServerSideClient } from "@/lib/supabase";
 
 export async function GET(req: NextRequest) {
@@ -12,7 +13,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ data: [] });
     }
 
-    const pattern = `%${q}%`;
+    const pattern = ilikePattern(q);
     const supabase = createServerSideClient();
 
     const [contacts, companies, tickets, opportunities] = await Promise.all([

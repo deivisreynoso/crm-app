@@ -7,6 +7,7 @@ import {
   FileText,
   LayoutDashboard,
   Paperclip,
+  Layers,
   Ticket,
   TrendingUp,
   Users,
@@ -18,6 +19,8 @@ export interface NavItem {
   labelKey?: keyof typeof import("./crm/locales/en.json")["nav"];
   icon: LucideIcon;
   description?: string;
+  /** Hide from sidebar when user cannot write (e.g. viewer demo) */
+  requiresWrite?: boolean;
 }
 
 export const MAIN_NAV: NavItem[] = [
@@ -78,7 +81,15 @@ export const SECONDARY_NAV: NavItem[] = [
     label: "Quotes",
     labelKey: "quotes",
     icon: FileText,
-    description: "Quotes & estimates",
+    description: "Quotes & PDF export",
+  },
+  {
+    href: "/services",
+    label: "Services",
+    labelKey: "services",
+    icon: Layers,
+    description: "Quote service catalog",
+    requiresWrite: true,
   },
   {
     href: "/attachments",

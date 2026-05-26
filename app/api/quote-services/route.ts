@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth";
+import { requireAuth, requireWorkspaceWrite } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { z } from "zod";
 import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
@@ -39,8 +39,10 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { workspaceOwnerId, error } = await requireAuth();
+    const { workspaceOwnerId, role, error } = await requireAuth();
     if (error) return error;
+    const writeError = requireWorkspaceWrite(role!);
+    if (writeError) return writeError;
 
     const parsed = serviceSchema.safeParse(await req.json());
     if (!parsed.success) {

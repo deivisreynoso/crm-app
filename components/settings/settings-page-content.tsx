@@ -38,10 +38,15 @@ export function SettingsPageContent() {
   const { data: ctx, isLoading } = useWorkspaceContext();
   const canManage = ctx?.canManage ?? false;
 
+  const s = dict.settings;
+
   if (isLoading) {
     return (
       <div className="space-y-6 w-full max-w-3xl">
-        <PageHeader title="Settings" description="Loading workspace…" />
+        <PageHeader
+          title={s?.pageTitle ?? "Settings"}
+          description={s?.loading ?? "Loading workspace…"}
+        />
       </div>
     );
   }
@@ -49,11 +54,11 @@ export function SettingsPageContent() {
   return (
     <div className="space-y-6 w-full max-w-3xl">
       <PageHeader
-        title="Settings"
+        title={s?.pageTitle ?? "Settings"}
         description={
           canManage
-            ? "Integrations, templates, duplicates, team, and custom fields."
-            : "Workspace preferences for your team account."
+            ? s?.pageDescriptionManage
+            : s?.pageDescriptionMember
         }
       />
 
@@ -72,11 +77,15 @@ export function SettingsPageContent() {
             <QuoteBrandingSettings />
           </Card>
           <Card padding="lg">
-            <h2 className="text-sm font-semibold text-heading mb-4">Quote services catalog</h2>
+            <h2 className="text-sm font-semibold text-heading mb-4">
+              {s?.quoteServices ?? "Quote services catalog"}
+            </h2>
             <QuoteServicesSettings />
           </Card>
           <Card padding="lg">
-            <h2 className="text-sm font-semibold text-heading mb-4">Booking availability</h2>
+            <h2 className="text-sm font-semibold text-heading mb-4">
+              {s?.bookingAvailability ?? "Booking availability"}
+            </h2>
             <BookingAvailabilitySettings />
           </Card>
           <Card padding="lg">
@@ -84,7 +93,9 @@ export function SettingsPageContent() {
             <WorkspaceLeadsSettings />
           </Card>
           <Card padding="lg">
-            <h2 className="text-sm font-semibold text-heading mb-4">Integrations</h2>
+            <h2 className="text-sm font-semibold text-heading mb-4">
+              {s?.integrations ?? "Integrations"}
+            </h2>
             <SettingsIntegrationsSection />
           </Card>
           <Card padding="lg">
@@ -94,7 +105,9 @@ export function SettingsPageContent() {
             <GoogleReviewRequestSettings />
           </Card>
           <Card padding="lg">
-            <h2 className="text-sm font-semibold text-heading mb-4">Email templates</h2>
+            <h2 className="text-sm font-semibold text-heading mb-4">
+              {s?.emailTemplates ?? "Email templates"}
+            </h2>
             <EmailTemplatesManager />
           </Card>
           <Card padding="lg">
@@ -102,13 +115,18 @@ export function SettingsPageContent() {
             <DuplicateReviewsPanel />
           </Card>
           <Card padding="lg">
-            <h2 className="text-sm font-semibold text-heading mb-4">Team</h2>
+            <h2 className="text-sm font-semibold text-heading mb-4">
+              {s?.team ?? "Team"}
+            </h2>
             <TeamSettings />
           </Card>
           <Card padding="lg">
-            <h2 className="text-sm font-semibold text-heading mb-4">Custom fields</h2>
+            <h2 className="text-sm font-semibold text-heading mb-4">
+              {s?.customFields ?? "Custom fields"}
+            </h2>
             <p className="text-sm text-body-muted mb-4">
-              Define extra fields for contacts, opportunities, and tickets.
+              {s?.customFieldsHelp ??
+                "Define extra fields for contacts, opportunities, and tickets."}
             </p>
             <CustomFieldManager />
           </Card>
@@ -118,8 +136,10 @@ export function SettingsPageContent() {
       {!canManage && (
         <Card padding="lg">
           <p className="text-sm text-body-muted">
-            You are signed in as a workspace teammate ({ctx?.role ?? "sales"}). CRM data
-            is shared with your team. Workspace settings are managed by the owner or an admin.
+            {(
+              s?.memberNotice ??
+              "You are signed in as a workspace teammate ({role}). CRM data is shared with your team. Workspace settings are managed by the owner or an admin."
+            ).replace("{role}", ctx?.role ?? "sales")}
           </p>
         </Card>
       )}

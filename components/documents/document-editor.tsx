@@ -41,10 +41,10 @@ interface DocumentEditorProps {
 
 export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProps) {
   const { dict } = useCrmLocale();
-  const { canWrite } = useWorkspaceCapabilities();
+  const { canWrite, isDemoViewer } = useWorkspaceCapabilities();
   const q = dict.quotes;
   const actions = dict.actions;
-  const readOnly = !canWrite;
+  const readOnly = isDemoViewer || !canWrite;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
   const { data: doc, isLoading, error } = useDocument(documentId);
@@ -127,8 +127,11 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
     mode === "quote" ||
     (mode === "auto" && doc ? isQuoteDocument(doc.type) : false);
 
+  const loadedDocIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!doc) return;
+    if (loadedDocIdRef.current === doc.id) return;
+    loadedDocIdRef.current = doc.id;
     setTitle(doc.title);
     setContent(doc.content ?? "");
     setContactId(doc.contact_id ?? "");
@@ -348,6 +351,19 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
                 </div>
               </section>
 
+              <QuoteLineItemsSection
+                documentId={documentId}
+                initialLines={doc.line_items ?? EMPTY_QUOTE_LINE_ITEMS}
+                initialTaxRate={Number(doc.tax_rate) || 0}
+                currency={currency}
+                readOnly={readOnly}
+                onDraftChange={setLineItemsDraft}
+                onSaved={() => {
+                  setLineItemsDraft(null);
+                  setToast({ text: q?.servicesSaved ?? "Services saved", ok: true });
+                }}
+              />
+
               <QuoteAcceptLinkPanel doc={doc} readOnly={readOnly} />
 
               <section className="surface-card p-4 space-y-3">
@@ -362,19 +378,6 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
                   placeholder={q?.messageToCustomer}
                 />
               </section>
-
-              <QuoteLineItemsSection
-                documentId={documentId}
-                initialLines={doc.line_items ?? EMPTY_QUOTE_LINE_ITEMS}
-                initialTaxRate={Number(doc.tax_rate) || 0}
-                currency={currency}
-                readOnly={readOnly}
-                onDraftChange={setLineItemsDraft}
-                onSaved={() => {
-                  setLineItemsDraft(null);
-                  setToast({ text: "Line items saved", ok: true });
-                }}
-              />
 
               <section className="surface-card p-4 space-y-3">
                 <h3 className="text-sm font-semibold text-heading">

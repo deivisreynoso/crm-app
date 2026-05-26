@@ -8,6 +8,7 @@ import {
   workspaceOwnerOnlyForbidden,
   workspaceWriteForbidden,
 } from "@/lib/api/workspace-guards";
+import { setTrustedWorkspaceHeaders } from "@/lib/api/workspace-headers";
 import { resolveWorkspaceContext } from "@/lib/team/workspace";
 import { isLocale } from "@/lib/website/i18n";
 import {
@@ -29,6 +30,7 @@ const CRM_PROTECTED = [
   "/account",
   "/settings",
   "/quotes",
+  "/services",
   "/attachments",
 ];
 
@@ -101,6 +103,17 @@ export async function middleware(req: NextRequest) {
           { status: 403 }
         );
       }
+
+      const requestHeaders = new Headers(req.headers);
+      setTrustedWorkspaceHeaders(requestHeaders, {
+        actorUserId: userId,
+        workspaceOwnerId: workspace.workspaceOwnerId,
+        role: workspace.role,
+        isWorkspaceOwner: workspace.isWorkspaceOwner,
+      });
+      return NextResponse.next({
+        request: { headers: requestHeaders },
+      });
     }
   }
 

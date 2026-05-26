@@ -20,7 +20,10 @@ export default function AttachmentsPage() {
   const [linkContactId, setLinkContactId] = useState("");
   const [linkCompanyId, setLinkCompanyId] = useState("");
 
-  const { data: files = [], isLoading } = useDocuments({ kind: "attachments" });
+  const { data: files = [], isLoading } = useDocuments({
+    kind: "attachments",
+    resolve_file_urls: true,
+  });
   const upload = useUploadDocument();
   const deleteDoc = useDeleteDocument();
   const { data: contactsData } = useContacts(1, 200);

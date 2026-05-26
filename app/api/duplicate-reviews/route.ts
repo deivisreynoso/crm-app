@@ -40,7 +40,11 @@ export async function GET(req: NextRequest) {
         );
       }
 
-      const enriched = await enrichContacts(supabase, fallback ?? []);
+      const enriched = await enrichContacts(
+        supabase,
+        workspaceOwnerId!,
+        fallback ?? []
+      );
       return NextResponse.json({ data: enriched });
     }
 
@@ -53,6 +57,7 @@ export async function GET(req: NextRequest) {
 
 async function enrichContacts(
   supabase: ReturnType<typeof createServerSideClient>,
+  workspaceOwnerId: string,
   reviews: Array<Record<string, unknown>>
 ) {
   const ids = new Set<string>();
@@ -65,6 +70,7 @@ async function enrichContacts(
   const { data: contacts } = await supabase
     .from("contacts")
     .select("id, first_name, last_name, email, phone")
+    .eq("user_id", workspaceOwnerId)
     .in("id", [...ids]);
 
   const map = Object.fromEntries((contacts ?? []).map((c) => [c.id, c]));
@@ -87,7 +93,7 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServerSideClient();
-    const result = await scanContactDuplicates(supabase, userId!);
+    const result = await scanContactDuplicates(supabase, workspaceOwnerId!);
     return NextResponse.json(result);
   } catch (err) {
     console.error("POST /api/duplicate-reviews:", err);

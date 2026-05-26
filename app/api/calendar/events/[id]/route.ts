@@ -3,6 +3,10 @@ import { requireAuth } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { calendarEventPatchSchema } from "@/lib/validators";
 import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
+import {
+  assertParentsInWorkspace,
+  workspaceParentForbidden,
+} from "@/lib/api/assert-workspace-parents";
 import { updateWithColumnFallback } from "@/lib/api/strip-update";
 import {
   deleteGoogleCalendarEvent,
@@ -82,6 +86,14 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     const supabase = createServerSideClient();
+    const parentCheck = await assertParentsInWorkspace(supabase, workspaceOwnerId!, {
+      contact_id: d.contact_id,
+      company_id: d.company_id,
+      opportunity_id: d.opportunity_id,
+    });
+    const parentError = workspaceParentForbidden(parentCheck);
+    if (parentError) return parentError;
+
     const { data, error: dbError } = await updateWithColumnFallback(
       (payload) =>
         supabase
@@ -157,7 +169,7 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
     if (existing?.google_event_id) {
       try {
         await deleteGoogleCalendarEvent(
-          userId!,
+          workspaceOwnerId!,
           existing.google_event_id as string
         );
       } catch (syncErr) {

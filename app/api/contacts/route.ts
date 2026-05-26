@@ -9,6 +9,7 @@ import {
   findDuplicateContact,
 } from "@/lib/identity/contact-duplicate";
 import { contactWriteErrorMessage } from "@/lib/identity/duplicate-errors";
+import { ilikePattern } from "@/lib/api/sanitize-search";
 import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
 
 export async function GET(req: NextRequest) {
@@ -46,8 +47,9 @@ export async function GET(req: NextRequest) {
     }
 
     if (search) {
+      const pattern = ilikePattern(search);
       query = query.or(
-        `first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%,company.ilike.%${search}%`
+        `first_name.ilike.${pattern},last_name.ilike.${pattern},email.ilike.${pattern},company.ilike.${pattern}`
       );
     }
 

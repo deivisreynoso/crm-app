@@ -25,7 +25,7 @@ import {
 import { useOpportunities } from "@/hooks/useOpportunities";
 import { useTickets, useCreateTicket } from "@/hooks/useTickets";
 import { useDocuments, useUploadDocument } from "@/hooks/useDocuments";
-import { useCalendarEvents } from "@/hooks/useCalendar";
+import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { useCompany } from "@/hooks/useCompanies";
 import { contactToFormDefaults } from "@/lib/contact-payload";
 import type { ContactFormInput, Task } from "@/types";

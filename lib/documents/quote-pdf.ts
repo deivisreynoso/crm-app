@@ -21,7 +21,7 @@ export type QuotePdfLabels = {
 };
 
 export const DEFAULT_QUOTE_PDF_LABELS: QuotePdfLabels = {
-  estimate: "ESTIMATE",
+  estimate: "QUOTE",
   billTo: "Bill to",
   total: "Total",
   item: "Item",
@@ -31,7 +31,7 @@ export const DEFAULT_QUOTE_PDF_LABELS: QuotePdfLabels = {
   subtotal: "Subtotal",
   tax: "Tax",
   notes: "Notes",
-  noLineItems: "No line items yet.",
+  noLineItems: "No services yet.",
   validUntil: "Valid until",
   ref: "Ref",
 };

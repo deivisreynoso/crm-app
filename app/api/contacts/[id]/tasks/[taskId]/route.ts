@@ -2,20 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { taskSchema } from "@/lib/validators";
+import { verifyContactInWorkspace } from "@/lib/contacts/verify-contact-ownership";
 import { humanizeDbError } from "@/lib/validation-errors";
 
 type RouteContext = { params: Promise<{ id: string; taskId: string }> };
-
-async function verifyContactOwnership(userId: string, contactId: string) {
-  const supabase = createServerSideClient();
-  const { data } = await supabase
-    .from("contacts")
-    .select("id")
-    .eq("id", contactId)
-    .eq("user_id", userId)
-    .single();
-  return !!data;
-}
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
@@ -23,7 +13,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     if (error) return error;
 
     const { id: contactId, taskId } = await context.params;
-    if (!(await verifyContactOwnership(workspaceOwnerId!, contactId))) {
+    if (!(await verifyContactInWorkspace(workspaceOwnerId!, contactId))) {
       return NextResponse.json({ error: "Contact not found" }, { status: 404 });
     }
 
@@ -53,7 +43,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     if (error) return error;
 
     const { id: contactId, taskId } = await context.params;
-    if (!(await verifyContactOwnership(workspaceOwnerId!, contactId))) {
+    if (!(await verifyContactInWorkspace(workspaceOwnerId!, contactId))) {
       return NextResponse.json({ error: "Contact not found" }, { status: 404 });
     }
 

@@ -5,7 +5,11 @@ import { documentPatchSchema } from "@/lib/validators";
 import { formatValidationDetails } from "@/lib/validation-errors";
 import { resolveDocumentFileUrl } from "@/lib/storage/documents";
 import { snapshotDocumentVersion } from "@/lib/documents/versioning";
-import { isQuoteDocument } from "@/lib/documents/kinds";
+import {
+  assertParentsInWorkspace,
+  workspaceParentForbidden,
+} from "@/lib/api/assert-workspace-parents";
+import { coerceQuoteDocumentType, isQuoteDocument } from "@/lib/documents/kinds";
 import { ensureQuoteReference } from "@/lib/quotes/reference";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -90,6 +94,14 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Document not found" }, { status: 404 });
     }
 
+    const parentCheck = await assertParentsInWorkspace(supabase, workspaceOwnerId!, {
+      contact_id: parsed.data.contact_id,
+      company_id: parsed.data.company_id,
+      opportunity_id: parsed.data.opportunity_id,
+    });
+    const parentError = workspaceParentForbidden(parentCheck);
+    if (parentError) return parentError;
+
     if (parsed.data.content !== undefined && parsed.data.content !== existing.content) {
       try {
         await snapshotDocumentVersion(supabase, workspaceOwnerId!, existing);
@@ -111,7 +123,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     if (d.opportunity_id !== undefined) {
       updates.opportunity_id = d.opportunity_id?.trim() ? d.opportunity_id : null;
     }
-    if (d.type !== undefined) updates.type = d.type;
+    if (d.type !== undefined) {
+      updates.type = coerceQuoteDocumentType(d.type);
+    }
     if (d.title !== undefined) updates.title = d.title;
     if (d.content !== undefined) updates.content = d.content?.trim() || null;
     if (d.status !== undefined) updates.status = d.status;

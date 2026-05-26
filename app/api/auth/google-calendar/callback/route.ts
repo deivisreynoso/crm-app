@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { getGoogleCalendarRedirectUri } from "@/lib/google/oauth-config";
+import { resolveWorkspaceContext } from "@/lib/team/workspace";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -54,10 +55,11 @@ export async function GET(req: NextRequest) {
 
   const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
   const supabase = createServerSideClient();
+  const { workspaceOwnerId } = await resolveWorkspaceContext(userId);
 
   await supabase.from("google_calendar_tokens").upsert(
     {
-      user_id: userId,
+      user_id: workspaceOwnerId,
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token ?? null,
       expires_at: expiresAt,

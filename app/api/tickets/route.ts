@@ -11,6 +11,10 @@ import {
 } from "@/lib/service-ticket-number";
 import { createNotification } from "@/lib/notifications/create-notification";
 import { logContactActivity } from "@/lib/activities/log-contact-activity";
+import {
+  assertParentsInWorkspace,
+  workspaceParentForbidden,
+} from "@/lib/api/assert-workspace-parents";
 import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
 
 export async function GET(req: NextRequest) {
@@ -19,15 +23,17 @@ export async function GET(req: NextRequest) {
     if (error) return error;
 
     const params = new URL(req.url).searchParams;
-    const data = await listTicketsEnriched(workspaceOwnerId!, {
+    const result = await listTicketsEnriched(workspaceOwnerId!, {
       contact_id: params.get("contact_id") ?? undefined,
       company_id: params.get("company_id") ?? undefined,
       status: params.get("status") ?? undefined,
       created_from: params.get("created_from") ?? undefined,
       created_to: params.get("created_to") ?? undefined,
+      page: Number(params.get("page") || "1"),
+      limit: Number(params.get("limit") || "50"),
     });
 
-    return NextResponse.json({ data });
+    return NextResponse.json(result);
   } catch (err) {
     console.error("GET /api/tickets error:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -65,6 +71,14 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServerSideClient();
+    const parentCheck = await assertParentsInWorkspace(
+      supabase,
+      workspaceOwnerId!,
+      parsed.data
+    );
+    const parentError = workspaceParentForbidden(parentCheck);
+    if (parentError) return parentError;
+
     const record = buildTicketRecord(parsed.data, workspaceOwnerId!);
     let ticketNumber = await generateServiceTicketNumber(workspaceOwnerId!);
 

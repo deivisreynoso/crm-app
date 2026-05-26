@@ -7,6 +7,10 @@ import { attachContactToOpportunity, listOpportunitiesWithContacts } from "@/lib
 import { triggerN8NWebhook } from "@/lib/n8n";
 import { createNotification } from "@/lib/notifications/create-notification";
 import { logContactActivity } from "@/lib/activities/log-contact-activity";
+import {
+  assertParentsInWorkspace,
+  workspaceParentForbidden,
+} from "@/lib/api/assert-workspace-parents";
 
 export async function GET(req: NextRequest) {
   try {
@@ -52,6 +56,14 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServerSideClient();
+    const parentCheck = await assertParentsInWorkspace(
+      supabase,
+      workspaceOwnerId!,
+      parsed.data
+    );
+    const parentError = workspaceParentForbidden(parentCheck);
+    if (parentError) return parentError;
+
     const payload = buildOpportunityRecord(parsed.data, workspaceOwnerId!);
 
     if (!payload.company_id && parsed.data.contact_id) {
@@ -59,6 +71,7 @@ export async function POST(req: NextRequest) {
         .from("contacts")
         .select("company_id")
         .eq("id", parsed.data.contact_id)
+        .eq("user_id", workspaceOwnerId!)
         .single();
       if (contact?.company_id) {
         payload.company_id = contact.company_id;

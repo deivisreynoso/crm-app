@@ -79,7 +79,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     if (!isQuoteDocument(doc.type as string)) {
       return NextResponse.json(
-        { error: "Only quotes (estimate, proposal, contract) can be sent via Gmail from this action." },
+        { error: "Only quotes can be sent via Gmail from this action." },
         { status: 400 }
       );
     }

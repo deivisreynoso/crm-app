@@ -1,6 +1,8 @@
 import { getServerSession, type Session } from "next-auth";
+import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
+import { readTrustedWorkspaceHeaders } from "@/lib/api/workspace-headers";
 import {
   canManageWorkspace,
   canWriteWorkspace,
@@ -29,7 +31,7 @@ export async function requireAuth(): Promise<
     }
 > {
   const session = await getServerSession(authOptions);
-  const userId = (session?.user as { id?: string } | undefined)?.id;
+  const userId = session?.user?.id;
 
   if (!session?.user || !userId) {
     return {
@@ -42,7 +44,16 @@ export async function requireAuth(): Promise<
     };
   }
 
-  const workspace = await resolveWorkspaceContext(userId);
+  const headerStore = await headers();
+  const cached = readTrustedWorkspaceHeaders(headerStore, userId);
+  const workspace = cached
+    ? {
+        actorUserId: userId,
+        workspaceOwnerId: cached.workspaceOwnerId,
+        role: cached.role,
+        isWorkspaceOwner: cached.isWorkspaceOwner,
+      }
+    : await resolveWorkspaceContext(userId);
 
   return {
     session,

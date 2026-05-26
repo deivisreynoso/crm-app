@@ -169,7 +169,7 @@ export function QuoteLineItemsSection({
       await queryClient.invalidateQueries({ queryKey: ["document", documentId] });
       onSaved?.();
     } catch (err) {
-      setError(formatApiError(err, "Could not save line items"));
+      setError(formatApiError(err, "Could not save services"));
     } finally {
       setSaving(false);
     }
@@ -248,6 +248,9 @@ export function QuoteLineItemsSection({
 
   return (
     <div className="surface-card p-4 space-y-4">
+      {q?.lineItemsHelp && (
+        <p className="text-xs text-body-muted">{q.lineItemsHelp}</p>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-heading">{q?.addProducts}</h3>
         {services.length > 0 && (
