@@ -41,12 +41,14 @@ There is **no** single “CRM API key” for third parties to call all routes. F
 
 **What the Lead API creates:**
 
-- **Contact** (or updates returning visitor by email/phone)
+- **Contact** (or updates returning visitor by email/phone) — uses `contacts.company` **text**, not the Accounts (`companies`) table
 - **Note** (transcript or AI summary)
-- **Opportunity** (first pipeline, stage `Qualified Lead`)
-- **Calendar event** (on booking — CRM calendar only; no Google sync on lead path)
+- **Opportunity** (first pipeline, stage `Qualified Lead`; always has `contact_id`)
+- **Calendar event** (on booking — CRM calendar only; always has `contact_id`; no Google sync on lead path)
 - **Activity log** + optional **in-app notification** for assignee
 - Optional **outbound** `website.lead` webhook to N8N
+
+**Contact-centric CRM (Phase 5):** Dashboard-created **tickets** and **calendar events** require a linked `contact_id`. The Accounts object was removed from CRM navigation; `/accounts` URLs redirect to contacts. Legacy `PATCH /api/integrations/accounts/[id]` and `/api/companies` remain for automation on existing `companies` rows — **website and Lead API flows do not depend on them.**
 
 ---
 
@@ -533,7 +535,7 @@ Partial updates for existing CRM records. Same auth as Lead API (`x-website-secr
 | `GET` | `/api/integrations/opportunities` | List opportunities (`pipeline_id`, `contact_id`, `stage`, `search` query params). |
 | `POST` | `/api/integrations/opportunities` | Create opportunity (same body as CRM `POST /api/opportunities`, includes `owner_id`, `tags`). |
 | `PATCH` | `/api/integrations/opportunities/[id]` | Same body as `PATCH /api/opportunities/[id]` (full partial or `{ "stage": "..." }` only). Fires `opportunity.updated` webhook. |
-| `PATCH` | `/api/integrations/accounts/[id]` | Company account fields: `name`, `website`, `phone`, `industry`, `company_size`, `revenue`, `account_summary`. |
+| `PATCH` | `/api/integrations/accounts/[id]` | Legacy **companies** table fields (`name`, `website`, …). Prefer `PATCH /api/integrations/contacts/[id]` for website/N8N lead enrichment. |
 
 **Example — update contact from N8N:**
 
@@ -916,7 +918,7 @@ PATCH triggers `opportunity.updated`; DELETE triggers `opportunity.deleted`.
 
 #### `GET|POST /api/tickets`
 
-**POST:** Requires `contact_id` or `company_id`; `subject` min 3 chars.
+**POST:** Requires **`contact_id`** (UUID); `subject` min 3 chars. Legacy `company_id` is derived from the contact when not sent.
 
 ```json
 {
@@ -942,13 +944,17 @@ PATCH triggers `opportunity.updated`; DELETE triggers `opportunity.deleted`.
 
 ---
 
-### 9.6 Companies (accounts)
+### 9.6 Companies (legacy API)
+
+Accounts were removed from CRM navigation. These routes remain for legacy data and integration PATCH; new website leads use **contacts** only.
 
 | Method | Path |
 |--------|------|
 | `GET`, `POST` | `/api/companies` |
 | `GET`, `PATCH`, `DELETE` | `/api/companies/[id]` |
 | `GET` | `/api/companies/[id]/related` |
+
+Legacy UI URLs `/accounts` and `/accounts/[id]` redirect to `/contacts` and `/contacts?company_id=…`.
 
 ---
 
@@ -965,9 +971,7 @@ PATCH triggers `opportunity.updated`; DELETE triggers `opportunity.deleted`.
 
 ### 9.8 Calendar
 
-#### `GET /api/calendar`
-
-Calendar overview.
+Use **`/api/calendar/events`** (the removed `GET /api/calendar` overview route is not available).
 
 #### `GET /api/calendar/events`
 
@@ -992,7 +996,7 @@ Calendar overview.
 }
 ```
 
-Requires `contact_id` or `company_id`. May sync to **Google Calendar** if owner connected integration.
+Requires **`contact_id`**. May sync to **Google Calendar** if owner connected integration. DB constraint `calendar_events_contact_required_check` (migration 037).
 
 #### `GET|PATCH|DELETE /api/calendar/events/[id]`
 
@@ -1046,7 +1050,7 @@ Returns `default_currency`, `default_sales_assignee`, `booking_availability`, `u
 |------|-----------|
 | **Payments** | `GET /api/payments` |
 | **Search** | `GET /api/search?q=...` |
-| **Dashboard** | `GET /api/dashboard/stats` |
+| **Dashboard** | `GET /api/dashboard/stats` — **unused**; home page uses server-side `lib/dashboard-stats.ts` |
 | **Analytics** | `GET /api/analytics/pipeline`, `/api/analytics/operations` |
 | **Duplicates** | `GET|POST /api/duplicate-reviews`, `PATCH /api/duplicate-reviews/[id]` (`action`: `dismiss` \| `merge`) |
 | **Custom fields** | `GET|POST /api/custom-fields`, `GET|PATCH|DELETE /api/custom-fields/[id]` |
@@ -1271,7 +1275,9 @@ See [§9](#9-crm-api-session). Full route list matches files under `app/api/**/r
 | Availability | `lib/website/booking-availability.ts` |
 | N8N outbound | `lib/n8n.ts` |
 | Validators | `lib/validators/index.ts` |
+| Contact company sync | `lib/contacts/enrich-company-from-contact.ts` |
+| Migrations | `migrations/035_*` … `037_*` (contact delete cascade, notes triggers, contact-required parents) |
 
 ---
 
-*Document generated for the ClickIn 360 CRM codebase. Update this file when adding or changing API routes.*
+*Last updated: 2026-05-27 (`main` @ Phase 5 / contact-centric model). Update this file when adding or changing API routes.*

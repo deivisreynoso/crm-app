@@ -27,7 +27,7 @@ git log -1 --format='%h %s (%cs)'
 
 | Date | Commit | Type | Summary |
 |------|--------|------|---------|
-| 2026-05-27 | *(pending)* | feature + fix | Phase 5 contact UI (2-col layout, i18n, log activity tabs), dead code cleanup, notes delete on contact removal, list indexes (036) |
+| 2026-05-27 | `8fc9cee` | feature + fix | **Phase 5 complete:** contact 2-col UX, EN/ES i18n, log activity tabs, contact-required tickets/events, appointment reschedule, delete cascades, dead code removal, migrations 035–037 |
 | 2026-05-27 | `738e03a` | security + feature | Workspace audit log (admin-only UI), RLS on `audit_logs`, logging for settings / contact delete / team changes |
 | 2026-05-27 | `ad323c0` | enhancement + security | Services catalog tool, API workspace hardening, pagination, pipeline seed route |
 | 2026-05-26 | `81426b3` | feature | Calendar: rose color for website appointments (`event_kind`) |
@@ -108,20 +108,21 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 - **Google review request** from contact (template + opt-out)
 - Duplicate detection queue (scan by email/phone), merge or dismiss pairs
 - **CSV import / export**
-- Delete removes calendar events, documents, payments, then contact (migration 035 CASCADE)
+- **CRM UI i18n:** contact detail, tickets, calendar forms, quick actions, related panel (EN/ES via Settings → Platform language)
+- Delete removes calendar events, documents, payments, contact notes, then contact (migrations 035–037)
 - Website lead fields (`assigned_to`, source)
 
 ### Pipelines & opportunities
 
 - Kanban board by pipeline/stage
-- Create/move opportunities; link contact and company
+- Create/move opportunities; **requires linked contact** (company name on contact record)
 - Default pipeline seed (`POST /api/pipelines/seed`)
 - Parent ID workspace validation on writes
 
 ### Service tickets
 
 - List/detail with subject, tags, custom fields, service ticket numbers
-- Status workflow, related contact/company
+- **Requires linked contact** on create (legacy `company_id` synced from contact when present)
 - **Gmail threads** on ticket (sync/send APIs)
 - Prompt to send review invitation when closed
 
@@ -145,6 +146,7 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 ### Calendar
 
 - Month view, upcoming list, contact-related events
+- **Requires linked contact** on create (website bookings always set `contact_id`)
 - Google Calendar sync (workspace)
 - **Appointments** (website bookings) vs **meetings** — rose vs location-based colors, legend
 - `event_kind` column (migration 032)
@@ -191,7 +193,7 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 
 | Integration | Auth | Purpose |
 |-------------|------|---------|
-| Lead API | `x-website-secret` | Webchat, forms, booking offers/slots/bookings |
+| Lead API | `x-website-secret` | Webchat, forms, booking offers/slots/bookings — **creates contacts** (not `companies` rows) |
 | Website chat | Public + optional secret | Marketing chat widget |
 | PATCH integrations | Integration secret | Server-to-server updates |
 | N8N webhooks | Outbound from CRM | `contact.*`, `website.lead`, etc. |
@@ -215,7 +217,7 @@ See [CLICKIN360-CRM-API.md](./CLICKIN360-CRM-API.md) for endpoints.
 
 ## Database migrations
 
-Production should run migrations **001–034** in order. Notable groups:
+Production should run migrations **001–037** in order. Notable groups:
 
 | Range | Theme |
 |-------|--------|
@@ -240,9 +242,9 @@ Historical phases map to git eras (not separate products):
 | **2 — UX polish** | Inline edit, search, branding | ✅ Shipped |
 | **3 — MVP expansion** | Analytics, documents/templates, calendar, custom fields, notification prefs | ✅ Shipped |
 | **4 — Operations** | Contact merge, in-app notifications, payments, ticket improvements | ✅ Shipped |
-| **5 — Production platform** | Website↔CRM, team/roles, quotes, contact UX, security, audit log | ⚠️ **Code complete locally** — not merged/deployed; run migrations **035–036** in Supabase |
+| **5 — Production platform** | Website↔CRM, team/roles, quotes, contact UX, security, audit log | ✅ **Shipped** on `main` (`8fc9cee`) — migrations **035–037** applied in Supabase |
 
-**We are closing Phase 5.** Phases 1–4 are done. Phase 5 audit log shipped on `main` (`738e03a`); remaining Phase 5 UX/security fixes are **uncommitted on local `main`** — commit, push, deploy, then run migrations 035–036 before calling Phase 5 fully done in production.
+**Phase 5 is complete.** Phase 6 is next (reporting, automation depth, quality, compliance).
 
 ---
 
@@ -252,12 +254,9 @@ Historical phases map to git eras (not separate products):
 
 | Item | Notes |
 |------|--------|
-| **Production deploy** | Commit local Phase 5 changes; pull on VPS; run migrations **035** and **036** in Supabase |
+| **VPS deploy** | Pull `main` @ `8fc9cee`; rebuild Docker (`scripts/deploy-vps.sh`) |
 | **Audit log coverage** | Expand beyond settings / delete / team (quotes, imports, merge, etc.) |
-| **AUDIT-FIX-TRACKER F1–F2, F4** | Async contact combobox; batch signed URLs; API doc sync |
-| **Storage cleanup** | Delete Supabase Storage objects when documents/contacts removed |
-| **Email body dedup** | Stop storing full body in both `contact_emails` and `activities.metadata` |
-| **Audit log retention** | Optional 90–180 day prune for `audit_logs` |
+| **AUDIT-FIX-TRACKER F1–F2, F5–F6** | Async contact combobox; batch signed URLs; storage cleanup; remove unused dashboard stats API |
 
 ### Phase 6 — candidates (not started)
 
@@ -285,7 +284,7 @@ Historical phases map to git eras (not separate products):
 | UI path | Purpose |
 |---------|---------|
 | `/dashboard` | Home stats |
-| `/accounts` | Redirects to `/contacts` (legacy) |
+| `/accounts`, `/accounts/[id]` | Redirect to `/contacts` (legacy URLs) |
 | `/contacts`, `/contacts/[id]` | People |
 | `/opportunities` | Pipeline board |
 | `/tickets`, `/tickets/[id]` | Support |
@@ -301,4 +300,4 @@ Historical phases map to git eras (not separate products):
 
 ---
 
-*Last updated: 2026-05-27 (local `main`, ahead of remote; production @ `738e03a`).*
+*Last updated: 2026-05-27 (`main` @ `8fc9cee`).*

@@ -2,9 +2,11 @@ ClickIn 360 — marketing site + CRM (Next.js, Supabase, Docker on VPS).
 
 **Documentation**
 
-- [CRM features & roadmap](./docs/CRM-FEATURES.md) — living feature list and phase status (update on merge to `main`)
-- [CRM API guide](./docs/CLICKIN360-CRM-API.md)
+- [CRM features & roadmap](./docs/CRM-FEATURES.md) — living feature list and phase status
+- [CRM API guide](./docs/CLICKIN360-CRM-API.md) — Lead API, integrations, session CRM routes
 - [Audit / hardening tracker](./docs/AUDIT-FIX-TRACKER.md)
+
+**Deploy (VPS):** pull `main`, then run `./scripts/deploy-vps.sh` (Docker Compose rebuild).
 
 ## Getting Started
 

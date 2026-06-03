@@ -37,18 +37,20 @@ Status: **done** | **todo**
 | L2 | NextAuth session typing | `types/next-auth.d.ts` |
 | L3 | Deprecated SMTP send route | Removed `documents/[id]/send` |
 | L4 | `verifyContactOwnership` duplication | `lib/contacts/verify-contact-ownership.ts` |
+| L5 | Contact page i18n | `contacts.*`, `activity.*`, `quickActions.*`, `tasks.*` in en/es (Phase 5) |
+| L6 | Contact-centric parent links | Tickets/events require `contact_id`; migration 037 |
 
 ## Optional follow-ups (todo)
 
-| ID | Idea |
-|----|------|
-| F1 | Async contact combobox instead of `useContacts(1, 200)` |
-| F2 | Batch Supabase signed URLs for document lists |
-| F3 | Remove `sign-out-header.tsx` if unused | **done** |
-| F4 | Update API docs referencing `/api/calendar` | todo |
+| ID | Idea | Status |
+|----|------|--------|
+| F1 | Async contact combobox instead of `useContacts(1, 200)` | todo |
+| F2 | Batch Supabase signed URLs for document lists | todo |
+| F3 | Remove dead dashboard/components | **done** — see list below |
+| F4 | Sync API docs with route changes | **done** — `CLICKIN360-CRM-API.md` updated 2026-05-27 |
 | F5 | Remove unused `GET /api/dashboard/stats` | todo — superseded by `lib/dashboard-stats.ts` |
 | F6 | Storage object cleanup on document/contact delete | todo |
-| F7 | Run migration 036 (notes triggers + indexes) | file ready |
+| F7 | Migrations 036–037 in Supabase | **done** (035–037) |
 
 ## Dead code removed (2026-05-27)
 
