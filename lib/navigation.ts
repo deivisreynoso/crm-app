@@ -1,7 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
-  Building2,
   Calendar,
   CreditCard,
   FileText,
@@ -30,13 +29,6 @@ export const MAIN_NAV: NavItem[] = [
     labelKey: "home",
     icon: LayoutDashboard,
     description: "Dashboard overview",
-  },
-  {
-    href: "/accounts",
-    label: "Accounts",
-    labelKey: "accounts",
-    icon: Building2,
-    description: "Companies you work with",
   },
   {
     href: "/contacts",

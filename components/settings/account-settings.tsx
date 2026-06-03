@@ -8,6 +8,7 @@ import { FormLabel } from "@/components/ui/form-label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CurrencySettings } from "@/components/settings/currency-settings";
 import { NotificationPreferencesSettings } from "@/components/settings/notification-preferences-settings";
+import { SettingsSection } from "@/components/settings/settings-section";
 import { formatApiError } from "@/lib/validation-errors";
 import axios from "axios";
 
@@ -77,108 +78,96 @@ export function AccountSettings() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {error && (
         <p className="text-sm text-[var(--error)] bg-red-500/10 rounded-lg px-3 py-2">
           {error}
         </p>
       )}
 
-      <form onSubmit={saveProfile} className="space-y-4">
-        <h3 className="text-sm font-semibold text-heading">Profile</h3>
-        <div>
-          <FormLabel>Full name</FormLabel>
-          <input
-            className="input-field w-full max-w-md"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-          />
-        </div>
-        <div>
-          <FormLabel>Email</FormLabel>
-          <input
-            type="email"
-            className="input-field w-full max-w-md"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <p className="text-xs text-body-muted mt-1">
-            Changing email may require confirmation depending on your auth settings.
-          </p>
-        </div>
-        {profileMsg && <p className="text-sm text-emerald-700">{profileMsg}</p>}
-        <Button type="submit" size="sm">
-          Save profile
-        </Button>
-      </form>
-
-      <form
-        onSubmit={changePassword}
-        className="space-y-4 border-t border-[var(--card-border)] pt-6"
+      <SettingsSection
+        title="Profile"
+        description="Name and email used to sign in."
       >
-        <h3 className="text-sm font-semibold text-heading">Password</h3>
-        <div>
-          <FormLabel>Current password</FormLabel>
-          <input
-            type="password"
-            className="input-field w-full max-w-md"
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-            autoComplete="current-password"
-          />
-        </div>
-        <div>
-          <FormLabel>New password</FormLabel>
-          <input
-            type="password"
-            className="input-field w-full max-w-md"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            autoComplete="new-password"
-          />
-        </div>
-        <div>
-          <FormLabel>Confirm new password</FormLabel>
-          <input
-            type="password"
-            className="input-field w-full max-w-md"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            autoComplete="new-password"
-          />
-        </div>
-        {passwordMsg && <p className="text-sm text-emerald-700">{passwordMsg}</p>}
-        <Button type="submit" size="sm" variant="outline">
-          Update password
-        </Button>
-      </form>
+        <form onSubmit={saveProfile} className="space-y-4 max-w-md">
+          <div>
+            <FormLabel>Full name</FormLabel>
+            <input
+              className="input-field w-full"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+            />
+          </div>
+          <div>
+            <FormLabel>Email</FormLabel>
+            <input
+              type="email"
+              className="input-field w-full"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          {profileMsg && <p className="text-sm text-emerald-700">{profileMsg}</p>}
+          <Button type="submit" size="sm">
+            Save profile
+          </Button>
+        </form>
+      </SettingsSection>
 
-      <div className="border-t border-[var(--card-border)] pt-6 space-y-3">
-        <h3 className="text-sm font-semibold text-heading">Two-step authentication</h3>
-        <p className="text-sm text-body-muted">
-          Add an extra layer of security when signing in. Full setup will be available
-          in a future update.
-        </p>
-        <Button type="button" size="sm" variant="outline" disabled>
-          Set up two-step auth (coming soon)
-        </Button>
-      </div>
+      <SettingsSection title="Password" description="Update your sign-in password.">
+        <form onSubmit={changePassword} className="space-y-4 max-w-md">
+          <div>
+            <FormLabel>Current password</FormLabel>
+            <input
+              type="password"
+              className="input-field w-full"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              autoComplete="current-password"
+            />
+          </div>
+          <div>
+            <FormLabel>New password</FormLabel>
+            <input
+              type="password"
+              className="input-field w-full"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              autoComplete="new-password"
+            />
+          </div>
+          <div>
+            <FormLabel>Confirm new password</FormLabel>
+            <input
+              type="password"
+              className="input-field w-full"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              autoComplete="new-password"
+            />
+          </div>
+          {passwordMsg && <p className="text-sm text-emerald-700">{passwordMsg}</p>}
+          <Button type="submit" size="sm" variant="outline">
+            Update password
+          </Button>
+        </form>
+      </SettingsSection>
 
-      <div className="border-t border-[var(--card-border)] pt-6 space-y-4">
-        <h3 className="text-sm font-semibold text-heading">Notifications</h3>
+      <SettingsSection
+        title="Notifications"
+        description="In-app alerts and email digest frequency."
+      >
         <NotificationPreferencesSettings />
-      </div>
+      </SettingsSection>
 
-      <div className="border-t border-[var(--card-border)] pt-6 space-y-4">
-        <h3 className="text-sm font-semibold text-heading">Currency</h3>
+      <SettingsSection title="Currency" description="Default currency for amounts in the CRM.">
         <CurrencySettings />
-      </div>
+      </SettingsSection>
 
-      <div className="border-t border-[var(--card-border)] pt-6 space-y-3">
-        <h3 className="text-sm font-semibold text-[var(--error)]">Delete account</h3>
-        <p className="text-sm text-body-muted">
-          Permanently delete your account and CRM data. This cannot be undone.
-        </p>
+      <SettingsSection
+        title="Delete account"
+        description="Permanently remove your user and workspace data. This cannot be undone."
+      >
         <Button
           type="button"
           size="sm"
@@ -188,7 +177,7 @@ export function AccountSettings() {
         >
           Delete account
         </Button>
-      </div>
+      </SettingsSection>
 
       <ConfirmDialog
         open={deleteOpen}

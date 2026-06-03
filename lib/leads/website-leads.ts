@@ -3,11 +3,8 @@ import { logContactActivity } from "@/lib/activities/log-contact-activity";
 import { triggerN8NWebhook } from "@/lib/n8n";
 import { findDuplicateContact } from "@/lib/identity/contact-duplicate";
 import { getWorkspaceWebsiteLeadsConfig } from "@/lib/team/workspace";
-import {
-  createBookingCalendarEvent,
-  type WebsiteCalendarSelection,
-} from "@/lib/leads/booking-calendar-event";
-import { getBookingAvailabilityForWebsite } from "@/lib/website/booking-availability";
+import type { WebsiteCalendarSelection } from "@/lib/leads/booking-calendar-event";
+import { upsertBookingCalendarEvent } from "@/lib/leads/reschedule-booking";
 
 export type WebsiteContactInfo = {
   name: string;
@@ -119,18 +116,18 @@ async function maybeCreateBookingCalendarEvent(
     contactName: string;
     company?: string | null;
     calendar?: WebsiteCalendarSelection | null;
+    reschedule?: boolean;
   }
 ): Promise<string | null> {
   if (!input.calendar?.date || !input.calendar?.time) return null;
 
-  const config = await getBookingAvailabilityForWebsite();
-  return createBookingCalendarEvent(supabase, workspaceOwnerId, {
+  return upsertBookingCalendarEvent(supabase, workspaceOwnerId, {
     contactId: input.contactId,
     opportunityId: input.opportunityId,
     contactName: input.contactName,
     company: input.company,
     calendar: input.calendar,
-    config,
+    reschedule: input.reschedule,
   });
 }
 
@@ -173,13 +170,17 @@ async function appendToExistingContact(
     },
   ]);
 
-  const opportunityId = await createOpportunityForContact(
-    supabase,
-    workspaceOwnerId,
-    contactId,
-    companyLabel,
-    q.ai_summary ?? null
-  );
+  const isReschedule = Boolean(input.calendar_selection?.date && input.calendar_selection?.time);
+
+  const opportunityId = isReschedule
+    ? null
+    : await createOpportunityForContact(
+        supabase,
+        workspaceOwnerId,
+        contactId,
+        companyLabel,
+        q.ai_summary ?? null
+      );
 
   const calendarEventId = await maybeCreateBookingCalendarEvent(
     supabase,
@@ -190,6 +191,7 @@ async function appendToExistingContact(
       contactName: `${first_name} ${last_name}`.trim(),
       company,
       calendar: input.calendar_selection,
+      reschedule: isReschedule,
     }
   );
 
@@ -197,7 +199,9 @@ async function appendToExistingContact(
     userId: workspaceOwnerId,
     contactId,
     type: "update",
-    description: `Return visit — new ${input.source} request`,
+    description: isReschedule
+      ? `Appointment rescheduled (${input.source})`
+      : `Return visit — new ${input.source} request`,
     metadata: { source: input.source, returning_visitor: true },
   });
 

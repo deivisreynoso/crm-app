@@ -44,5 +44,12 @@ Status: **done** | **todo**
 |----|------|
 | F1 | Async contact combobox instead of `useContacts(1, 200)` |
 | F2 | Batch Supabase signed URLs for document lists |
-| F3 | Remove `sign-out-header.tsx` if unused |
-| F4 | Update API docs referencing `/api/calendar` |
+| F3 | Remove `sign-out-header.tsx` if unused | **done** |
+| F4 | Update API docs referencing `/api/calendar` | todo |
+| F5 | Remove unused `GET /api/dashboard/stats` | todo — superseded by `lib/dashboard-stats.ts` |
+| F6 | Storage object cleanup on document/contact delete | todo |
+| F7 | Run migration 036 (notes triggers + indexes) | file ready |
+
+## Dead code removed (2026-05-27)
+
+`sign-out-header.tsx`, `quick-action-buttons.tsx`, `account-overview.tsx`, `contact-related-lists.tsx`, `upcoming-events.tsx`, `app-launcher.tsx`

@@ -7,7 +7,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export type ActivityFeedItem = {
   id: string;
-  source: "note" | "activity";
+  source: "note" | "activity" | "calendar";
   type: string;
   content: string;
   created_at: string;
@@ -63,7 +63,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
     const supabase = createServerSideClient();
 
-    const [notesRes, activitiesRes] = await Promise.all([
+    const [notesRes, activitiesRes, eventsRes] = await Promise.all([
       supabase
         .from("notes")
         .select("id, content, activity_type, created_at")
@@ -77,6 +77,12 @@ export async function GET(_req: NextRequest, context: RouteContext) {
         .eq("user_id", workspaceOwnerId!)
         .eq("contact_id", contactId)
         .order("created_at", { ascending: false }),
+      supabase
+        .from("calendar_events")
+        .select("id, title, description, start_time, event_kind, created_at")
+        .eq("user_id", workspaceOwnerId!)
+        .eq("contact_id", contactId)
+        .order("start_time", { ascending: false }),
     ]);
 
     if (notesRes.error) throw notesRes.error;
@@ -106,7 +112,36 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       };
     });
 
-    const data = [...noteItems, ...activityItems].sort(
+    const loggedEventIds = new Set<string>();
+    if (!activitiesRes.error) {
+      for (const a of activitiesRes.data ?? []) {
+        const meta = (a.metadata as Record<string, unknown> | null) ?? null;
+        const eid = meta?.calendar_event_id;
+        if (typeof eid === "string") loggedEventIds.add(eid);
+      }
+    }
+
+    const calendarItems: ActivityFeedItem[] = (eventsRes.error
+      ? []
+      : (eventsRes.data ?? [])
+    )
+      .filter((ev) => !loggedEventIds.has(ev.id as string))
+      .map((ev) => {
+        const start = ev.start_time as string;
+        const title = (ev.title as string) || "Calendar event";
+        const desc = (ev.description as string) || "";
+        const kind = ev.event_kind === "appointment" ? "appointment" : "meeting";
+        return {
+          id: `calendar-${ev.id}`,
+          source: "calendar" as const,
+          type: kind,
+          content: desc ? `${title}\n${desc}` : title,
+          created_at: start || (ev.created_at as string),
+          is_system: false,
+        };
+      });
+
+    const data = [...noteItems, ...activityItems, ...calendarItems].sort(
       (a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );

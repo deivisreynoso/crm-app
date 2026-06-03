@@ -8,6 +8,7 @@ import {
   assertParentsInWorkspace,
   workspaceParentForbidden,
 } from "@/lib/api/assert-workspace-parents";
+import { enrichCompanyIdFromContact } from "@/lib/contacts/enrich-company-from-contact";
 import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
 import { ticketDisplayLabel } from "@/lib/service-ticket-number";
 import { createNotification } from "@/lib/notifications/create-notification";
@@ -66,9 +67,20 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const parentError = workspaceParentForbidden(parentCheck);
     if (parentError) return parentError;
 
+    let patch = parsed.data;
+    if (parsed.data.contact_id?.trim()) {
+      const companyId = await enrichCompanyIdFromContact(
+        supabase,
+        workspaceOwnerId!,
+        parsed.data.contact_id,
+        parsed.data.company_id
+      );
+      patch = { ...parsed.data, company_id: companyId ?? undefined };
+    }
+
     const { data, error: dbError } = await supabase
       .from("tickets")
-      .update({ ...buildTicketUpdate(parsed.data), updated_at: new Date().toISOString() })
+      .update({ ...buildTicketUpdate(patch), updated_at: new Date().toISOString() })
       .eq("id", id)
       .eq("user_id", workspaceOwnerId!)
       .select("*")

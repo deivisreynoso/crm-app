@@ -18,7 +18,6 @@ import {
 
 const CRM_PROTECTED = [
   "/dashboard",
-  "/accounts",
   "/contacts",
   "/opportunities",
   "/tickets",
@@ -133,8 +132,6 @@ export const config = {
     "/register",
     "/dashboard",
     "/dashboard/:path*",
-    "/accounts",
-    "/accounts/:path*",
     "/contacts",
     "/contacts/:path*",
     "/opportunities",

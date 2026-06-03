@@ -154,7 +154,7 @@ export type MoveOpportunityStageData = z.infer<typeof moveOpportunityStageSchema
 
 export const ticketSchema = z
   .object({
-    contact_id: z.string().uuid().optional().or(z.literal("")),
+    contact_id: z.string().uuid("Select a contact"),
     company_id: z.string().uuid().optional().or(z.literal("")),
     subject: z.string().min(3, "Subject must be at least 3 characters"),
     title: z.string().optional().or(z.literal("")),
@@ -169,32 +169,33 @@ export const ticketSchema = z
     category: z.string().optional().or(z.literal("")),
     tags: z.string().optional().or(z.literal("")),
     custom_fields: customFieldValuesSchema,
-  })
-  .refine(
-    (data) => !!(data.contact_id?.trim() || data.company_id?.trim()),
-    { message: "Link the case to a contact or an account", path: ["contact_id"] }
-  );
+  });
 
 export type TicketFormData = z.infer<typeof ticketSchema>;
 
-/** PATCH body — no contact/account refine so single-field updates work */
-export const ticketPatchSchema = z.object({
-  contact_id: z.string().uuid().optional().or(z.literal("")),
-  company_id: z.string().uuid().optional().or(z.literal("")),
-  subject: z.string().min(3, "Subject must be at least 3 characters").optional(),
-  title: z.string().optional().or(z.literal("")),
-  description: z.string().optional().or(z.literal("")),
-  status: z
-    .enum(["open", "in_progress", "closed", "on_hold"])
-    .optional(),
-  priority: z
-    .enum(["low", "medium", "high", "urgent"])
-    .optional(),
-  assigned_to: z.string().uuid().optional().or(z.literal("")),
-  category: z.string().optional().or(z.literal("")),
-  tags: z.string().optional().or(z.literal("")),
-  custom_fields: customFieldValuesSchema,
-});
+/** PATCH body — contact cannot be cleared */
+export const ticketPatchSchema = z
+  .object({
+    contact_id: z.string().uuid().optional().or(z.literal("")),
+    company_id: z.string().uuid().optional().or(z.literal("")),
+    subject: z.string().min(3, "Subject must be at least 3 characters").optional(),
+    title: z.string().optional().or(z.literal("")),
+    description: z.string().optional().or(z.literal("")),
+    status: z
+      .enum(["open", "in_progress", "closed", "on_hold"])
+      .optional(),
+    priority: z
+      .enum(["low", "medium", "high", "urgent"])
+      .optional(),
+    assigned_to: z.string().uuid().optional().or(z.literal("")),
+    category: z.string().optional().or(z.literal("")),
+    tags: z.string().optional().or(z.literal("")),
+    custom_fields: customFieldValuesSchema,
+  })
+  .refine(
+    (data) => data.contact_id === undefined || !!data.contact_id?.trim(),
+    { message: "A contact is required", path: ["contact_id"] }
+  );
 
 export type TicketPatchData = z.infer<typeof ticketPatchSchema>;
 
@@ -212,12 +213,8 @@ export const documentSchema = z
   })
   .refine(
     (data) =>
-      !!(
-        data.contact_id?.trim() ||
-        data.company_id?.trim() ||
-        data.opportunity_id?.trim()
-      ),
-    { message: "Link the document to an account, contact, or opportunity", path: ["contact_id"] }
+      !!(data.contact_id?.trim() || data.opportunity_id?.trim()),
+    { message: "Link the document to a contact or opportunity", path: ["contact_id"] }
   );
 
 export type DocumentFormData = z.infer<typeof documentSchema>;
@@ -295,7 +292,7 @@ export type CustomFieldFormData = z.infer<typeof customFieldSchema>;
 
 export const calendarEventSchema = z
   .object({
-    contact_id: z.string().uuid().optional().or(z.literal("")),
+    contact_id: z.string().uuid("Select a contact"),
     company_id: z.string().uuid().optional().or(z.literal("")),
     opportunity_id: z.string().uuid().optional().or(z.literal("")),
     title: z.string().min(1),
@@ -310,14 +307,7 @@ export const calendarEventSchema = z
   .refine((data) => new Date(data.end_time) > new Date(data.start_time), {
     message: "End time must be after start time",
     path: ["end_time"],
-  })
-  .refine(
-    (data) => !!(data.contact_id?.trim() || data.company_id?.trim()),
-    {
-      message: "Select an account or contact for this event.",
-      path: ["contact_id"],
-    }
-  );
+  });
 
 export type CalendarEventFormData = z.infer<typeof calendarEventSchema>;
 
@@ -337,13 +327,11 @@ export const calendarEventPatchSchema = z
   })
   .refine(
     (data) => {
-      const touched =
-        data.contact_id !== undefined || data.company_id !== undefined;
-      if (!touched) return true;
-      return !!(data.contact_id?.trim() || data.company_id?.trim());
+      if (data.contact_id === undefined) return true;
+      return !!data.contact_id?.trim();
     },
     {
-      message: "Select an account or contact for this event.",
+      message: "A contact is required for this event.",
       path: ["contact_id"],
     }
   );

@@ -8,6 +8,7 @@ import {
   assertParentsInWorkspace,
   workspaceParentForbidden,
 } from "@/lib/api/assert-workspace-parents";
+import { enrichCompanyIdFromContact } from "@/lib/contacts/enrich-company-from-contact";
 import { createGoogleCalendarEvent } from "@/lib/google/calendar";
 
 function emptyToNull(value: string | undefined): string | null {
@@ -85,10 +86,17 @@ export async function POST(req: NextRequest) {
     const parentError = workspaceParentForbidden(parentCheck);
     if (parentError) return parentError;
 
+    const companyId = await enrichCompanyIdFromContact(
+      supabase,
+      workspaceOwnerId!,
+      parsed.data.contact_id,
+      parsed.data.company_id
+    );
+
     const row = {
       user_id: workspaceOwnerId!,
-      contact_id: parsed.data.contact_id?.trim() || null,
-      company_id: parsed.data.company_id?.trim() || null,
+      contact_id: parsed.data.contact_id.trim(),
+      company_id: companyId,
       opportunity_id: parsed.data.opportunity_id?.trim() || null,
       title: parsed.data.title.trim(),
       description: emptyToNull(parsed.data.description),
@@ -107,8 +115,8 @@ export async function POST(req: NextRequest) {
     );
 
     if (dbError) {
-      const hint = dbError.message.includes("calendar_events_parent_check")
-        ? "Run migration 012_relax_parent_checks.sql to allow events without a linked contact."
+      const hint = dbError.message.includes("calendar_events_contact_required_check")
+        ? "Link this event to a contact (run migration 037_require_contact_parent.sql)."
         : "Run migration 011_calendar_location_custom_field_meta.sql in Supabase.";
       return NextResponse.json({ error: dbError.message, hint }, { status: 500 });
     }

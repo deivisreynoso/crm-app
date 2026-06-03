@@ -72,3 +72,54 @@ export async function createBookingCalendarEvent(
 
   return created.id;
 }
+
+/** Update an existing website booking event (reschedule). */
+export async function updateBookingCalendarEvent(
+  supabase: SupabaseClient,
+  workspaceOwnerId: string,
+  eventId: string,
+  input: {
+    contactName: string;
+    company?: string | null;
+    calendar: WebsiteCalendarSelection;
+    config: BookingAvailabilityConfig;
+  }
+): Promise<string> {
+  const normalizedTime =
+    input.calendar.time.length >= 5
+      ? input.calendar.time.slice(0, 5)
+      : input.calendar.time;
+  const start = slotToDate(
+    input.calendar.date,
+    normalizedTime,
+    input.config.timezone
+  );
+  if (Number.isNaN(start.getTime())) {
+    throw new Error("Invalid booking date or time.");
+  }
+
+  const end = new Date(
+    start.getTime() + input.config.meeting_duration_minutes * 60_000
+  );
+  const label = input.company?.trim() || input.contactName.trim();
+  const tz =
+    input.calendar.timezone?.trim() || input.config.timezone.replace(/_/g, " ");
+
+  const { error } = await supabase
+    .from("calendar_events")
+    .update({
+      title: `Discovery call — ${label}`,
+      description: `Rescheduled via website (${tz}).`,
+      start_time: start.toISOString(),
+      end_time: end.toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", eventId)
+    .eq("user_id", workspaceOwnerId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return eventId;
+}

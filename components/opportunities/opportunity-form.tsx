@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FormLabel } from "@/components/ui/form-label";
 import { TagsInput } from "@/components/forms/tags-input";
 import { useContacts } from "@/hooks/useContacts";
-import { useCompanies } from "@/hooks/useCompanies";
 import { useCustomFields } from "@/hooks/useCustomFields";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import axios from "axios";
@@ -21,7 +20,6 @@ interface OpportunityFormProps {
   stages: PipelineStage[];
   defaultStage?: string;
   defaultContactId?: string;
-  defaultCompanyId?: string;
   initial?: Partial<OpportunityFormInput> & { id?: string };
   onSubmit: (data: OpportunityFormInput) => Promise<void>;
   onCancel: () => void;
@@ -33,19 +31,14 @@ export function OpportunityForm({
   stages,
   defaultStage,
   defaultContactId,
-  defaultCompanyId,
   initial,
   onSubmit,
   onCancel,
   isLoading,
 }: OpportunityFormProps) {
   const { data: contactsData } = useContacts(1, 200);
-  const { data: companies = [] } = useCompanies();
   const allContacts = contactsData?.data ?? [];
 
-  const [companyId, setCompanyId] = useState(
-    initial?.company_id ?? defaultCompanyId ?? ""
-  );
   const [contactId, setContactId] = useState(
     initial?.contact_id ?? defaultContactId ?? ""
   );
@@ -82,9 +75,6 @@ export function OpportunityForm({
 
   useEffect(() => {
     setCustomFields(normalizeCustomFieldValues(initial?.custom_fields));
-    if (initial?.company_id !== undefined) {
-      setCompanyId(initial.company_id ?? defaultCompanyId ?? "");
-    }
     if (initial?.contact_id !== undefined) {
       setContactId(initial.contact_id ?? defaultContactId ?? "");
     }
@@ -99,12 +89,7 @@ export function OpportunityForm({
     if (initial?.probability !== undefined) {
       setProbability(initial.probability?.toString() ?? "50");
     }
-  }, [initial?.id, initial, defaultCompanyId, defaultContactId, defaultStage, stages]);
-
-  const contacts = useMemo(() => {
-    if (!companyId) return allContacts;
-    return allContacts.filter((c) => c.company_id === companyId);
-  }, [allContacts, companyId]);
+  }, [initial?.id, initial, defaultContactId, defaultStage, stages]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -112,7 +97,6 @@ export function OpportunityForm({
 
     await onSubmit({
       contact_id: contactId,
-      company_id: companyId || undefined,
       pipeline_id: pipelineId,
       title: title.trim(),
       value: value ? Number(value) : undefined,
@@ -128,41 +112,22 @@ export function OpportunityForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <FormLabel>Account</FormLabel>
-          <select
-            value={companyId}
-            onChange={(e) => {
-              setCompanyId(e.target.value);
-              setContactId("");
-            }}
-            className="input-field"
-          >
-            <option value="">— Any account —</option>
-            {companies.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <FormLabel required>Contact</FormLabel>
-          <select
-            value={contactId}
-            onChange={(e) => setContactId(e.target.value)}
-            required
-            className="input-field"
-          >
-            <option value="">Select contact</option>
-            {contacts.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.first_name} {c.last_name}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div>
+        <FormLabel required>Contact</FormLabel>
+        <select
+          value={contactId}
+          onChange={(e) => setContactId(e.target.value)}
+          required
+          className="input-field"
+        >
+          <option value="">Select contact</option>
+          {allContacts.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.first_name} {c.last_name}
+              {c.company?.trim() ? ` · ${c.company}` : ""}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div>

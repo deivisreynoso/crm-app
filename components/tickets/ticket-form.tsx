@@ -10,7 +10,6 @@ import {
   TICKET_STATUSES,
 } from "@/lib/constants/ticket-fields";
 import { useContacts } from "@/hooks/useContacts";
-import { useCompanies } from "@/hooks/useCompanies";
 import { useCustomFields } from "@/hooks/useCustomFields";
 import {
   EntityCustomFieldsForm,
@@ -28,7 +27,6 @@ const EMPTY_CUSTOM_FIELDS: CustomFieldDefinition[] = [];
 interface TicketFormProps {
   initial?: Partial<TicketFormInput> & { id?: string };
   defaultContactId?: string;
-  defaultCompanyId?: string;
   onSubmit: (data: TicketFormInput) => Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
@@ -37,21 +35,16 @@ interface TicketFormProps {
 export function TicketForm({
   initial,
   defaultContactId,
-  defaultCompanyId,
   onSubmit,
   onCancel,
   isLoading,
 }: TicketFormProps) {
   const { data: session } = useSession();
   const { data: contactsData } = useContacts(1, 200);
-  const { data: companies = [] } = useCompanies();
   const contacts = contactsData?.data ?? [];
 
   const [contactId, setContactId] = useState(
     initial?.contact_id ?? defaultContactId ?? ""
-  );
-  const [companyId, setCompanyId] = useState(
-    initial?.company_id ?? defaultCompanyId ?? ""
   );
   const [assignedTo, setAssignedTo] = useState(initial?.assigned_to ?? "");
   const [subject, setSubject] = useState(
@@ -80,9 +73,6 @@ export function TicketForm({
     if (initial?.contact_id !== undefined) {
       setContactId(initial.contact_id ?? defaultContactId ?? "");
     }
-    if (initial?.company_id !== undefined) {
-      setCompanyId(initial.company_id ?? defaultCompanyId ?? "");
-    }
     if (initial?.subject !== undefined || initial?.title !== undefined) {
       setSubject(initial.subject ?? initial.title ?? "");
     }
@@ -99,7 +89,7 @@ export function TicketForm({
             : []
       );
     }
-  }, [initial?.id, initial, defaultContactId, defaultCompanyId, customFieldDefs]);
+  }, [initial?.id, initial, defaultContactId, customFieldDefs]);
 
   const sessionUser = session?.user as { id?: string; name?: string | null; email?: string | null } | undefined;
   const assigneeId = sessionUser?.id ?? "";
@@ -107,12 +97,10 @@ export function TicketForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!subject.trim()) return;
-    if (!contactId && !companyId) return;
+    if (!subject.trim() || !contactId) return;
 
     await onSubmit({
-      contact_id: contactId || undefined,
-      company_id: companyId || undefined,
+      contact_id: contactId,
       assigned_to: assignedTo || assigneeId || undefined,
       subject: subject.trim(),
       description: description || undefined,
@@ -126,39 +114,24 @@ export function TicketForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <FormLabel>Account</FormLabel>
-          <select
-            value={companyId}
-            onChange={(e) => setCompanyId(e.target.value)}
-            className="input-field"
-          >
-            <option value="">— Select account —</option>
-            {companies.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <FormLabel>Contact</FormLabel>
-          <select
-            value={contactId}
-            onChange={(e) => setContactId(e.target.value)}
-            className="input-field"
-          >
-            <option value="">— Select contact —</option>
-            {contacts.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.first_name} {c.last_name}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div>
+        <FormLabel required>Contact</FormLabel>
+        <select
+          value={contactId}
+          onChange={(e) => setContactId(e.target.value)}
+          required
+          className="input-field"
+        >
+          <option value="">— Select contact —</option>
+          {contacts.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.first_name} {c.last_name}
+              {c.company?.trim() ? ` · ${c.company}` : ""}
+            </option>
+          ))}
+        </select>
       </div>
-      <RequiredHint>Link to an account and/or contact (at least one required)</RequiredHint>
+      <RequiredHint>Every service ticket must be linked to a contact.</RequiredHint>
 
       <div>
         <FormLabel>Assigned to</FormLabel>
@@ -270,7 +243,7 @@ export function TicketForm({
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" disabled={isLoading}>
+        <Button type="submit" disabled={isLoading || !contactId}>
           {isLoading ? "Saving…" : initial?.id ? "Update" : "Create"}
         </Button>
       </div>

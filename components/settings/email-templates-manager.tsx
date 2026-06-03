@@ -6,45 +6,88 @@ import {
   useCreateEmailTemplate,
   useDeleteEmailTemplate,
   useEmailTemplates,
+  useUpdateEmailTemplate,
+  type EmailTemplate,
 } from "@/hooks/useEmailTemplates";
 import { formatApiError } from "@/lib/validation-errors";
 
 export function EmailTemplatesManager() {
   const { data: templates = [], isLoading } = useEmailTemplates();
   const createTemplate = useCreateEmailTemplate();
+  const updateTemplate = useUpdateEmailTemplate();
   const deleteTemplate = useDeleteEmailTemplate();
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<EmailTemplate | null>(null);
   const [name, setName] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  async function handleCreate(e: React.FormEvent) {
+  function resetForm() {
+    setName("");
+    setSubject("");
+    setBody("");
+    setEditing(null);
+    setOpen(false);
+  }
+
+  function startEdit(t: EmailTemplate) {
+    setEditing(t);
+    setName(t.name);
+    setSubject(t.subject);
+    setBody(t.body);
+    setOpen(true);
+    setError(null);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     try {
-      await createTemplate.mutateAsync({
-        name: name.trim(),
-        subject: subject.trim(),
-        body,
-      });
-      setName("");
-      setSubject("");
-      setBody("");
-      setOpen(false);
+      if (editing) {
+        await updateTemplate.mutateAsync({
+          id: editing.id,
+          input: {
+            name: name.trim(),
+            subject: subject.trim(),
+            body,
+          },
+        });
+      } else {
+        await createTemplate.mutateAsync({
+          name: name.trim(),
+          subject: subject.trim(),
+          body,
+        });
+      }
+      resetForm();
     } catch (err) {
-      setError(formatApiError(err, "Could not create template"));
+      setError(formatApiError(err, editing ? "Could not update template" : "Could not create template"));
     }
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center gap-2">
+      <div className="flex justify-between items-center gap-2 flex-wrap">
         <p className="text-sm text-body-muted">
           Reusable email copy for outreach and follow-ups.
         </p>
-        <Button size="sm" variant="outline" onClick={() => setOpen((v) => !v)}>
-          {open ? "Cancel" : "New template"}
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            if (open && !editing) {
+              resetForm();
+            } else {
+              setEditing(null);
+              setName("");
+              setSubject("");
+              setBody("");
+              setOpen(true);
+            }
+          }}
+        >
+          {open && !editing ? "Cancel" : "New template"}
         </Button>
       </div>
       {error && (
@@ -53,7 +96,13 @@ export function EmailTemplatesManager() {
         </p>
       )}
       {open && (
-        <form onSubmit={handleCreate} className="space-y-3 border border-[var(--card-border)] rounded-lg p-4">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-3 border border-[var(--card-border)] rounded-lg p-4 bg-[var(--surface-subtle)]"
+        >
+          <p className="text-sm font-medium text-heading">
+            {editing ? `Edit: ${editing.name}` : "New template"}
+          </p>
           <input
             className="input-field w-full"
             placeholder="Template name"
@@ -69,15 +118,22 @@ export function EmailTemplatesManager() {
             required
           />
           <textarea
-            className="input-field w-full min-h-[120px]"
+            className="input-field w-full min-h-[140px]"
             placeholder="Email body…"
             value={body}
             onChange={(e) => setBody(e.target.value)}
             required
           />
-          <Button type="submit" size="sm" disabled={createTemplate.isPending}>
-            Save template
-          </Button>
+          <div className="flex gap-2">
+            <Button type="submit" size="sm" disabled={createTemplate.isPending || updateTemplate.isPending}>
+              {editing ? "Save changes" : "Save template"}
+            </Button>
+            {editing && (
+              <Button type="button" size="sm" variant="outline" onClick={resetForm}>
+                Cancel edit
+              </Button>
+            )}
+          </div>
         </form>
       )}
       {isLoading ? (
@@ -91,17 +147,22 @@ export function EmailTemplatesManager() {
               key={t.id}
               className="flex items-start justify-between gap-3 px-4 py-3 bg-[var(--card)]"
             >
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-heading">{t.name}</p>
-                <p className="text-xs text-body-muted truncate">{t.subject}</p>
+                <p className="text-xs text-body-muted truncate mt-0.5">{t.subject}</p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => void deleteTemplate.mutateAsync(t.id)}
-              >
-                Remove
-              </Button>
+              <div className="flex gap-2 shrink-0">
+                <Button variant="outline" size="sm" onClick={() => startEdit(t)}>
+                  Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void deleteTemplate.mutateAsync(t.id)}
+                >
+                  Remove
+                </Button>
+              </div>
             </li>
           ))}
         </ul>

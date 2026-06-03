@@ -10,6 +10,7 @@ import {
   QuickTaskFormFields,
   type QuickTaskFormValues,
 } from "@/components/forms/quick-task-form-fields";
+import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { cn } from "@/lib/utils";
 
 export interface QuickTaskInput {
@@ -23,7 +24,6 @@ interface QuickActionBarProps {
   email?: string | null;
   phone?: string | null;
   className?: string;
-  /** Opens in-app Gmail compose instead of mailto: */
   onSendEmail?: () => void;
   onRequestReview?: () => void;
   onAddNote?: (content: string) => Promise<void>;
@@ -32,6 +32,19 @@ interface QuickActionBarProps {
   noteLoading?: boolean;
   taskLoading?: boolean;
 }
+
+/** Compact chips with subtle color cues per action type */
+const ACTION_STYLES: Record<string, string> = {
+  note: "border-slate-200 bg-slate-50/80 text-slate-700 hover:bg-slate-100",
+  call: "border-blue-200 bg-blue-50/90 text-blue-800 hover:bg-blue-100",
+  email: "border-violet-200 bg-violet-50/90 text-violet-800 hover:bg-violet-100",
+  review: "border-amber-200 bg-amber-50/90 text-amber-900 hover:bg-amber-100",
+  task: "border-emerald-200 bg-emerald-50/90 text-emerald-800 hover:bg-emerald-100",
+  "copy-email":
+    "border-[var(--card-border)] bg-[var(--card)] text-body-muted hover:bg-[var(--sidebar-hover)]",
+  "copy-phone":
+    "border-[var(--card-border)] bg-[var(--card)] text-body-muted hover:bg-[var(--sidebar-hover)]",
+};
 
 export function QuickActionBar({
   email,
@@ -45,6 +58,10 @@ export function QuickActionBar({
   noteLoading,
   taskLoading,
 }: QuickActionBarProps) {
+  const { dict } = useCrmLocale();
+  const q = dict.quickActions;
+  const act = dict.actions;
+  const r = dict.reviewRequest;
   const [noteOpen, setNoteOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
@@ -54,22 +71,22 @@ export function QuickActionBar({
   async function copyText(value: string) {
     try {
       await navigator.clipboard.writeText(value);
-      showCopied("Copied");
+      showCopied(q.copied);
     } catch {
-      showCopied("Copy failed");
+      showCopied(q.copyFailed);
     }
   }
 
   const actions = [
     onAddNote && {
       key: "note",
-      label: "Note",
+      label: q.note,
       icon: StickyNote,
       onClick: () => setNoteOpen(true),
     },
     phone?.trim() && {
       key: "call",
-      label: "Call",
+      label: q.call,
       icon: Phone,
       href: `tel:${phone.replace(/\s/g, "")}`,
     },
@@ -77,43 +94,43 @@ export function QuickActionBar({
       (onSendEmail
         ? {
             key: "email",
-            label: "Email",
+            label: q.email,
             icon: Mail,
             onClick: onSendEmail,
           }
         : {
             key: "email",
-            label: "Email",
+            label: q.email,
             icon: Mail,
             href: `mailto:${email}`,
           }),
     onRequestReview &&
       email?.trim() && {
         key: "review",
-        label: "Review",
+        label: r.action,
         icon: Star,
         onClick: onRequestReview,
       },
-    email?.trim() && {
-      key: "copy-email",
-      label: "Copy email",
-      icon: Copy,
-      onClick: () => void copyText(email!),
-    },
-    phone?.trim() && {
-      key: "copy-phone",
-      label: "Copy phone",
-      icon: Copy,
-      onClick: () => void copyText(phone!),
-    },
     onAddTask && {
       key: "task",
-      label: "Task",
+      label: q.task,
       icon: ListTodo,
       onClick: () => {
         setTaskForm(EMPTY_QUICK_TASK);
         setTaskOpen(true);
       },
+    },
+    email?.trim() && {
+      key: "copy-email",
+      label: q.copyEmail,
+      icon: Copy,
+      onClick: () => void copyText(email!),
+    },
+    phone?.trim() && {
+      key: "copy-phone",
+      label: q.copyPhone,
+      icon: Copy,
+      onClick: () => void copyText(phone!),
     },
   ].filter(Boolean) as Array<{
     key: string;
@@ -123,24 +140,30 @@ export function QuickActionBar({
     onClick?: () => void;
   }>;
 
+  const chipCls =
+    "inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium border transition-colors";
+
   return (
     <>
-      <div className={cn("flex flex-wrap items-center gap-2", className)}>
+      <div
+        className={cn("flex flex-wrap items-center gap-1.5", className)}
+        role="toolbar"
+        aria-label={q.toolbar}
+      >
         {actions.map((a) => {
           const Icon = a.icon;
-          const cls =
-            "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-heading border border-[var(--card-border)] hover:bg-[var(--sidebar-hover)] transition-colors";
+          const cls = cn(chipCls, ACTION_STYLES[a.key] ?? ACTION_STYLES.note);
           if (a.href) {
             return (
               <a key={a.key} href={a.href} className={cls}>
-                <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />
+                <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
                 {a.label}
               </a>
             );
           }
           return (
             <button key={a.key} type="button" className={cls} onClick={a.onClick}>
-              <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />
+              <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
               {a.label}
             </button>
           );
@@ -148,7 +171,7 @@ export function QuickActionBar({
         {copyToast}
       </div>
 
-      <Modal open={noteOpen} onClose={() => setNoteOpen(false)} title="Add note">
+      <Modal open={noteOpen} onClose={() => setNoteOpen(false)} title={q.addNoteTitle}>
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -160,28 +183,24 @@ export function QuickActionBar({
           className="space-y-3"
         >
           <textarea
-            className="input-field w-full min-h-[120px]"
+            className="input-field w-full min-h-[100px]"
             value={noteText}
             onChange={(e) => setNoteText(e.target.value)}
-            placeholder="What happened on this call or meeting?"
+            placeholder={q.addNotePlaceholder}
             required
           />
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setNoteOpen(false)}>
-              Cancel
+            <Button type="button" variant="outline" size="sm" onClick={() => setNoteOpen(false)}>
+              {act.cancel}
             </Button>
-            <Button type="submit" disabled={noteLoading}>
-              Save note
+            <Button type="submit" size="sm" disabled={noteLoading}>
+              {q.saveNote}
             </Button>
           </div>
         </form>
       </Modal>
 
-      <Modal
-        open={taskOpen}
-        onClose={() => setTaskOpen(false)}
-        title="Add task"
-      >
+      <Modal open={taskOpen} onClose={() => setTaskOpen(false)} title={q.addTaskTitle}>
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -203,11 +222,11 @@ export function QuickActionBar({
         >
           <QuickTaskFormFields values={taskForm} onChange={setTaskForm} />
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setTaskOpen(false)}>
-              Cancel
+            <Button type="button" variant="outline" size="sm" onClick={() => setTaskOpen(false)}>
+              {act.cancel}
             </Button>
-            <Button type="submit" disabled={taskLoading}>
-              Create task
+            <Button type="submit" size="sm" disabled={taskLoading}>
+              {q.createTask}
             </Button>
           </div>
         </form>

@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { cn, formatDateTime } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { formatDateTimeInTimeZone } from "@/lib/utils/datetime";
+import { useDisplayTimeZone } from "@/hooks/useDisplayTimeZone";
+import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import {
-  ACTIVITY_TYPES,
-  ACTIVITY_TYPE_LABELS,
   ACTIVITY_TYPE_STYLES,
   type ActivityType,
 } from "@/lib/constants/activity";
@@ -14,9 +13,12 @@ import type { ActivityFeedItem, Note } from "@/types";
 interface ActivityPanelProps {
   items?: ActivityFeedItem[];
   notes?: Note[];
+  contactTimezone?: string | null;
   isLoading?: boolean;
-  isAdding: boolean;
+  isAdding?: boolean;
   onAdd?: (input: { content: string; activity_type: ActivityType }) => Promise<void>;
+  /** Timeline-only mode (no inline log form) */
+  timelineOnly?: boolean;
 }
 
 function notesToFeedItems(notes: Note[]): ActivityFeedItem[] {
@@ -30,40 +32,33 @@ function notesToFeedItems(notes: Note[]): ActivityFeedItem[] {
   }));
 }
 
-const SYSTEM_TYPE_LABELS: Record<string, string> = {
-  system: "System",
-  update: "Updated",
-  created: "Created",
-  task: "Task",
-  review_request: "Review invitation",
-};
+const APPOINTMENT_TYPE_STYLE =
+  "bg-rose-50 text-rose-800 border border-rose-200";
 
 export function ActivityPanel({
   items: itemsProp,
   notes,
+  contactTimezone,
   isLoading,
-  isAdding,
-  onAdd,
+  timelineOnly = false,
 }: ActivityPanelProps) {
+  const { dict } = useCrmLocale();
+  const a = dict.activity;
   const items = itemsProp ?? (notes ? notesToFeedItems(notes) : []);
-  const [activityType, setActivityType] = useState<ActivityType>("call");
-  const [content, setContent] = useState("");
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!onAdd || !content.trim()) return;
-    await onAdd({ content: content.trim(), activity_type: activityType });
-    setContent("");
-  }
+  const displayTz = useDisplayTimeZone(contactTimezone);
 
   function typeLabel(item: ActivityFeedItem) {
+    if (item.type === "appointment") return a.types.appointment;
     if (item.is_system) {
-      return SYSTEM_TYPE_LABELS[item.type] ?? "Activity";
+      const sys = a.system as Record<string, string>;
+      return sys[item.type] ?? a.system.activity;
     }
-    return ACTIVITY_TYPE_LABELS[item.type as ActivityType] ?? item.type;
+    const types = a.types as Record<string, string>;
+    return types[item.type] ?? item.type;
   }
 
   function typeStyle(item: ActivityFeedItem) {
+    if (item.type === "appointment") return APPOINTMENT_TYPE_STYLE;
     if (item.is_system) {
       return "bg-slate-100 text-slate-700 border border-slate-200";
     }
@@ -74,65 +69,26 @@ export function ActivityPanel({
   }
 
   return (
-    <div className="space-y-6">
-      {onAdd && (
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-3 p-4 rounded-lg border border-[var(--card-border)] bg-[var(--surface-subtle)]"
-      >
-        <p className="text-xs text-body-muted">
-          Log a manual activity below. Updates, tasks, and other actions on this
-          contact appear automatically in the timeline.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {ACTIVITY_TYPES.map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setActivityType(type)}
-              className={cn(
-                "px-3 py-1 rounded-full text-xs font-medium transition-colors",
-                activityType === type
-                  ? ACTIVITY_TYPE_STYLES[type]
-                  : "bg-[var(--card)] text-body-muted border border-[var(--card-border)] hover:border-[var(--primary)]"
-              )}
-            >
-              {ACTIVITY_TYPE_LABELS[type]}
-            </button>
-          ))}
-        </div>
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          rows={3}
-          placeholder={`What happened on this ${ACTIVITY_TYPE_LABELS[activityType].toLowerCase()}?`}
-          className="input-field w-full min-h-[80px]"
-        />
-        <Button type="submit" size="sm" disabled={isAdding}>
-          Log activity
-        </Button>
-      </form>
-      )}
-
+    <div className="space-y-4">
       {isLoading ? (
-        <p className="text-sm text-body-muted text-center py-8">Loading activity…</p>
+        <p className="text-sm text-body-muted text-center py-8">{a.loading}</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-body-muted text-center py-8">
-          No activity yet. Actions on this contact will show up here automatically.
-        </p>
+        <p className="text-sm text-body-muted text-center py-8">{a.empty}</p>
       ) : (
         <ul className="space-y-0">
           {items.map((item, index) => (
-            <li key={item.id} className="relative flex gap-4 pb-6">
+            <li key={item.id} className="relative flex gap-3 pb-5">
               {index < items.length - 1 && (
-                <span className="absolute left-[11px] top-6 bottom-0 w-px bg-[var(--card-border)]" />
+                <span className="absolute left-[10px] top-5 bottom-0 w-px bg-[var(--card-border)]" />
               )}
               <span
                 className={cn(
-                  "relative z-10 w-6 h-6 rounded-full shrink-0 mt-0.5 border-2",
-                  item.is_system
-                    ? "bg-[var(--surface-subtle)] border-[var(--card-border)]"
-                    : "bg-[var(--card)] border-[var(--primary)]"
+                  "relative z-10 w-5 h-5 rounded-full shrink-0 mt-0.5 border-2",
+                  item.type === "appointment"
+                    ? "bg-rose-100 border-rose-500"
+                    : item.is_system
+                      ? "bg-[var(--surface-subtle)] border-[var(--card-border)]"
+                      : "bg-[var(--card)] border-[var(--primary)]"
                 )}
               />
               <div className="flex-1 min-w-0">
@@ -145,8 +101,8 @@ export function ActivityPanel({
                   >
                     {typeLabel(item)}
                   </span>
-                  <time className="text-xs text-body-muted">
-                    {formatDateTime(item.created_at)}
+                  <time className="text-xs text-body-muted" title={displayTz}>
+                    {formatDateTimeInTimeZone(item.created_at, displayTz)}
                   </time>
                 </div>
                 {item.type === "email" && item.email_body ? (
@@ -156,15 +112,15 @@ export function ActivityPanel({
                     )}
                     <p className="text-body-muted text-xs">
                       {item.email_direction === "inbound"
-                        ? "Received"
+                        ? a.emailReceived
                         : item.email_direction === "outbound"
-                          ? "Sent"
-                          : "Email"}
+                          ? a.emailSent
+                          : a.types.email}
                     </p>
-                    <p className="whitespace-pre-wrap">{item.email_body}</p>
+                    <p className="whitespace-pre-wrap text-sm">{item.email_body}</p>
                   </div>
                 ) : (
-                  <p className="text-sm text-heading whitespace-pre-wrap">
+                  <p className="text-sm text-heading whitespace-pre-wrap leading-relaxed">
                     {item.content}
                   </p>
                 )}

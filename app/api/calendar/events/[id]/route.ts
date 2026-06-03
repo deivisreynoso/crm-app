@@ -7,6 +7,7 @@ import {
   assertParentsInWorkspace,
   workspaceParentForbidden,
 } from "@/lib/api/assert-workspace-parents";
+import { enrichCompanyIdFromContact } from "@/lib/contacts/enrich-company-from-contact";
 import { updateWithColumnFallback } from "@/lib/api/strip-update";
 import {
   deleteGoogleCalendarEvent,
@@ -64,6 +65,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     const d = parsed.data;
+    const supabase = createServerSideClient();
     const updates: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
@@ -77,15 +79,21 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     if (d.location_type !== undefined) updates.location_type = d.location_type;
     if (d.contact_id !== undefined) {
       updates.contact_id = d.contact_id?.trim() ? d.contact_id : null;
-    }
-    if (d.company_id !== undefined) {
+      if (d.contact_id?.trim()) {
+        updates.company_id = await enrichCompanyIdFromContact(
+          supabase,
+          workspaceOwnerId!,
+          d.contact_id,
+          d.company_id
+        );
+      }
+    } else if (d.company_id !== undefined) {
       updates.company_id = d.company_id?.trim() ? d.company_id : null;
     }
     if (d.opportunity_id !== undefined) {
       updates.opportunity_id = d.opportunity_id?.trim() ? d.opportunity_id : null;
     }
 
-    const supabase = createServerSideClient();
     const parentCheck = await assertParentsInWorkspace(supabase, workspaceOwnerId!, {
       contact_id: d.contact_id,
       company_id: d.company_id,

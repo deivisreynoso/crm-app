@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { cn, formatDate, formatDateTime } from "@/lib/utils";
 import type { Task } from "@/types";
 import axios from "axios";
@@ -35,6 +36,8 @@ export function TasksPanel({
   onAdd,
   onOpenTask,
 }: TasksPanelProps) {
+  const { dict } = useCrmLocale();
+  const t = dict.tasks;
   const [title, setTitle] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
@@ -78,13 +81,13 @@ export function TasksPanel({
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Task title"
+          placeholder={t.titlePlaceholder}
           className="input-field w-full"
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
             <label className="text-xs text-body-muted block mb-1">
-              Due date & time
+              {t.dueDateTime}
             </label>
             <input
               type="datetime-local"
@@ -95,7 +98,7 @@ export function TasksPanel({
           </div>
           <div>
             <label className="text-xs text-body-muted block mb-1">
-              Assigned to
+              {t.assignedTo}
             </label>
             <select
               value={assignedTo}
@@ -116,20 +119,18 @@ export function TasksPanel({
             }
             className="input-field w-full sm:col-span-2"
           >
-            <option value="low">Low priority</option>
-            <option value="medium">Medium priority</option>
-            <option value="high">High priority</option>
+            <option value="low">{t.priorityLow}</option>
+            <option value="medium">{t.priorityMedium}</option>
+            <option value="high">{t.priorityHigh}</option>
           </select>
         </div>
         <Button type="submit" size="sm" disabled={isAdding}>
-          Add task
+          {t.addTask}
         </Button>
       </form>
 
       {tasks.length === 0 ? (
-        <p className="text-sm text-body-muted text-center py-8">
-          No tasks yet. Add a follow-up or reminder above.
-        </p>
+        <p className="text-sm text-body-muted text-center py-8">{t.empty}</p>
       ) : (
         <ul className="divide-y divide-[var(--card-border)] border border-[var(--card-border)] rounded-lg overflow-hidden bg-[var(--card)]">
           {tasks.map((task) => (
@@ -142,14 +143,16 @@ export function TasksPanel({
                 <div className="flex items-start justify-between gap-3">
                   <p className="font-medium text-heading text-sm">{task.title}</p>
                   <span className="text-xs text-[var(--secondary)] shrink-0">
-                    Open →
+                    {t.open}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-body-muted">
-                  <span>Created {formatDateTime(task.created_at)}</span>
+                  <span>
+                    {t.created} {formatDateTime(task.created_at)}
+                  </span>
                   {(task.due_at || task.due_date) && (
                     <span>
-                      Due{" "}
+                      {t.due}{" "}
                       {task.due_at
                         ? formatDateTime(task.due_at)
                         : formatDate(task.due_date!)}
@@ -161,7 +164,7 @@ export function TasksPanel({
                       PRIORITY_STYLES[task.priority]
                     )}
                   >
-                    {task.priority} priority
+                    {task.priority} {t.prioritySuffix}
                   </span>
                   <span
                     className={cn(

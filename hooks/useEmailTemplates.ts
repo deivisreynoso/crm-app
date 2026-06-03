@@ -32,6 +32,20 @@ export function useCreateEmailTemplate() {
   });
 }
 
+export function useUpdateEmailTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: Partial<EmailTemplateFormData>;
+    }) => axios.patch<EmailTemplate>(`/api/email-templates/${id}`, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["email-templates"] }),
+  });
+}
+
 export function useDeleteEmailTemplate() {
   const queryClient = useQueryClient();
   return useMutation({

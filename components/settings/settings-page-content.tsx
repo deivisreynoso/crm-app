@@ -14,129 +14,110 @@ import { QuoteServicesSettings } from "@/components/settings/quote-services-sett
 import { QuoteBrandingSettings } from "@/components/settings/quote-branding-settings";
 import { GoogleReviewRequestSettings } from "@/components/settings/google-review-request-settings";
 import { AuditLogsPanel } from "@/components/settings/audit-logs-panel";
+import { SettingsSection } from "@/components/settings/settings-section";
 import { CrmLanguageSwitcher } from "@/components/crm/crm-language-switcher";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { useWorkspaceContext } from "@/hooks/useWorkspaceContext";
-
-function LanguageSettingsCard() {
-  const { dict } = useCrmLocale();
-  return (
-    <Card padding="lg">
-      <h2 className="text-sm font-semibold text-heading mb-1">
-        {dict.settings?.language ?? "Platform language"}
-      </h2>
-      <p className="text-sm text-body-muted mb-4">
-        {dict.settings?.languageHelp ??
-          "Applies to CRM navigation and common labels."}
-      </p>
-      <CrmLanguageSwitcher />
-    </Card>
-  );
-}
 
 export function SettingsPageContent() {
   const { dict } = useCrmLocale();
   const { data: ctx, isLoading } = useWorkspaceContext();
   const canManage = ctx?.canManage ?? false;
-
   const s = dict.settings;
 
   if (isLoading) {
     return (
-      <div className="space-y-6 w-full max-w-3xl">
-        <PageHeader
-          title={s?.pageTitle ?? "Settings"}
-          description={s?.loading ?? "Loading workspace…"}
-        />
+      <div className="space-y-6 w-full max-w-4xl">
+        <PageHeader title={s?.pageTitle ?? "Settings"} description={s?.loading ?? "Loading…"} />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 w-full max-w-3xl">
+    <div className="space-y-6 w-full max-w-4xl">
       <PageHeader
         title={s?.pageTitle ?? "Settings"}
         description={
-          canManage
-            ? s?.pageDescriptionManage
-            : s?.pageDescriptionMember
+          canManage ? s?.pageDescriptionManage : s?.pageDescriptionMember
         }
       />
 
-      <LanguageSettingsCard />
+      <SettingsSection
+        title={s?.language ?? "Platform language"}
+        description={
+          s?.languageHelp ?? "Applies to CRM navigation and common labels."
+        }
+      >
+        <CrmLanguageSwitcher />
+      </SettingsSection>
 
-      <Card padding="lg">
+      <SettingsSection
+        title="Google Workspace"
+        description="Connect Gmail and Calendar for email and scheduling."
+      >
         <GoogleWorkspaceSetup />
-      </Card>
+      </SettingsSection>
 
       {canManage && (
         <>
-          <Card padding="lg">
-            <h2 className="text-sm font-semibold text-heading mb-2">
-              {dict.settings?.quoteBranding ?? "Quote branding"}
-            </h2>
+          <SettingsSection
+            title={dict.settings?.quoteBranding ?? "Quote branding"}
+            description="Logo and company name on quote PDFs."
+          >
             <QuoteBrandingSettings />
-          </Card>
-          <Card padding="lg">
-            <h2 className="text-sm font-semibold text-heading mb-4">
-              {s?.quoteServices ?? "Quote services catalog"}
-            </h2>
+          </SettingsSection>
+
+          <SettingsSection
+            title={s?.quoteServices ?? "Services catalog"}
+            description={s?.quoteServicesSettingsHelp}
+          >
             <QuoteServicesSettings />
-          </Card>
-          <Card padding="lg">
-            <h2 className="text-sm font-semibold text-heading mb-4">
-              {s?.bookingAvailability ?? "Booking availability"}
-            </h2>
+          </SettingsSection>
+
+          <SettingsSection title={s?.bookingAvailability ?? "Booking availability"}>
             <BookingAvailabilitySettings />
-          </Card>
-          <Card padding="lg">
-            <h2 className="text-sm font-semibold text-heading mb-4">Website leads</h2>
+          </SettingsSection>
+
+          <SettingsSection
+            title={s?.websiteLeads ?? "Website leads"}
+            description="Default assignee for inbound website leads."
+          >
             <WorkspaceLeadsSettings />
-          </Card>
-          <Card padding="lg">
-            <h2 className="text-sm font-semibold text-heading mb-4">
-              {s?.integrations ?? "Integrations"}
-            </h2>
+          </SettingsSection>
+
+          <SettingsSection title={s?.integrations ?? "Integrations"}>
             <SettingsIntegrationsSection />
-          </Card>
-          <Card padding="lg">
-            <h2 className="text-sm font-semibold text-heading mb-2">
-              {dict.settings?.reviewRequests ?? "Google review invitations"}
-            </h2>
+          </SettingsSection>
+
+          <SettingsSection
+            title={dict.settings?.reviewRequests ?? "Google review invitations"}
+            description={dict.settings?.reviewRequestsHelp}
+          >
             <GoogleReviewRequestSettings />
-          </Card>
-          <Card padding="lg">
-            <h2 className="text-sm font-semibold text-heading mb-4">
-              {s?.emailTemplates ?? "Email templates"}
-            </h2>
+          </SettingsSection>
+
+          <SettingsSection title={s?.emailTemplates ?? "Email templates"}>
             <EmailTemplatesManager />
-          </Card>
-          <Card padding="lg">
-            <h2 className="text-sm font-semibold text-heading mb-4">Duplicate contacts</h2>
+          </SettingsSection>
+
+          <SettingsSection title={s?.duplicateContacts ?? "Duplicate contacts"}>
             <DuplicateReviewsPanel />
-          </Card>
-          <Card padding="lg">
-            <h2 className="text-sm font-semibold text-heading mb-4">
-              {s?.team ?? "Team"}
-            </h2>
+          </SettingsSection>
+
+          <SettingsSection title={s?.team ?? "Team"}>
             <TeamSettings />
-          </Card>
-          <Card padding="lg">
-            <h2 className="text-sm font-semibold text-heading mb-4">
-              {s?.auditLogs ?? "Audit log"}
-            </h2>
+          </SettingsSection>
+
+          <SettingsSection title={s?.auditLogs ?? "Audit log"}>
             <AuditLogsPanel />
-          </Card>
-          <Card padding="lg">
-            <h2 className="text-sm font-semibold text-heading mb-4">
-              {s?.customFields ?? "Custom fields"}
-            </h2>
-            <p className="text-sm text-body-muted mb-4">
-              {s?.customFieldsHelp ??
-                "Define extra fields for contacts, opportunities, and tickets."}
-            </p>
+          </SettingsSection>
+
+          <SettingsSection
+            title={s?.customFields ?? "Custom fields"}
+            description={s?.customFieldsHelp}
+          >
             <CustomFieldManager />
-          </Card>
+          </SettingsSection>
         </>
       )}
 

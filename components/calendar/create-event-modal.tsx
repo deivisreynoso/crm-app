@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { LocationInput } from "@/components/calendar/location-input";
 import { useContacts } from "@/hooks/useContacts";
-import { useCompanies } from "@/hooks/useCompanies";
 import { useOpportunityPicker } from "@/hooks/useOpportunities";
 import type { CalendarEvent, CalendarEventFormInput } from "@/types";
 import type { LocationType } from "@/lib/calendar/utils";
@@ -23,7 +22,6 @@ interface CreateEventModalProps {
   initialDate?: Date;
   initial?: CalendarEvent | null;
   defaultContactId?: string;
-  defaultCompanyId?: string;
   onSubmit: (data: CalendarEventFormInput) => Promise<void>;
   isLoading?: boolean;
 }
@@ -34,17 +32,14 @@ export function CreateEventModal({
   initialDate,
   initial,
   defaultContactId,
-  defaultCompanyId,
   onSubmit,
   isLoading,
 }: CreateEventModalProps) {
   const { data: contactsData } = useContacts(1, 200);
-  const { data: companies = [] } = useCompanies();
   const contacts = contactsData?.data ?? [];
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [companyId, setCompanyId] = useState("");
   const [contactId, setContactId] = useState("");
   const [opportunityId, setOpportunityId] = useState("");
   const [start, setStart] = useState("");
@@ -58,11 +53,6 @@ export function CreateEventModal({
     contactId || undefined
   );
 
-  const filteredContacts = useMemo(() => {
-    if (!companyId) return contacts;
-    return contacts.filter((c) => c.company_id === companyId);
-  }, [contacts, companyId]);
-
   useEffect(() => {
     if (!open) return;
     setError(null);
@@ -70,7 +60,6 @@ export function CreateEventModal({
     if (initial) {
       setTitle(initial.title);
       setDescription(initial.description ?? "");
-      setCompanyId(initial.company_id ?? "");
       setContactId(initial.contact_id ?? "");
       setOpportunityId(initial.opportunity_id ?? "");
       setStart(toLocalInput(initial.start_time));
@@ -86,14 +75,13 @@ export function CreateEventModal({
     endDt.setHours(10, 0, 0, 0);
     setTitle("");
     setDescription("");
-    setCompanyId(defaultCompanyId ?? "");
     setContactId(defaultContactId ?? "");
     setOpportunityId("");
     setStart(toLocalInput(startDt.toISOString()));
     setEnd(toLocalInput(endDt.toISOString()));
     setLocationType("zoom");
     setLocation("");
-  }, [open, initial, initialDate, defaultContactId, defaultCompanyId]);
+  }, [open, initial, initialDate, defaultContactId]);
 
   function validate(): boolean {
     const next: Record<string, string> = {};
@@ -103,8 +91,8 @@ export function CreateEventModal({
     if (start && end && new Date(end) <= new Date(start)) {
       next.end = "End time must be after start time.";
     }
-    if (!contactId && !companyId) {
-      next.link = "Select an account or contact for this event.";
+    if (!contactId) {
+      next.link = "Select a contact for this event.";
     }
     setFieldErrors(next);
     return Object.keys(next).length === 0;
@@ -118,8 +106,7 @@ export function CreateEventModal({
       await onSubmit({
         title: title.trim(),
         description: description || undefined,
-        company_id: companyId || undefined,
-        contact_id: contactId || undefined,
+        contact_id: contactId,
         opportunity_id: opportunityId || undefined,
         start_time: new Date(start).toISOString(),
         end_time: new Date(end).toISOString(),
@@ -188,44 +175,27 @@ export function CreateEventModal({
             )}
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-heading mb-1">Account</label>
-            <select
-              className="input-field w-full"
-              value={companyId}
-              onChange={(e) => {
-                setCompanyId(e.target.value);
-                setContactId("");
-                setOpportunityId("");
-              }}
-            >
-              <option value="">— Select account —</option>
-              {companies.map((co) => (
-                <option key={co.id} value={co.id}>
-                  {co.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-heading mb-1">Contact</label>
-            <select
-              className="input-field w-full"
-              value={contactId}
-              onChange={(e) => {
-                setContactId(e.target.value);
-                setOpportunityId("");
-              }}
-            >
-              <option value="">— Select contact —</option>
-              {filteredContacts.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.first_name} {c.last_name}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-heading mb-1">
+            Contact <span className="text-[var(--error)]">*</span>
+          </label>
+          <select
+            className="input-field w-full"
+            value={contactId}
+            onChange={(e) => {
+              setContactId(e.target.value);
+              setOpportunityId("");
+            }}
+            required
+          >
+            <option value="">— Select contact —</option>
+            {contacts.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.first_name} {c.last_name}
+                {c.company?.trim() ? ` · ${c.company}` : ""}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="block text-sm font-medium text-heading mb-1">

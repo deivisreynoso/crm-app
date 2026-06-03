@@ -6,7 +6,6 @@ import type { DocumentFormInput } from "@/types";
 
 interface DocumentUploadFormProps {
   defaultContactId?: string;
-  defaultCompanyId?: string;
   defaultOpportunityId?: string;
   onSubmit: (metadata: DocumentFormInput, file?: File | null) => Promise<void>;
   onCancel: () => void;
@@ -19,7 +18,6 @@ const inputClass =
 
 export function DocumentUploadForm({
   defaultContactId,
-  defaultCompanyId,
   onSubmit,
   onCancel,
   isLoading,
@@ -31,14 +29,13 @@ export function DocumentUploadForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
-    if (!defaultContactId && !defaultCompanyId) return;
+    if (!defaultContactId) return;
 
     await onSubmit(
       {
         title: title.trim(),
         type: "attachment",
         contact_id: defaultContactId,
-        company_id: defaultCompanyId,
         status: "draft",
       },
       file

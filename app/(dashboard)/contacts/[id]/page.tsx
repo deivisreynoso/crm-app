@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ContactForm } from "@/components/forms/ContactForm";
 import { ContactOverview } from "@/components/contact/contact-overview";
+import { ContactLogActivity } from "@/components/contact/contact-log-activity";
 import { ActivityPanel } from "@/components/contact/activity-panel";
 import { TasksPanel } from "@/components/contact/tasks-panel";
 import { TaskDetailModal } from "@/components/contact/task-detail-modal";
@@ -26,38 +27,38 @@ import { useOpportunities } from "@/hooks/useOpportunities";
 import { useTickets, useCreateTicket } from "@/hooks/useTickets";
 import { useDocuments, useUploadDocument } from "@/hooks/useDocuments";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
-import { useCompany } from "@/hooks/useCompanies";
 import { contactToFormDefaults } from "@/lib/contact-payload";
 import type { ContactFormInput, Task } from "@/types";
+import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { QuickActionBar } from "@/components/quick-actions/quick-action-bar";
 import { SendEmailModal } from "@/components/contact/send-email-modal";
 import { RequestReviewModal } from "@/components/contact/request-review-modal";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
-import { ContactEmailPanel } from "@/components/contact/contact-email-panel";
-import { useContactEmails } from "@/hooks/useGmail";
 import { getInitials } from "@/lib/utils";
 
 type PageProps = { params: Promise<{ id: string }> };
-type WorkTab = "related" | "emails" | "activity" | "tasks";
+type WorkTab = "activity" | "related" | "tasks";
 type MobileTab = "overview" | WorkTab;
 
 export default function ContactDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
-  const [workTab, setWorkTab] = useState<WorkTab>("related");
+  const [workTab, setWorkTab] = useState<WorkTab>("activity");
   const [mobileTab, setMobileTab] = useState<MobileTab>("overview");
   const [openTask, setOpenTask] = useState<Task | null>(null);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const { canWrite } = useWorkspaceCapabilities();
+  const { dict } = useCrmLocale();
+  const c = dict.contacts;
+  const act = dict.actions;
 
   const { data: contact, isLoading, error } = useContact(id);
   const updateContact = useUpdateContact(id);
   const { data: activityItems = [], isLoading: activityLoading } =
     useContactActivityFeed(id);
-  const { data: contactEmails = [] } = useContactEmails(id);
   const createNote = useCreateContactNote(id);
   const { data: tasks = [] } = useContactTasks(id);
   const createTask = useCreateContactTask(id);
@@ -74,13 +75,6 @@ export default function ContactDetailPage({ params }: PageProps) {
   const { data: contactEvents = [] } = useCalendarEvents({ contact_id: id });
   const createTicket = useCreateTicket();
   const uploadDocument = useUploadDocument();
-  const { data: linkedAccount } = useCompany(contact?.company_id ?? "");
-
-  const relatedCount =
-    contactOpportunities.length +
-    contactTickets.length +
-    contactQuotes.length +
-    contactAttachments.length;
 
   function handleOpenTask(task: Task) {
     setOpenTask(task);
@@ -97,21 +91,29 @@ export default function ContactDetailPage({ params }: PageProps) {
   }
 
   if (isLoading) {
-    return <p className="text-body-muted text-sm">Loading contact…</p>;
+    return <p className="text-body-muted text-sm">{c.loading}</p>;
   }
 
   if (error || !contact) {
     return (
       <div className="space-y-3">
-        <p className="text-[var(--error)]">Contact not found.</p>
+        <p className="text-[var(--error)]">{c.notFound}</p>
         <Link href="/contacts" className="text-sm text-[var(--primary)] hover:underline">
-          ← Back to contacts
-        </Link>
+              ← {dict.nav.contacts}
+            </Link>
       </div>
     );
   }
 
   const initials = getInitials(contact.first_name, contact.last_name);
+  const companyLabel = contact.company?.trim() || "—";
+
+  const relatedCount =
+    contactOpportunities.length +
+    contactTickets.length +
+    contactQuotes.length +
+    contactAttachments.length +
+    contactEvents.length;
 
   const relatedPanel = (
     <EntityRelatedPanel
@@ -149,56 +151,65 @@ export default function ContactDetailPage({ params }: PageProps) {
   );
 
   const activityPanel = (
-    <ActivityPanel
-      items={activityItems}
-      isLoading={activityLoading}
-      isAdding={createNote.isPending}
-      onAdd={async (input) => {
-        await createNote.mutateAsync(input);
-      }}
-    />
+    <>
+      <ContactLogActivity
+        contactEmail={contact.email}
+        canWrite={canWrite}
+        isAdding={createNote.isPending}
+        onLog={async (input) => {
+          await createNote.mutateAsync({
+            content: input.content,
+            activity_type: input.activity_type,
+          });
+        }}
+        onSendEmail={() => setEmailModalOpen(true)}
+      />
+      <ActivityPanel
+        items={activityItems}
+        contactTimezone={contact.timezone}
+        isLoading={activityLoading}
+        timelineOnly
+      />
+    </>
   );
 
   const tasksPanel = (
     <TasksPanel
       tasks={tasks}
       isAdding={createTask.isPending}
-      onAdd={async (input) => createTask.mutateAsync(input)}
+      onAdd={async (input) => {
+        await createTask.mutateAsync(input);
+      }}
       onOpenTask={handleOpenTask}
     />
   );
 
-  const emailsPanel = (
-    <ContactEmailPanel
-      contact={contact}
-      onOpenFullCompose={() => setEmailModalOpen(true)}
-    />
-  );
+  const workTabs = [
+    { id: "activity" as const, label: c.logActivityTab, count: activityItems.length },
+    { id: "related" as const, label: c.relatedTab, count: relatedCount },
+    { id: "tasks" as const, label: c.tasksTab, count: tasks.length },
+  ];
 
   const workPanelContent =
-    workTab === "related"
-      ? relatedPanel
-      : workTab === "emails"
-        ? emailsPanel
-        : workTab === "activity"
-          ? activityPanel
-          : tasksPanel;
+    workTab === "activity"
+      ? activityPanel
+      : workTab === "related"
+        ? relatedPanel
+        : tasksPanel;
 
   const mobileContent =
     mobileTab === "overview" ? (
       <ContactOverview contact={contact} onSaveField={handleSaveField} />
-    ) : mobileTab === "related" ? (
-      relatedPanel
-    ) : mobileTab === "emails" ? (
-      emailsPanel
     ) : mobileTab === "activity" ? (
       activityPanel
+    ) : mobileTab === "related" ? (
+      relatedPanel
     ) : (
       tasksPanel
     );
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-5 w-full max-w-[1600px]">
       <TaskDetailModal
         contactId={id}
         task={openTask}
@@ -215,7 +226,7 @@ export default function ContactDetailPage({ params }: PageProps) {
 
       <SendEmailModal
         contact={contact}
-        companyName={linkedAccount?.name}
+        companyName={contact.company}
         open={emailModalOpen}
         onClose={() => setEmailModalOpen(false)}
         onSent={() => {
@@ -226,7 +237,7 @@ export default function ContactDetailPage({ params }: PageProps) {
 
       <RequestReviewModal
         contact={contact}
-        companyName={linkedAccount?.name}
+        companyName={contact.company}
         open={reviewModalOpen}
         onClose={() => setReviewModalOpen(false)}
         onSent={() => {
@@ -235,21 +246,33 @@ export default function ContactDetailPage({ params }: PageProps) {
         }}
       />
 
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-        <div className="flex items-start gap-4 min-w-0">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-semibold">
+      <header className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-semibold">
             {initials}
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <Link
               href="/contacts"
               className="text-xs text-body-muted hover:text-[var(--primary)]"
             >
-              ← All contacts
+              {c.backToAll}
             </Link>
-            <h1 className="text-2xl font-bold text-heading tracking-tight mt-0.5">
+            <h1 className="text-xl sm:text-2xl font-bold text-heading tracking-tight mt-0.5">
               {contact.first_name} {contact.last_name}
             </h1>
+            <p className="text-sm text-body-muted mt-0.5 truncate">
+              {contact.title && <span>{contact.title} · </span>}
+              {companyLabel}
+            </p>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <Badge variant="info">{contact.status}</Badge>
+              {contact.email && (
+                <Badge variant="neutral" className="max-w-[200px] truncate">
+                  {contact.email}
+                </Badge>
+              )}
+            </div>
             <QuickActionBar
               email={contact.email}
               phone={contact.phone}
@@ -281,31 +304,17 @@ export default function ContactDetailPage({ params }: PageProps) {
                 handleOpenTask(task);
               }}
             />
-            <p className="text-sm text-body-muted mt-3">
-              {contact.title && <span>{contact.title} · </span>}
-              {contact.company_id && linkedAccount ? (
-                <Link
-                  href={`/accounts/${contact.company_id}`}
-                  className="text-[var(--secondary)] hover:underline"
-                >
-                  {linkedAccount.name}
-                </Link>
-              ) : (
-                contact.company || "No account"
-              )}
-            </p>
-            <div className="flex flex-wrap gap-2 mt-3">
-              <Badge variant="info">{contact.status}</Badge>
-              {contact.email && <Badge variant="neutral">{contact.email}</Badge>}
-            </div>
           </div>
         </div>
-        <div className="flex gap-2 shrink-0">
-          <Button variant="outline" size="sm" onClick={() => setIsEditing((v) => !v)}>
-            {isEditing ? "Cancel" : "Edit"}
-          </Button>
-        </div>
-      </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="shrink-0 self-start"
+          onClick={() => setIsEditing((v) => !v)}
+        >
+          {isEditing ? act.cancel : act.edit}
+        </Button>
+      </header>
 
       {isEditing ? (
         <Card padding="lg">
@@ -314,51 +323,44 @@ export default function ContactDetailPage({ params }: PageProps) {
             defaultValues={contactToFormDefaults(contact)}
             onSubmit={handleUpdate}
             isLoading={updateContact.isPending}
-            submitLabel="Save Changes"
+            submitLabel={c.saveChanges}
           />
         </Card>
       ) : (
         <>
-          <div className="hidden xl:grid xl:grid-cols-12 gap-6 items-start">
-            <Card className="xl:col-span-5" padding="lg">
+          <div className="hidden lg:grid lg:grid-cols-12 gap-6 items-start">
+            <Card className="lg:col-span-5" padding="lg">
               <div className="flex items-center gap-2 mb-5">
                 <User className="h-4 w-4 text-[var(--primary)]" strokeWidth={1.75} />
-                <h2 className="text-sm font-semibold text-heading">Overview</h2>
+                <h2 className="text-sm font-semibold text-heading">{c.contactDetails}</h2>
               </div>
               <ContactOverview contact={contact} onSaveField={handleSaveField} />
             </Card>
-            <Card className="xl:col-span-7" padding="none">
+
+            <Card className="lg:col-span-7" padding="none">
               <div className="px-6 pt-4">
                 <RecordSectionTabs
-                  tabs={[
-                    { id: "related", label: "Related", count: relatedCount },
-                    { id: "emails", label: "Emails", count: contactEmails.length },
-                    { id: "activity", label: "Activity", count: activityItems.length },
-                    { id: "tasks", label: "Tasks", count: tasks.length },
-                  ]}
+                  tabs={workTabs}
                   activeTab={workTab}
                   onTabChange={(t) => setWorkTab(t as WorkTab)}
                 />
               </div>
-              <div className="p-6">{workPanelContent}</div>
+              <div className="p-6 pt-4">{workPanelContent}</div>
             </Card>
           </div>
 
-          <Card className="xl:hidden" padding="none">
+          <Card className="lg:hidden" padding="none">
             <div className="px-6 pt-4">
               <RecordSectionTabs
                 tabs={[
-                  { id: "overview", label: "Overview" },
-                  { id: "related", label: "Related", count: relatedCount },
-                  { id: "emails", label: "Emails", count: contactEmails.length },
-                  { id: "activity", label: "Activity", count: activityItems.length },
-                  { id: "tasks", label: "Tasks", count: tasks.length },
+                  { id: "overview", label: c.detailsTab },
+                  ...workTabs,
                 ]}
                 activeTab={mobileTab}
                 onTabChange={(t) => setMobileTab(t as MobileTab)}
               />
             </div>
-            <div className="p-6">{mobileContent}</div>
+            <div className="p-6 pt-4">{mobileContent}</div>
           </Card>
         </>
       )}

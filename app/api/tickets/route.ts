@@ -15,6 +15,7 @@ import {
   assertParentsInWorkspace,
   workspaceParentForbidden,
 } from "@/lib/api/assert-workspace-parents";
+import { enrichCompanyIdFromContact } from "@/lib/contacts/enrich-company-from-contact";
 import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
 
 export async function GET(req: NextRequest) {
@@ -79,7 +80,17 @@ export async function POST(req: NextRequest) {
     const parentError = workspaceParentForbidden(parentCheck);
     if (parentError) return parentError;
 
-    const record = buildTicketRecord(parsed.data, workspaceOwnerId!);
+    const companyId = await enrichCompanyIdFromContact(
+      supabase,
+      workspaceOwnerId!,
+      parsed.data.contact_id,
+      parsed.data.company_id
+    );
+
+    const record = buildTicketRecord(
+      { ...parsed.data, company_id: companyId ?? undefined },
+      workspaceOwnerId!
+    );
     let ticketNumber = await generateServiceTicketNumber(workspaceOwnerId!);
 
     let { data, error: dbError } = await insertTicket(

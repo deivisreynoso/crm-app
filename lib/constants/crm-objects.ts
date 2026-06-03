@@ -1,6 +1,5 @@
 export type CrmObjectId =
   | "home"
-  | "accounts"
   | "contacts"
   | "opportunities"
   | "tickets"
@@ -30,20 +29,12 @@ export const CRM_OBJECTS: CrmObjectDef[] = [
     description: "Dashboard overview",
   },
   {
-    id: "accounts",
-    label: "Accounts",
-    href: "/accounts",
-    iconBg: "bg-blue-600",
-    glyph: "▦",
-    description: "Companies you do business with",
-  },
-  {
     id: "contacts",
     label: "Contacts",
     href: "/contacts",
     iconBg: "bg-violet-600",
     glyph: "👤",
-    description: "People at your accounts",
+    description: "People and companies you work with",
   },
   {
     id: "opportunities",

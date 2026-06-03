@@ -14,6 +14,7 @@ import { DocumentUploadForm } from "@/components/documents/document-upload-form"
 import { ContactForm } from "@/components/forms/ContactForm";
 import { OpportunityForm } from "@/components/opportunities/opportunity-form";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
+import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { formatCurrency } from "@/lib/utils";
 import { useCreateContact } from "@/hooks/useContacts";
 import { usePipelines } from "@/hooks/usePipelines";
@@ -103,6 +104,8 @@ export function EntityRelatedPanel({
   const defaultPipeline = pipelines[0];
   const createOpportunity = useCreateOpportunity(defaultPipeline?.id ?? "");
   const { canWrite } = useWorkspaceCapabilities();
+  const { dict } = useCrmLocale();
+  const rel = dict.related;
   const router = useRouter();
 
   const newQuoteHref = useMemo(() => {
@@ -121,7 +124,7 @@ export function EntityRelatedPanel({
     <div className="space-y-4">
       {showAccountContacts && context.companyId && (
         <RelatedListSection
-          title="Contacts"
+          title={rel.contacts}
           count={contacts.length}
           iconBg="bg-violet-600"
           iconGlyph="👤"
@@ -146,7 +149,7 @@ export function EntityRelatedPanel({
       )}
 
       <RelatedListSection
-        title="Opportunities"
+        title={rel.opportunities}
         count={opportunities.length}
         iconBg="bg-amber-500"
         iconGlyph="◆"
@@ -175,7 +178,7 @@ export function EntityRelatedPanel({
       </RelatedListSection>
 
       <RelatedListSection
-        title="Service Tickets"
+        title={rel.tickets}
         count={tickets.length}
         iconBg="bg-rose-500"
         iconGlyph="▣"
@@ -214,7 +217,7 @@ export function EntityRelatedPanel({
       </RelatedListSection>
 
       <RelatedListSection
-        title="Quotes"
+        title={rel.quotes}
         count={quotes.length}
         iconBg="bg-slate-500"
         iconGlyph="📄"
@@ -226,7 +229,7 @@ export function EntityRelatedPanel({
               : "/quotes"
         }
         onNew={canWrite ? () => router.push(newQuoteHref) : undefined}
-        newLabel="New"
+        newLabel={rel.new}
       >
         {quotes.length === 0 ? (
           <p className="text-sm text-[var(--muted)]">No quotes yet.</p>
@@ -259,7 +262,7 @@ export function EntityRelatedPanel({
       </RelatedListSection>
 
       <RelatedListSection
-        title="Attachments"
+        title={rel.attachments}
         count={attachments.length}
         iconBg="bg-gray-500"
         iconGlyph="📎"
@@ -278,7 +281,7 @@ export function EntityRelatedPanel({
               }
             : undefined
         }
-        newLabel="Upload"
+        newLabel={rel.upload}
       >
         {attachments.length === 0 ? (
           <div
@@ -337,7 +340,7 @@ export function EntityRelatedPanel({
       </RelatedListSection>
 
       <RelatedListSection
-        title="Calendar"
+        title={rel.calendar}
         count={calendarEvents.length}
         iconBg="bg-teal-600"
         iconGlyph="📅"
@@ -349,7 +352,7 @@ export function EntityRelatedPanel({
               : "/calendar"
         }
         onNew={canWrite ? () => setCalendarModal(true) : undefined}
-        newLabel="Schedule"
+        newLabel={rel.schedule}
       >
         {calendarEvents.length === 0 ? (
           <p className="text-sm text-[var(--muted)]">No events scheduled.</p>
@@ -411,7 +414,6 @@ export function EntityRelatedPanel({
             pipelineId={defaultPipeline.id}
             stages={defaultPipeline.stages}
             defaultContactId={context.contactId}
-            defaultCompanyId={context.companyId}
             onSubmit={async (data) => {
               await createOpportunity.mutateAsync(data);
               setOppModal(false);
@@ -445,7 +447,6 @@ export function EntityRelatedPanel({
             )}
             <TicketForm
               defaultContactId={context.contactId}
-              defaultCompanyId={context.companyId}
               onSubmit={async (data) => {
                 setTicketError(null);
                 try {
@@ -479,7 +480,6 @@ export function EntityRelatedPanel({
         }}
         initial={editingCalendarEvent}
         defaultContactId={context.contactId}
-        defaultCompanyId={context.companyId}
         onSubmit={async (data) => {
           if (editingCalendarEvent) {
             await updateCalendarEvent.mutateAsync({
@@ -490,7 +490,6 @@ export function EntityRelatedPanel({
             await createCalendarEvent.mutateAsync({
               ...data,
               contact_id: data.contact_id ?? context.contactId,
-              company_id: data.company_id ?? context.companyId,
             });
           }
           setCalendarModal(false);
@@ -524,7 +523,6 @@ export function EntityRelatedPanel({
         {onCreateDocument && (
           <DocumentUploadForm
             defaultContactId={context.contactId}
-            defaultCompanyId={context.companyId}
             errorMessage={docError}
             onSubmit={async (meta, file) => {
               try {

@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     const pattern = ilikePattern(q);
     const supabase = createServerSideClient();
 
-    const [contacts, companies, tickets, opportunities] = await Promise.all([
+    const [contacts, tickets, opportunities] = await Promise.all([
       supabase
         .from("contacts")
         .select("id, first_name, last_name, email, company")
@@ -24,13 +24,7 @@ export async function GET(req: NextRequest) {
         .or(
           `first_name.ilike.${pattern},last_name.ilike.${pattern},email.ilike.${pattern},company.ilike.${pattern}`
         )
-        .limit(5),
-      supabase
-        .from("companies")
-        .select("id, name, industry")
-        .eq("user_id", workspaceOwnerId!)
-        .or(`name.ilike.${pattern},industry.ilike.${pattern}`)
-        .limit(5),
+        .limit(8),
       supabase
         .from("tickets")
         .select("id, title, subject, ticket_number, status")
@@ -54,13 +48,6 @@ export async function GET(req: NextRequest) {
         label: `${c.first_name} ${c.last_name}`,
         sublabel: c.email ?? c.company ?? undefined,
         href: `/contacts/${c.id}`,
-      })),
-      ...(companies.data ?? []).map((c) => ({
-        type: "account" as const,
-        id: c.id,
-        label: c.name,
-        sublabel: c.industry ?? undefined,
-        href: `/accounts/${c.id}`,
       })),
       ...(tickets.data ?? []).map((t) => ({
         type: "ticket" as const,

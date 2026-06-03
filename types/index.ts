@@ -109,7 +109,7 @@ export interface User {
 
   export interface ActivityFeedItem {
     id: string;
-    source: 'note' | 'activity';
+    source: 'note' | 'activity' | 'calendar';
     type: string;
     content: string;
     created_at: string;

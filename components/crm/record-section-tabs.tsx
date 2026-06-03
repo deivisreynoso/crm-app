@@ -24,29 +24,41 @@ export function RecordSectionTabs({
   return (
     <nav
       className={cn(
-        "flex gap-6 border-b border-[var(--card-border)]",
+        "flex gap-8 border-b border-[var(--card-border)]",
         className
       )}
       aria-label="Record sections"
     >
-      {tabs.map((tab) => (
-        <button
-          key={tab.id}
-          type="button"
-          onClick={() => onTabChange(tab.id)}
-          className={cn(
-            "pb-3 text-sm font-medium border-b-2 -mb-px transition-colors",
-            activeTab === tab.id
-              ? "border-[var(--secondary)] text-[var(--primary)]"
-              : "border-transparent text-body-muted hover:text-heading"
-          )}
-        >
-          {tab.label}
-          {tab.count !== undefined && tab.count > 0 && (
-            <span className="ml-1.5 text-body-muted">({tab.count})</span>
-          )}
-        </button>
-      ))}
+      {tabs.map((tab) => {
+        const isActive = activeTab === tab.id;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onTabChange(tab.id)}
+            className={cn(
+              "pb-3 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap",
+              isActive
+                ? "border-[var(--secondary)] text-[var(--primary)]"
+                : "border-transparent text-body-muted hover:text-heading hover:border-[var(--card-border)]"
+            )}
+          >
+            {tab.label}
+            {tab.count !== undefined && (
+              <span
+                className={cn(
+                  "ml-1",
+                  isActive ? "text-[var(--primary)]/80" : "text-body-muted"
+                )}
+              >
+                ({tab.count})
+              </span>
+            )}
+          </button>
+        );
+      })}
     </nav>
   );
 }

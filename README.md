@@ -1,4 +1,10 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+ClickIn 360 — marketing site + CRM (Next.js, Supabase, Docker on VPS).
+
+**Documentation**
+
+- [CRM features & roadmap](./docs/CRM-FEATURES.md) — living feature list and phase status (update on merge to `main`)
+- [CRM API guide](./docs/CLICKIN360-CRM-API.md)
+- [Audit / hardening tracker](./docs/AUDIT-FIX-TRACKER.md)
 
 ## Getting Started
 

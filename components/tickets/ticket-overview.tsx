@@ -10,7 +10,6 @@ import {
   TICKET_STATUSES,
 } from "@/lib/constants/ticket-fields";
 import { useContacts } from "@/hooks/useContacts";
-import { useCompanies } from "@/hooks/useCompanies";
 import { formatDateTime } from "@/lib/utils";
 import { EntityCustomFieldsOverview } from "@/components/custom-fields/entity-custom-fields-overview";
 import { TagsChips } from "@/components/forms/tags-chips";
@@ -23,17 +22,10 @@ interface TicketOverviewProps {
 }
 
 export function TicketOverview({ ticket, onSaveField, readOnly }: TicketOverviewProps) {
-  const { data: companies = [] } = useCompanies();
   const { data: contactsData } = useContacts(1, 200);
   const contacts = contactsData?.data ?? [];
 
   const displaySubject = ticket.subject?.trim() || ticket.title;
-
-  const accountOptions = companies.map((c) => ({
-    id: c.id,
-    label: c.name,
-    href: `/accounts/${c.id}`,
-  }));
 
   const contactOptions = contacts.map((c) => ({
     id: c.id,
@@ -52,19 +44,14 @@ export function TicketOverview({ ticket, onSaveField, readOnly }: TicketOverview
       </div>
 
       <AssociationSelect
-        label="Account"
-        value={ticket.company_id ?? ""}
-        options={accountOptions}
-        placeholder="Link account"
-        onChange={async (id) => onSaveField({ company_id: id || undefined })}
-        disabled={readOnly}
-      />
-      <AssociationSelect
         label="Contact"
         value={ticket.contact_id ?? ""}
         options={contactOptions}
         placeholder="Link contact"
-        onChange={async (id) => onSaveField({ contact_id: id || undefined })}
+        onChange={async (id) => {
+          if (!id) return;
+          await onSaveField({ contact_id: id });
+        }}
         disabled={readOnly}
       />
 

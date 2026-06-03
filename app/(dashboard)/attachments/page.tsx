@@ -9,7 +9,6 @@ import { PageHeader } from "@/components/ui/page-shell";
 import { DocumentUploadForm } from "@/components/documents/document-upload-form";
 import { useDocuments, useUploadDocument, useDeleteDocument } from "@/hooks/useDocuments";
 import { useContacts } from "@/hooks/useContacts";
-import { useCompanies } from "@/hooks/useCompanies";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 
 export default function AttachmentsPage() {
@@ -18,7 +17,6 @@ export default function AttachmentsPage() {
   const a = dict.actions;
   const [modalOpen, setModalOpen] = useState(false);
   const [linkContactId, setLinkContactId] = useState("");
-  const [linkCompanyId, setLinkCompanyId] = useState("");
 
   const { data: files = [], isLoading } = useDocuments({
     kind: "attachments",
@@ -27,7 +25,6 @@ export default function AttachmentsPage() {
   const upload = useUploadDocument();
   const deleteDoc = useDeleteDocument();
   const { data: contactsData } = useContacts(1, 200);
-  const { data: companies = [] } = useCompanies();
 
   return (
     <div className="space-y-6 w-full">
@@ -113,31 +110,20 @@ export default function AttachmentsPage() {
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={att?.upload}>
         <div className="space-y-4 mb-4">
           <div>
-            <label className="block text-sm font-medium text-heading mb-1">Account</label>
-            <select
-              value={linkCompanyId}
-              onChange={(e) => setLinkCompanyId(e.target.value)}
-              className="input-field"
-            >
-              <option value="">—</option>
-              {companies.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-heading mb-1">Contact</label>
+            <label className="block text-sm font-medium text-heading mb-1">
+              Contact <span className="text-[var(--error)]">*</span>
+            </label>
             <select
               value={linkContactId}
               onChange={(e) => setLinkContactId(e.target.value)}
               className="input-field"
+              required
             >
-              <option value="">—</option>
+              <option value="">— Select contact —</option>
               {(contactsData?.data ?? []).map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.first_name} {c.last_name}
+                  {c.company?.trim() ? ` · ${c.company}` : ""}
                 </option>
               ))}
             </select>
@@ -145,14 +131,13 @@ export default function AttachmentsPage() {
         </div>
         <DocumentUploadForm
           defaultContactId={linkContactId}
-          defaultCompanyId={linkCompanyId}
           onSubmit={async (meta, file) => {
+            if (!linkContactId) return;
             await upload.mutateAsync({
               metadata: {
                 ...meta,
                 type: "attachment",
-                contact_id: linkContactId || undefined,
-                company_id: linkCompanyId || undefined,
+                contact_id: linkContactId,
               },
               file,
             });

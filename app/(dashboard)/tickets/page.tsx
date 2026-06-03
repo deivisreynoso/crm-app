@@ -127,7 +127,7 @@ export default function ServiceTicketsPage() {
               <tr>
                 <DataTableHeadCell>Ticket #</DataTableHeadCell>
                 <DataTableHeadCell>Subject</DataTableHeadCell>
-                <DataTableHeadCell>Account / Contact</DataTableHeadCell>
+                <DataTableHeadCell>Contact</DataTableHeadCell>
                 <DataTableHeadCell>Category</DataTableHeadCell>
                 <DataTableHeadCell>Status</DataTableHeadCell>
                 <DataTableHeadCell>Priority</DataTableHeadCell>
@@ -156,23 +156,20 @@ export default function ServiceTicketsPage() {
                   </DataTableCell>
                   <DataTableCell>
                     <div className="text-body-muted space-y-0.5">
-                      {t.company?.name && (
-                        <Link
-                          href={`/accounts/${t.company_id}`}
-                          className="text-[var(--secondary)] hover:underline block"
-                        >
-                          {t.company.name}
-                        </Link>
-                      )}
-                      {t.contact && (
+                      {t.contact ? (
                         <Link
                           href={`/contacts/${t.contact_id}`}
-                          className="hover:underline block"
+                          className="hover:underline block text-heading"
                         >
                           {t.contact.first_name} {t.contact.last_name}
                         </Link>
+                      ) : (
+                        <span className="text-[var(--error)] text-xs">No contact linked</span>
                       )}
-                      {!t.company && !t.contact && "—"}
+                      {t.company?.name && (
+                        <span className="block text-xs">{t.company.name}</span>
+                      )}
+                      {!t.contact && !t.company && "—"}
                     </div>
                   </DataTableCell>
                   <DataTableCell>

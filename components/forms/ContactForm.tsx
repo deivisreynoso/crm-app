@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { FormLabel, RequiredHint } from "@/components/ui/form-label";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { TagsInput } from "@/components/forms/tags-input";
-import { useCompanies, useCreateCompany } from "@/hooks/useCompanies";
 import { useCustomFields } from "@/hooks/useCustomFields";
 import {
   EntityCustomFieldsForm,
@@ -68,9 +67,6 @@ export function ContactForm({
   const state = useWatch({ control, name: "state" });
   const timezone = useWatch({ control, name: "timezone" });
   const states = getStatesForCountry(country);
-  const { data: companies = [] } = useCompanies();
-  const createCompany = useCreateCompany();
-  const [newCompanyName, setNewCompanyName] = useState("");
 
   useEffect(() => {
     if (!country) return;
@@ -121,42 +117,18 @@ export function ContactForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <FormLabel htmlFor="company_id">Account</FormLabel>
-          <Controller
-            name="company_id"
-            control={control}
-            render={({ field }) => (
-              <select {...field} id="company_id" className="input-field">
-                <option value="">No account linked</option>
-                {companies.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            )}
+          <FormLabel htmlFor="company">Company</FormLabel>
+          <input id="company" {...register("company")} className="input-field" />
+        </div>
+        <div>
+          <FormLabel htmlFor="website">Website</FormLabel>
+          <input
+            id="website"
+            type="url"
+            {...register("website")}
+            className="input-field"
+            placeholder="https://"
           />
-          <div className="flex gap-2 mt-2">
-            <input
-              value={newCompanyName}
-              onChange={(e) => setNewCompanyName(e.target.value)}
-              placeholder="Quick add account"
-              className="input-field flex-1 text-sm py-2"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={!newCompanyName.trim() || createCompany.isPending}
-              onClick={async () => {
-                const res = await createCompany.mutateAsync({ name: newCompanyName.trim() });
-                setNewCompanyName("");
-                setValue("company_id", res.data.id);
-              }}
-            >
-              Add
-            </Button>
-          </div>
         </div>
         <div>
           <FormLabel htmlFor="title">Job title</FormLabel>
