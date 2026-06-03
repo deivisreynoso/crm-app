@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, requireWorkspaceManage } from "@/lib/api/auth";
+import { recordAuditLog } from "@/lib/audit/record";
 import { createServerSideClient } from "@/lib/supabase";
 import { z } from "zod";
 import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
@@ -98,7 +99,8 @@ export async function GET() {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const { workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } =
+      await requireAuth();
     if (error) return error;
 
     const manageError = requireWorkspaceManage(role!, isWorkspaceOwner);
@@ -175,6 +177,19 @@ export async function PATCH(req: NextRequest) {
       supabase,
       data.quote_logo_storage_path as string | null | undefined
     );
+
+    await recordAuditLog({
+      workspaceOwnerId: workspaceOwnerId!,
+      actorUserId: userId!,
+      action: "settings.updated",
+      entityType: "workspace",
+      entityId: workspaceOwnerId!,
+      entityName: "Workspace settings",
+      newValues: parsed.data as Record<string, unknown>,
+      changeSummary: "Workspace settings updated",
+      req,
+    });
+
     return NextResponse.json({ ...data, quote_logo_url });
   } catch (err) {
     console.error("PATCH /api/settings:", err);

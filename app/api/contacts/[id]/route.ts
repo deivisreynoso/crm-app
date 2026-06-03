@@ -12,6 +12,7 @@ import {
 } from "@/lib/identity/contact-duplicate";
 import { contactWriteErrorMessage } from "@/lib/identity/duplicate-errors";
 import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
+import { recordAuditLog } from "@/lib/audit/record";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -154,7 +155,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   }
 }
 
-export async function DELETE(_req: NextRequest, context: RouteContext) {
+export async function DELETE(req: NextRequest, context: RouteContext) {
   try {
     const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
@@ -184,6 +185,21 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
     if (!data) {
       return NextResponse.json({ error: "Contact not found" }, { status: 404 });
     }
+
+    const contactName =
+      `${String(data.first_name ?? "")} ${String(data.last_name ?? "")}`.trim() ||
+      "Contact";
+
+    await recordAuditLog({
+      workspaceOwnerId: workspaceOwnerId!,
+      actorUserId: userId!,
+      action: "contact.deleted",
+      entityType: "contact",
+      entityId: id,
+      entityName: contactName,
+      changeSummary: `Deleted contact ${contactName}`,
+      req,
+    });
 
     await triggerN8NWebhook("contact.deleted", data);
 

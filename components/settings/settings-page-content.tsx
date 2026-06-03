@@ -13,6 +13,7 @@ import { BookingAvailabilitySettings } from "@/components/settings/booking-avail
 import { QuoteServicesSettings } from "@/components/settings/quote-services-settings";
 import { QuoteBrandingSettings } from "@/components/settings/quote-branding-settings";
 import { GoogleReviewRequestSettings } from "@/components/settings/google-review-request-settings";
+import { AuditLogsPanel } from "@/components/settings/audit-logs-panel";
 import { CrmLanguageSwitcher } from "@/components/crm/crm-language-switcher";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { useWorkspaceContext } from "@/hooks/useWorkspaceContext";
@@ -119,6 +120,12 @@ export function SettingsPageContent() {
               {s?.team ?? "Team"}
             </h2>
             <TeamSettings />
+          </Card>
+          <Card padding="lg">
+            <h2 className="text-sm font-semibold text-heading mb-4">
+              {s?.auditLogs ?? "Audit log"}
+            </h2>
+            <AuditLogsPanel />
           </Card>
           <Card padding="lg">
             <h2 className="text-sm font-semibold text-heading mb-4">

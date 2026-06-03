@@ -3,6 +3,7 @@ import { requireAuth, requireWorkspaceManage, requireWorkspaceOwner } from "@/li
 import { createServerSideClient } from "@/lib/supabase";
 import { z } from "zod";
 import { humanizeDbError } from "@/lib/validation-errors";
+import { recordAuditLog } from "@/lib/audit/record";
 
 const patchMemberSchema = z.object({
   role: z.enum(["sales", "viewer", "admin"]),
@@ -61,6 +62,21 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       );
     }
 
+    const label = (row.display_name as string | null)?.trim() || (row.email as string);
+
+    await recordAuditLog({
+      workspaceOwnerId: workspaceOwnerId!,
+      actorUserId: userId!,
+      action: "team_member.role_updated",
+      entityType: "team_member",
+      entityId: memberUserId,
+      entityName: label,
+      oldValues: { role: row.role },
+      newValues: { role: parsed.data.role },
+      changeSummary: `Changed ${label} role from ${row.role} to ${parsed.data.role}`,
+      req,
+    });
+
     return NextResponse.json({ data });
   } catch (err) {
     console.error("PATCH /api/team/members/[id]:", err);
@@ -69,10 +85,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 }
 
 /** Remove a teammate from the workspace (workspace owner only). */
-export async function DELETE(_req: NextRequest, context: RouteContext) {
+export async function DELETE(req: NextRequest, context: RouteContext) {
   try {
     const { id: memberUserId } = await context.params;
-    const { workspaceOwnerId, isWorkspaceOwner, error } = await requireAuth();
+    const { userId, workspaceOwnerId, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const ownerError = requireWorkspaceOwner(isWorkspaceOwner);
@@ -115,6 +131,17 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
       .delete()
       .eq("owner_user_id", workspaceOwnerId!)
       .eq("email", row.email.toLowerCase());
+
+    await recordAuditLog({
+      workspaceOwnerId: workspaceOwnerId!,
+      actorUserId: userId!,
+      action: "team_member.removed",
+      entityType: "team_member",
+      entityId: memberUserId,
+      entityName: row.email as string,
+      changeSummary: `Removed teammate ${row.email}`,
+      req,
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {
