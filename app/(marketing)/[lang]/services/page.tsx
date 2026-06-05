@@ -6,11 +6,11 @@ import {
   Globe,
   Database,
   Workflow,
-  ArrowRight,
   Check,
 } from "lucide-react";
-import { ChatOpenButton } from "@/components/website/chat-open-trigger";
-import { getDictionary, isLocale } from "@/lib/website/i18n";
+import { ServicesPageCtas } from "@/components/website/services-page-ctas";
+import { ServiceCard } from "@/components/website/service-card";
+import { getDictionary, isLocale, type Locale } from "@/lib/website/i18n";
 
 type Props = { params: Promise<{ lang: string }> };
 
@@ -45,20 +45,12 @@ export default async function ServicesPage({ params }: Props) {
           <p className="text-base sm:text-lg text-white/90 max-w-2xl mx-auto leading-relaxed">
             {s.subtitle}
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-            <Link href={`/${lang}/book-call`}>
-              <button
-                type="button"
-                className="website-cta-primary inline-flex items-center justify-center gap-2 h-12 px-8 rounded-xl text-base w-full sm:w-auto"
-              >
-                {s.ctaPrimary}
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </Link>
-            <ChatOpenButton className="website-cta-secondary inline-flex items-center justify-center gap-2 h-12 px-8 rounded-xl text-base w-full sm:w-auto">
-              {s.ctaSecondary}
-            </ChatOpenButton>
-          </div>
+          <ServicesPageCtas
+            lang={lang as Locale}
+            ctaPrimary={s.ctaPrimary}
+            ctaSecondary={s.ctaSecondary}
+            variant="hero"
+          />
         </div>
       </section>
 
@@ -68,10 +60,7 @@ export default async function ServicesPage({ params }: Props) {
             {s.items.map((item, i) => {
               const Icon = icons[i] ?? Workflow;
               return (
-                <article
-                  key={item.title}
-                  className="website-card-lift rounded-3xl border border-[var(--card-border)] bg-[var(--card)] p-8 shadow-[var(--shadow-sm)]"
-                >
+                <ServiceCard key={item.title} title={item.title}>
                   <div className="w-12 h-12 rounded-2xl bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center mb-5">
                     <Icon className="w-6 h-6" />
                   </div>
@@ -89,7 +78,7 @@ export default async function ServicesPage({ params }: Props) {
                       </li>
                     ))}
                   </ul>
-                </article>
+                </ServiceCard>
               );
             })}
           </div>
@@ -99,13 +88,12 @@ export default async function ServicesPage({ params }: Props) {
               {s.outroTitle}
             </h3>
             <p className="mt-3 text-body-muted max-w-xl mx-auto">{s.outroBody}</p>
-            <Link
-              href={`/${lang}/book-call`}
-              className="inline-flex mt-6 items-center gap-2 h-12 px-8 rounded-xl website-cta-primary text-base font-semibold"
-            >
-              {s.ctaPrimary}
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+            <ServicesPageCtas
+              lang={lang as Locale}
+              ctaPrimary={s.ctaPrimary}
+              ctaSecondary={s.ctaSecondary}
+              variant="outro"
+            />
           </div>
         </div>
       </section>

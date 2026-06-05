@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { TrackedLink } from "@/components/website/tracked-link";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/website/language-toggle";
@@ -64,13 +65,15 @@ export function WebsiteMobileNav({ lang, dict }: Props) {
                 {dict.nav[item.key]}
               </a>
             ))}
-            <Link
+            <TrackedLink
               href={`/${lang}/book-call`}
               className="px-4 py-3 rounded-xl text-base font-medium text-[var(--secondary)]"
+              ctaName={dict.nav.book}
+              ctaLocation="mobile-nav"
               onClick={() => setOpen(false)}
             >
               {dict.nav.book}
-            </Link>
+            </TrackedLink>
             <div className="flex items-center gap-3 pt-3 mt-2 border-t border-[var(--card-border)]">
               <LanguageToggle lang={lang} />
               <Link href="/login" className="flex-1" onClick={() => setOpen(false)}>
@@ -78,9 +81,15 @@ export function WebsiteMobileNav({ lang, dict }: Props) {
                   {dict.nav.login}
                 </Button>
               </Link>
-              <Link href={`/${lang}/book-call`} className="flex-1" onClick={() => setOpen(false)}>
+              <TrackedLink
+                href={`/${lang}/book-call`}
+                className="flex-1"
+                ctaName={dict.nav.bookCta}
+                ctaLocation="mobile-nav-cta"
+                onClick={() => setOpen(false)}
+              >
                 <Button className="w-full">{dict.nav.bookCta}</Button>
-              </Link>
+              </TrackedLink>
             </div>
           </nav>
         </>

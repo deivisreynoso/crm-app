@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Calendar, Check, Clock } from "lucide-react";
+import { ga4Events } from "@/lib/analytics/ga4-events";
 import { Button } from "@/components/ui/button";
 import { formatPhone } from "@/lib/phone";
 import type { Locale } from "@/lib/website/i18n";
@@ -35,6 +36,7 @@ function formatDisplayDate(dateStr: string, lang: Locale): string {
 }
 
 export function WebsiteBookingForm({ lang }: Props) {
+  const bookingStarted = useRef(false);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -169,6 +171,13 @@ export function WebsiteBookingForm({ lang }: Props) {
   );
 
   useEffect(() => {
+    if (!bookingStarted.current) {
+      bookingStarted.current = true;
+      ga4Events.bookingStart("discovery", "booking-page");
+    }
+  }, []);
+
+  useEffect(() => {
     if (step === 3 && form.date) {
       void loadSlots(form.date);
     }
@@ -211,10 +220,21 @@ export function WebsiteBookingForm({ lang }: Props) {
       const data = (await res.json()) as {
         error?: string;
         returning_visitor?: boolean;
+        contact_id?: string;
+        calendar_event_id?: string;
       };
       if (!res.ok) {
         throw new Error(data.error ?? "Submission failed");
       }
+
+      const bookingId = data.calendar_event_id ?? data.contact_id ?? "unknown";
+      ga4Events.formSubmit("booking_form", "book-call-page");
+      ga4Events.bookingComplete(
+        bookingId,
+        "discovery",
+        `${form.date} ${form.time}`
+      );
+
       setSubmitResult({ returning_visitor: Boolean(data.returning_visitor) });
       setDone(true);
     } catch (err) {

@@ -4,6 +4,7 @@ import "../marketing.css";
 import { WebsiteFooter } from "@/components/website/website-footer";
 import { WebsiteHeader } from "@/components/website/website-header";
 import { WebsiteChatShell } from "@/components/website/website-chat-shell";
+import { ScrollDepthTracker } from "@/components/analytics/scroll-depth-tracker";
 import { GoogleAnalytics } from "@/components/website/google-analytics";
 import { CookieConsentBanner } from "@/components/website/cookie-consent-banner";
 import { getDictionary, isLocale, type Locale } from "@/lib/website/i18n";
@@ -39,6 +40,7 @@ export default async function MarketingLayout({ children, params }: Props) {
       <WebsiteFooter lang={lang as Locale} dict={dict} />
       <WebsiteChatShell lang={lang as Locale} ctaText={dict.chat.title} />
       <GoogleAnalytics />
+      <ScrollDepthTracker />
       <CookieConsentBanner lang={lang as Locale} copy={dict.cookies} />
     </div>
   );

@@ -29,6 +29,7 @@ import {
   stripSlotLines,
   type ParsedSlotOption,
 } from "@/lib/website/parse-chat-slots";
+import { ga4Events } from "@/lib/analytics/ga4-events";
 
 export type ChatWidgetProps = {
   /** Label on the floating bubble (tooltip / aria) */
@@ -163,7 +164,10 @@ export function ChatWidget({
   useEffect(() => {
     setSessionId(getOrCreateChatSessionId());
     setProfile(getChatProfile());
-  }, []);
+    if (variant === "inline") {
+      ga4Events.chatStart("inline_section");
+    }
+  }, [variant]);
 
   useEffect(() => {
     if (variant !== "floating") return;
@@ -296,6 +300,10 @@ export function ChatWidget({
         content: trimmed,
         status: "sent",
       };
+      const length =
+        trimmed.length > 100 ? "long" : trimmed.length > 50 ? "medium" : "short";
+      ga4Events.chatMessage("user_message", length);
+
       setMessages((prev) => [...prev, userMsg]);
       setInput("");
       void postMessage(outbound, userMsg.id);
@@ -473,6 +481,7 @@ export function ChatWidget({
       <button
         type="button"
         onClick={() => {
+          ga4Events.chatStart("floating_widget");
           setOpen(true);
           setMinimized(false);
         }}

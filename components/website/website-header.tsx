@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { TrackedLink } from "@/components/website/tracked-link";
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/website/language-toggle";
 import { WebsiteMobileNav } from "@/components/website/website-mobile-nav";
@@ -87,11 +88,16 @@ export function WebsiteHeader({ lang, dict }: Props) {
                 {dict.nav.login}
               </Button>
             </Link>
-            <Link href={`/${lang}/book-call`} className="hidden md:block">
+            <TrackedLink
+              href={`/${lang}/book-call`}
+              className="hidden md:block"
+              ctaName={dict.nav.bookCta}
+              ctaLocation="header"
+            >
               <Button size="sm" className="font-semibold shadow-sm px-5">
                 {dict.nav.bookCta}
               </Button>
-            </Link>
+            </TrackedLink>
             <WebsiteMobileNav lang={lang} dict={dict} />
           </div>
         </div>

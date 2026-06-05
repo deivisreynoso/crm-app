@@ -1,6 +1,7 @@
 "use client";
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { ga4Events } from "@/lib/analytics/ga4-events";
 import { openChatWidget } from "@/lib/website/chat-session";
 
 type ChatOpenButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -19,6 +20,7 @@ export function ChatOpenButton({
       type={type}
       {...props}
       onClick={(e) => {
+        ga4Events.chatStart("cta_button");
         openChatWidget();
         onClick?.(e);
       }}

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Bot } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { WebsiteWebchatEmbed } from "@/components/website/website-webchat-embed";
+import { ContactPageCtas } from "@/components/website/contact-page-ctas";
 import { getDictionary, isLocale } from "@/lib/website/i18n";
 
 type Props = { params: Promise<{ lang: string }> };
@@ -48,11 +48,7 @@ export default async function ContactPage({ params }: Props) {
 
         <WebsiteWebchatEmbed lang={lang} dict={dict} />
 
-        <div className="flex flex-wrap gap-3 justify-center">
-          <Link href={`/${lang}/book-call`}>
-            <Button>{dict.nav.book}</Button>
-          </Link>
-        </div>
+        <ContactPageCtas lang={lang} bookLabel={dict.nav.book} />
       </div>
     </div>
   );

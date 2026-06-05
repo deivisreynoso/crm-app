@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { ga4Events } from "@/lib/analytics/ga4-events";
 import type { WebsiteDictionary } from "@/lib/website/i18n";
 
 type Props = {
@@ -39,7 +40,12 @@ export function WebsiteFaq({ dict }: Props) {
                       <button
                         type="button"
                         className="w-full flex items-start justify-between gap-4 px-5 py-4 text-left font-semibold text-heading hover:bg-[var(--sidebar-hover)] transition-colors"
-                        onClick={() => setOpenId(isOpen ? null : id)}
+                        onClick={() => {
+                          if (!isOpen) {
+                            ga4Events.faqClicked(item.q, group.category);
+                          }
+                          setOpenId(isOpen ? null : id);
+                        }}
                         aria-expanded={isOpen}
                       >
                         <span className="text-sm sm:text-base leading-snug">{item.q}</span>

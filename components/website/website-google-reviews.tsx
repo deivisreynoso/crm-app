@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { ExternalLink, Star } from "lucide-react";
+import { ga4Events } from "@/lib/analytics/ga4-events";
 import { GOOGLE_REVIEWS_URL } from "@/lib/website/google-reviews-url";
 import type { WebsiteDictionary } from "@/lib/website/i18n";
 
@@ -51,6 +54,9 @@ export function WebsiteGoogleReviews({ dict }: Props) {
             <article
               key={`${item.name}-${item.text.slice(0, 24)}`}
               className="website-card-lift flex flex-col rounded-2xl border border-[var(--card-border)] bg-[var(--card)] p-6 shadow-[var(--shadow-sm)]"
+              onMouseEnter={() =>
+                ga4Events.testimonialViewed(item.name, item.role ?? undefined)
+              }
             >
               <StarRow rating={item.rating} />
               <blockquote className="mt-4 flex-1 text-sm text-heading leading-relaxed">
@@ -72,6 +78,7 @@ export function WebsiteGoogleReviews({ dict }: Props) {
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-2 h-11 px-6 rounded-xl text-sm font-semibold text-white bg-[var(--primary)] hover:opacity-95 transition-opacity"
+            onClick={() => ga4Events.socialClicked("google_reviews", "reviews-section")}
           >
             {reviews.cta}
             <ExternalLink className="h-4 w-4" strokeWidth={2} aria-hidden />

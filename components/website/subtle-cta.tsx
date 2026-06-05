@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { ArrowRight, MessageCircle } from "lucide-react";
 import { ChatOpenButton } from "@/components/website/chat-open-trigger";
+import { TrackedLink } from "@/components/website/tracked-link";
 import type { Locale } from "@/lib/website/i18n";
 
 type Variant = "book" | "chat";
@@ -28,9 +28,14 @@ export function SubtleCta({ lang, variant, label, className = "" }: Props) {
   }
 
   return (
-    <Link href={`/${lang}/book-call`} className={linkClass}>
+    <TrackedLink
+      href={`/${lang}/book-call`}
+      className={linkClass}
+      ctaName={label}
+      ctaLocation="subtle-cta"
+    >
       {label}
       <Icon className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-    </Link>
+    </TrackedLink>
   );
 }
