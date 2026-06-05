@@ -243,7 +243,14 @@
       "activity": "Activity"
     },
     "emailReceived": "Received",
-    "emailSent": "Sent"
+    "emailSent": "Sent",
+    "authorSystem": "System",
+    "authorTeam": "Team member",
+    "copy": "Copy text",
+    "copied": "Copied",
+    "copyFailed": "Copy failed",
+    "expand": "Show details",
+    "collapse": "Hide details"
   },
   "quickActions": {
     "toolbar": "Quick actions",

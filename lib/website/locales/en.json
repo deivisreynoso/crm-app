@@ -315,6 +315,13 @@
     "services": "Services",
     "contact": "Contact"
   },
+  "cookies": {
+    "title": "Cookies & analytics",
+    "description": "We use essential cookies for language and security, and optional analytics cookies (Google Analytics) to understand how visitors use our site. You can accept or decline analytics cookies.",
+    "accept": "Accept analytics",
+    "decline": "Decline",
+    "privacyLink": "Privacy policy"
+  },
   "pages": {
     "about": {
       "title": "About ClickIn 360 — eCommerce AI & automation",

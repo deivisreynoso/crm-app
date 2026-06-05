@@ -315,6 +315,13 @@
     "services": "Servicios",
     "contact": "Contacto"
   },
+  "cookies": {
+    "title": "Cookies y analítica",
+    "description": "Usamos cookies esenciales para idioma y seguridad, y cookies de analítica opcionales (Google Analytics) para entender cómo se usa el sitio. Puedes aceptar o rechazar las cookies de analítica.",
+    "accept": "Aceptar analítica",
+    "decline": "Rechazar",
+    "privacyLink": "Política de privacidad"
+  },
   "pages": {
     "about": {
       "title": "Sobre ClickIn 360 — IA y automatización eCommerce",

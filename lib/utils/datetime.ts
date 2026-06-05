@@ -37,3 +37,41 @@ export function resolveDisplayTimeZone(
   if (ut) return ut;
   return undefined;
 }
+
+const CRM_LOCALE_MAP: Record<string, string> = {
+  en: "en-US",
+  es: "es-ES",
+};
+
+/** Salesforce-style timeline header: "May 26, 2026 at 5:09 PM" */
+export function formatTimelineDateTime(
+  date: string | Date,
+  timeZone?: string | null,
+  locale = "en-US"
+): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(d.getTime())) return "";
+
+  const intlLocale = CRM_LOCALE_MAP[locale] ?? locale;
+  const tz = timeZone?.trim() || undefined;
+  const dateOpts: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: tz,
+  };
+  const timeOpts: Intl.DateTimeFormatOptions = {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: tz,
+  };
+
+  try {
+    const datePart = d.toLocaleDateString(intlLocale, dateOpts);
+    const timePart = d.toLocaleTimeString(intlLocale, timeOpts);
+    const connector = intlLocale.startsWith("es") ? " a las " : " at ";
+    return `${datePart}${connector}${timePart}`;
+  } catch {
+    return d.toLocaleString(intlLocale);
+  }
+}

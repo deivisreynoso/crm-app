@@ -114,6 +114,7 @@ export interface User {
     content: string;
     created_at: string;
     is_system: boolean;
+    author_name?: string;
     email_subject?: string;
     email_body?: string;
     email_direction?: 'outbound' | 'inbound';

@@ -243,7 +243,14 @@
       "activity": "Actividad"
     },
     "emailReceived": "Recibido",
-    "emailSent": "Enviado"
+    "emailSent": "Enviado",
+    "authorSystem": "Sistema",
+    "authorTeam": "Miembro del equipo",
+    "copy": "Copiar texto",
+    "copied": "Copiado",
+    "copyFailed": "Error al copiar",
+    "expand": "Ver detalles",
+    "collapse": "Ocultar detalles"
   },
   "quickActions": {
     "toolbar": "Acciones rápidas",
