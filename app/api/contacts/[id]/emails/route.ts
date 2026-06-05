@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
+import { verifyContactInWorkspace } from "@/lib/contacts/verify-contact-ownership";
 import { createServerSideClient } from "@/lib/supabase";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -10,18 +11,11 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     if (error) return error;
 
     const { id: contactId } = await context.params;
-    const supabase = createServerSideClient();
-
-    const { data: contact } = await supabase
-      .from("contacts")
-      .select("id")
-      .eq("id", contactId)
-      .eq("user_id", workspaceOwnerId!)
-      .maybeSingle();
-
-    if (!contact) {
+    if (!(await verifyContactInWorkspace(workspaceOwnerId!, contactId))) {
       return NextResponse.json({ error: "Contact not found" }, { status: 404 });
     }
+
+    const supabase = createServerSideClient();
 
     const { data, error: dbError } = await supabase
       .from("contact_emails")

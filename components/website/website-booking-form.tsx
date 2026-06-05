@@ -177,11 +177,15 @@ export function WebsiteBookingForm({ lang }: Props) {
     }
   }, []);
 
-  useEffect(() => {
-    if (step === 3 && form.date) {
-      void loadSlots(form.date);
-    }
-  }, [step, form.date, loadSlots]);
+  function goToNextStep() {
+    setStep((s) => {
+      const next = s + 1;
+      if (next === 3 && form.date) {
+        void loadSlots(form.date);
+      }
+      return next;
+    });
+  }
 
   const fullPhone = formatPhone(dialCode, form.phoneNumber);
   const selectedSlot = slots.find((s) => s.time === form.time);
@@ -565,7 +569,7 @@ export function WebsiteBookingForm({ lang }: Props) {
           <Button
             type="button"
             className="ml-auto"
-            onClick={() => setStep((s) => s + 1)}
+            onClick={goToNextStep}
             disabled={
               step === 1 &&
               (!form.name.trim() || !form.email.trim() || !form.phoneNumber.trim())

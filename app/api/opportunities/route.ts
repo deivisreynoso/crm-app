@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
       console.error("POST opportunity enrich error:", enrichErr);
     }
     await triggerN8NWebhook("opportunity.created", enriched);
-    await createNotification(supabase, userId!, {
+    await createNotification(supabase, workspaceOwnerId!, {
       kind: "opportunity_reminder",
       title: "New opportunity",
       message: parsed.data.title,

@@ -41,7 +41,7 @@ export async function getOperationsMetrics(
   const prospects = allContacts.filter((c) => c.status === "prospect").length;
   const activeContacts = allContacts.filter((c) => c.status === "active").length;
 
-  let ticketQuery = supabase
+  const ticketQuery = supabase
     .from("tickets")
     .select("status, priority, created_at, updated_at")
     .eq("user_id", userId);
@@ -82,7 +82,7 @@ export async function getOperationsMetrics(
     priorityMap.set(t.priority, (priorityMap.get(t.priority) ?? 0) + 1);
   }
 
-  let eventsQuery = supabase
+  const eventsQuery = supabase
     .from("calendar_events")
     .select("id, start_time")
     .eq("user_id", userId)

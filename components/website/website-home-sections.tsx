@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { TrackedLink } from "@/components/website/tracked-link";
 import { PackageCard } from "@/components/website/package-card";
 
@@ -17,7 +16,6 @@ import {
   Headphones,
   Shield,
   Database,
-  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WebsiteWebchatEmbed } from "@/components/website/website-webchat-embed";

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ga4Events } from "@/lib/analytics/ga4-events";

@@ -8,12 +8,14 @@ const CONTACT_FIELDS_BASIC =
 
 async function fetchContact(
   supabase: ReturnType<typeof createServerSideClient>,
-  contactId: string
+  contactId: string,
+  workspaceOwnerId: string
 ) {
   const full = await supabase
     .from("contacts")
     .select(CONTACT_FIELDS)
     .eq("id", contactId)
+    .eq("user_id", workspaceOwnerId)
     .maybeSingle();
 
   if (!full.error && full.data) return full.data;
@@ -22,6 +24,7 @@ async function fetchContact(
     .from("contacts")
     .select(CONTACT_FIELDS_BASIC)
     .eq("id", contactId)
+    .eq("user_id", workspaceOwnerId)
     .maybeSingle();
 
   if (basic.error) {
@@ -33,6 +36,7 @@ async function fetchContact(
 
 async function resolveCompanyName(
   supabase: ReturnType<typeof createServerSideClient>,
+  workspaceOwnerId: string,
   contact: { company?: string | null; company_id?: string | null }
 ) {
   let companyName = contact.company ?? undefined;
@@ -42,6 +46,7 @@ async function resolveCompanyName(
     .from("companies")
     .select("name")
     .eq("id", contact.company_id)
+    .eq("user_id", workspaceOwnerId)
     .maybeSingle();
 
   if (!error && company?.name) return company.name;
@@ -53,13 +58,20 @@ export async function attachContactToOpportunity(
 ) {
   const supabase = createServerSideClient();
   const contactId = opportunity.contact_id as string;
-  if (!contactId) return { ...opportunity, contact: null };
+  const workspaceOwnerId = opportunity.user_id as string | undefined;
+  if (!contactId || !workspaceOwnerId) {
+    return { ...opportunity, contact: null };
+  }
 
-  const contact = await fetchContact(supabase, contactId);
+  const contact = await fetchContact(supabase, contactId, workspaceOwnerId);
 
   if (!contact) return { ...opportunity, contact: null };
 
-  const companyName = await resolveCompanyName(supabase, contact);
+  const companyName = await resolveCompanyName(
+    supabase,
+    workspaceOwnerId,
+    contact
+  );
 
   return {
     ...opportunity,
@@ -119,6 +131,7 @@ export async function listOpportunitiesWithContacts(
   const { data: contacts, error: contactsError } = await supabase
     .from("contacts")
     .select(CONTACT_FIELDS)
+    .eq("user_id", userId)
     .in("id", contactIds);
 
   if (contactsError) {
@@ -139,6 +152,7 @@ export async function listOpportunitiesWithContacts(
     const { data: companies, error: companiesError } = await supabase
       .from("companies")
       .select("id, name")
+      .eq("user_id", userId)
       .in("id", companyIds);
 
     if (!companiesError && companies) {

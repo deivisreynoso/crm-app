@@ -169,14 +169,20 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
 
     const { id } = await context.params;
     const supabase = createServerSideClient();
-    const { error: dbError } = await supabase
+    const { data: deleted, error: dbError } = await supabase
       .from("documents")
       .delete()
       .eq("id", id)
-      .eq("user_id", workspaceOwnerId!);
+      .eq("user_id", workspaceOwnerId!)
+      .select("id")
+      .maybeSingle();
 
     if (dbError) {
       return NextResponse.json({ error: dbError.message }, { status: 500 });
+    }
+
+    if (!deleted) {
+      return NextResponse.json({ error: "Document not found" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true });

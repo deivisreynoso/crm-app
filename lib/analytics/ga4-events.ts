@@ -1,10 +1,20 @@
 import { getAnalyticsConsent } from "@/lib/website/analytics-consent";
 
+export type Ga4DebugEntry = {
+  event: string;
+  payload: Record<string, string | number | undefined>;
+  sent: boolean;
+};
+
 declare global {
   interface Window {
     gtag?: (...args: unknown[]) => void;
+    __ga4Log__?: Ga4DebugEntry[];
   }
 }
+
+const GTAG_RETRY_MS = 50;
+const GTAG_MAX_ATTEMPTS = 40;
 
 function canTrack(): boolean {
   return (
@@ -14,15 +24,49 @@ function canTrack(): boolean {
   );
 }
 
+function logGa4Dev(
+  event: string,
+  payload: Record<string, string | number | undefined>,
+  sent: boolean
+) {
+  if (process.env.NODE_ENV !== "development" || typeof window === "undefined") {
+    return;
+  }
+  window.__ga4Log__ = window.__ga4Log__ ?? [];
+  window.__ga4Log__.push({ event, payload, sent });
+  if (!sent) {
+    console.debug("[GA4] skipped (consent or gtag missing)", event, payload);
+  } else {
+    console.debug("[GA4] event", event, payload);
+  }
+}
+
 function sendEvent(
   event: string,
-  params: Record<string, string | number | undefined>
+  params: Record<string, string | number | undefined>,
+  attempt = 0
 ) {
-  if (!canTrack()) return;
-  window.gtag!("event", event, {
-    ...params,
-    timestamp: new Date().toISOString(),
-  });
+  const payload = { ...params, timestamp: new Date().toISOString() };
+
+  if (canTrack()) {
+    logGa4Dev(event, payload, true);
+    window.gtag!("event", event, payload);
+    return;
+  }
+
+  if (
+    typeof window !== "undefined" &&
+    getAnalyticsConsent() === "granted" &&
+    attempt < GTAG_MAX_ATTEMPTS
+  ) {
+    window.setTimeout(
+      () => sendEvent(event, params, attempt + 1),
+      GTAG_RETRY_MS
+    );
+    return;
+  }
+
+  logGa4Dev(event, payload, false);
 }
 
 export const ga4Events = {

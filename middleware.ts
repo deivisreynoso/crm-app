@@ -154,6 +154,8 @@ export const config = {
     "/settings/:path*",
     "/quotes",
     "/quotes/:path*",
+    "/services",
+    "/services/:path*",
     "/attachments",
     "/attachments/:path*",
     "/api/:path*",

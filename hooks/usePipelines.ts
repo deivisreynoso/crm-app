@@ -8,8 +8,17 @@ export function usePipelines() {
     queryFn: async () => {
       const { data } = await axios.get<{ data: Pipeline[] }>("/api/pipelines");
       if (data.data.length > 0) return data.data;
-      const seeded = await axios.post<{ data: Pipeline[] }>("/api/pipelines/seed");
-      return seeded.data.data;
+      try {
+        const seeded = await axios.post<{ data: Pipeline[] }>(
+          "/api/pipelines/seed"
+        );
+        return seeded.data.data;
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response?.status === 403) {
+          return [];
+        }
+        throw err;
+      }
     },
   });
 }

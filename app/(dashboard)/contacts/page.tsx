@@ -24,14 +24,6 @@ import {
   useCreateContact,
   useDeleteContact,
 } from "@/hooks/useContacts";
-
-function apiErrorMessage(err: unknown): string {
-  if (axios.isAxiosError(err)) {
-    const msg = err.response?.data as { error?: string } | undefined;
-    return msg?.error ?? err.message;
-  }
-  return "Failed to delete contact.";
-}
 import { useCompanies } from "@/hooks/useCompanies";
 import type { ContactFormInput } from "@/types";
 import { formatDate } from "@/lib/utils";
@@ -40,6 +32,14 @@ import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { SavedFiltersBar } from "@/components/filters/saved-filters-bar";
 import { ContactsImportExport } from "@/components/contacts/contacts-import-export";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
+
+function apiErrorMessage(err: unknown): string {
+  if (axios.isAxiosError(err)) {
+    const msg = err.response?.data as { error?: string } | undefined;
+    return msg?.error ?? err.message;
+  }
+  return "Failed to delete contact.";
+}
 
 function ContactsPageContent() {
   const router = useRouter();

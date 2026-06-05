@@ -164,6 +164,9 @@ export function ChatWidget({
   useEffect(() => {
     setSessionId(getOrCreateChatSessionId());
     setProfile(getChatProfile());
+  }, []);
+
+  useEffect(() => {
     if (variant === "inline") {
       ga4Events.chatStart("inline_section");
     }

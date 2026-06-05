@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
     const supabase = createServerSideClient();
     let query = supabase
       .from("documents")
-      .select("*")
+      .select("*", { count: "exact" })
       .eq("user_id", workspaceOwnerId!)
       .order("created_at", { ascending: false });
 

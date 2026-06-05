@@ -11,6 +11,8 @@ export function ScrollDepthTracker() {
       const windowHeight = window.innerHeight;
       const documentHeight = document.documentElement.scrollHeight;
       if (documentHeight <= windowHeight) return;
+      // Avoid firing depth milestones before the user scrolls (e.g. short booking page).
+      if (window.scrollY < 80) return;
 
       const scrollPercentage =
         (window.scrollY + windowHeight) / documentHeight;
@@ -29,7 +31,6 @@ export function ScrollDepthTracker() {
       }
     };
 
-    handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);

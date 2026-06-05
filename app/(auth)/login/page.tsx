@@ -66,15 +66,11 @@ function LoginForm() {
 
   return (
     <div className="surface-card p-8 border border-[var(--card-border)] shadow-[var(--shadow-md)]">
-      <div className="lg:hidden">
+      <div className="mb-6 lg:mb-8">
         <AuthBrandHeader
           title="Welcome back"
           subtitle="Sign in to your CRM workspace"
         />
-      </div>
-      <div className="hidden lg:block mb-8">
-        <h1 className="text-2xl font-bold text-heading tracking-tight">Welcome back</h1>
-        <p className="text-body-muted text-sm mt-1.5">Sign in to your CRM workspace</p>
       </div>
 
       {notice && (

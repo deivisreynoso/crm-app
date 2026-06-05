@@ -21,16 +21,25 @@ export function setAnalyticsConsent(value: AnalyticsConsent) {
   document.cookie = `${ANALYTICS_CONSENT_COOKIE}=${value}; path=/; max-age=${ANALYTICS_CONSENT_MAX_AGE}; SameSite=Lax`;
 }
 
+function updateGtagConsent(value: AnalyticsConsent, attempt = 0) {
+  if (typeof window === "undefined") return;
+  if (typeof window.gtag === "function") {
+    window.gtag("consent", "update", {
+      analytics_storage: value === "granted" ? "granted" : "denied",
+    });
+    return;
+  }
+  if (attempt < 40) {
+    window.setTimeout(() => updateGtagConsent(value, attempt + 1), 50);
+  }
+}
+
 export function grantAnalyticsConsent() {
   setAnalyticsConsent("granted");
-  if (typeof window !== "undefined" && window.gtag) {
-    window.gtag("consent", "update", { analytics_storage: "granted" });
-  }
+  updateGtagConsent("granted");
 }
 
 export function denyAnalyticsConsent() {
   setAnalyticsConsent("denied");
-  if (typeof window !== "undefined" && window.gtag) {
-    window.gtag("consent", "update", { analytics_storage: "denied" });
-  }
+  updateGtagConsent("denied");
 }

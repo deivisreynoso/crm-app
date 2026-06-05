@@ -33,6 +33,14 @@ export async function ensureDefaultPipeline(
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    const { data: afterRace } = await supabase
+      .from("pipelines")
+      .select("*")
+      .eq("user_id", workspaceOwnerId)
+      .order("created_at", { ascending: true });
+    if (afterRace?.length) return afterRace;
+    throw error;
+  }
   return created ? [created] : [];
 }

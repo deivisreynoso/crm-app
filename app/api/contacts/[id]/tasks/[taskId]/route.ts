@@ -89,6 +89,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       );
     }
 
+    if (!data) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
+
     return NextResponse.json(data);
   } catch (err) {
     console.error("PATCH task:", err);

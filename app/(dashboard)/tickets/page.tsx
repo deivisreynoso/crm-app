@@ -156,7 +156,7 @@ export default function ServiceTicketsPage() {
                   </DataTableCell>
                   <DataTableCell>
                     <div className="text-body-muted space-y-0.5">
-                      {t.contact ? (
+                      {t.contact && t.contact_id ? (
                         <Link
                           href={`/contacts/${t.contact_id}`}
                           className="hover:underline block text-heading"
