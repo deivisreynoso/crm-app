@@ -35,7 +35,7 @@ export const MAIN_NAV: NavItem[] = [
     label: "Contacts",
     labelKey: "contacts",
     icon: Users,
-    description: "People at your accounts",
+    description: "People at your companies",
   },
   {
     href: "/opportunities",
@@ -77,10 +77,10 @@ export const SECONDARY_NAV: NavItem[] = [
   },
   {
     href: "/services",
-    label: "Services",
+    label: "Product Catalog",
     labelKey: "services",
     icon: Layers,
-    description: "Quote service catalog",
+    description: "Quote product catalog",
     requiresWrite: true,
   },
   {

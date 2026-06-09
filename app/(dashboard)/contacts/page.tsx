@@ -32,6 +32,7 @@ import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { SavedFiltersBar } from "@/components/filters/saved-filters-bar";
 import { ContactsImportExport } from "@/components/contacts/contacts-import-export";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
+import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 
 function apiErrorMessage(err: unknown): string {
   if (axios.isAxiosError(err)) {
@@ -44,6 +45,8 @@ function apiErrorMessage(err: unknown): string {
 function ContactsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { dict } = useCrmLocale();
+  const ct = dict.contacts;
   const { confirm, dialogProps } = useConfirmDialog();
   const presetCompanyId = searchParams.get("company_id") ?? searchParams.get("company") ?? "";
   const presetSearch = searchParams.get("search") ?? "";
@@ -253,14 +256,14 @@ function ContactsPageContent() {
           <DataTable>
             <DataTableHead>
               <tr>
-                <DataTableHeadCell>Name</DataTableHeadCell>
-                <DataTableHeadCell>Email</DataTableHeadCell>
-                <DataTableHeadCell>Phone</DataTableHeadCell>
-                <DataTableHeadCell>Account</DataTableHeadCell>
-                <DataTableHeadCell>Title</DataTableHeadCell>
-                <DataTableHeadCell>Created</DataTableHeadCell>
-                <DataTableHeadCell>Status</DataTableHeadCell>
-                <DataTableHeadCell align="right">Actions</DataTableHeadCell>
+                <DataTableHeadCell>{ct?.listName ?? "Name"}</DataTableHeadCell>
+                <DataTableHeadCell>{ct?.listEmail ?? "Email"}</DataTableHeadCell>
+                <DataTableHeadCell>{ct?.listPhone ?? "Phone"}</DataTableHeadCell>
+                <DataTableHeadCell>{ct?.listCompany ?? "Companies"}</DataTableHeadCell>
+                <DataTableHeadCell>{ct?.listTitle ?? "Title"}</DataTableHeadCell>
+                <DataTableHeadCell>{ct?.listCreated ?? "Created"}</DataTableHeadCell>
+                <DataTableHeadCell>{ct?.listStatus ?? "Status"}</DataTableHeadCell>
+                <DataTableHeadCell align="right">{ct?.listActions ?? "Actions"}</DataTableHeadCell>
               </tr>
             </DataTableHead>
             <DataTableBody>

@@ -68,7 +68,7 @@ export function SettingsPageContent() {
           </SettingsSection>
 
           <SettingsSection
-            title={s?.quoteServices ?? "Services catalog"}
+            title={s?.quoteServices ?? "Product catalog"}
             description={s?.quoteServicesSettingsHelp}
           >
             <QuoteServicesSettings />

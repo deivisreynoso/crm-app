@@ -14,7 +14,7 @@ export default function ServicesPage() {
   if (isLoading) {
     return (
       <div className="space-y-6 w-full max-w-3xl">
-        <PageHeader title={s?.title ?? "Services"} description={s?.loading} />
+        <PageHeader title={s?.title ?? "Product Catalog"} description={s?.loading} />
       </div>
     );
   }
@@ -22,10 +22,10 @@ export default function ServicesPage() {
   if (!canWrite) {
     return (
       <div className="space-y-6 w-full max-w-3xl">
-        <PageHeader title={s?.title ?? "Services"} description={s?.description} />
+        <PageHeader title={s?.title ?? "Product Catalog"} description={s?.description} />
         <p className="text-sm text-body-muted">
           {s?.viewerNotice ??
-            "Your account has view-only access. Service catalog is not available in demo mode."}
+            "Your account has view-only access. Product catalog is not available in demo mode."}
         </p>
         <Link
           href="/quotes"
@@ -39,7 +39,7 @@ export default function ServicesPage() {
 
   return (
     <div className="space-y-6 w-full max-w-3xl">
-      <PageHeader title={s?.title ?? "Services"} description={s?.description} />
+      <PageHeader title={s?.title ?? "Product Catalog"} description={s?.description} />
       <div className="surface-card p-6">
         <QuoteServicesCatalog canManageCatalog={canManage} />
       </div>

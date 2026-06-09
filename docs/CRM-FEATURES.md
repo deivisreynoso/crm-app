@@ -27,6 +27,10 @@ git log -1 --format='%h %s (%cs)'
 
 | Date | Commit | Type | Summary |
 |------|--------|------|---------|
+| 2026-05-27 | `662422a` | fix + enhancement | GA4 gtag retry/consent; CRM workspace scoping (opportunities, documents, pipelines); tickets/tasks edge cases |
+| 2026-05-27 | `cb348eb` | feature | GA4 custom events on marketing site (CTA, scroll, booking, chat, FAQ) |
+| 2026-05-27 | `215f28f` | infra | `robots.txt` + `sitemap.xml` for Search Console |
+| 2026-05-27 | `ab07aca` | feature | Salesforce-style activity timeline; GA4 + cookie consent on marketing layout |
 | 2026-05-27 | `8fc9cee` | feature + fix | **Phase 5 complete:** contact 2-col UX, EN/ES i18n, log activity tabs, contact-required tickets/events, appointment reschedule, delete cascades, dead code removal, migrations 035–037 |
 | 2026-05-27 | `738e03a` | security + feature | Workspace audit log (admin-only UI), RLS on `audit_logs`, logging for settings / contact delete / team changes |
 | 2026-05-27 | `ad323c0` | enhancement + security | Services catalog tool, API workspace hardening, pagination, pipeline seed route |
@@ -128,7 +132,7 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 
 ### Quotes & documents
 
-- **Quotes** module: list, create, edit, line items from **Services catalog**
+- **Quotes** module: list, create, edit, line items from **Product Catalog**
 - Quote templates, branding (logo, company name), EN/ES locale for PDF/UI
 - Sequential reference numbers (`Q-YYYY-#####`)
 - PDF generation and **send via Gmail** (connected user)
@@ -137,9 +141,9 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 - Legacy **Documents** routes still present (`/documents`) alongside quotes
 - Attachments list with optional signed URLs
 
-### Services catalog
+### Product catalog
 
-- **Tools → Services** — day-to-day catalog browse/use on quotes
+- **Tools → Product Catalog** (`/services`) — day-to-day catalog browse/use on quotes
 - **Settings** — owner/admin price edits and deletes
 - `quote_services` + `quote_line_items` tables
 
@@ -244,31 +248,44 @@ Historical phases map to git eras (not separate products):
 | **4 — Operations** | Contact merge, in-app notifications, payments, ticket improvements | ✅ Shipped |
 | **5 — Production platform** | Website↔CRM, team/roles, quotes, contact UX, security, audit log | ✅ **Shipped** on `main` (`8fc9cee`) — migrations **035–037** applied in Supabase |
 
-**Phase 5 is complete.** Phase 6 is next (reporting, automation depth, quality, compliance).
+**Phase 5 is complete.** **Phase 6 is in progress** — ops hardening and marketing analytics shipped on `main` @ `662422a`; product roadmap items below are not started.
 
 ---
 
 ## Missing / next (Phase 6)
 
-### Post–Phase 5 ops
+### Done since Phase 5 (shipped on `main`)
 
-| Item | Notes |
-|------|--------|
-| **VPS deploy** | Pull `main` @ `8fc9cee`; rebuild Docker (`scripts/deploy-vps.sh`) |
-| **Audit log coverage** | Expand beyond settings / delete / team (quotes, imports, merge, etc.) |
-| **AUDIT-FIX-TRACKER F1–F2, F5–F6** | Async contact combobox; batch signed URLs; storage cleanup; remove unused dashboard stats API |
+| Item | Commit / notes |
+|------|----------------|
+| **Services catalog tool** | `/services` — quote line-item catalog (rename to **Product Catalog** in UI) |
+| **API workspace hardening** | Parent validation, trusted headers, pagination, pipeline seed route (`ad323c0`, `662422a`) |
+| **Audit log (initial)** | Admin-only UI + RLS (`738e03a`) |
+| **Marketing GA4 + SEO** | Cookie consent, custom events, robots/sitemap (`ab07aca`–`cb348eb`) |
+| **Activity timeline** | Salesforce-style feed on contact detail (`ab07aca`) |
+| **Migrations 035–037** | Contact delete cascades; required `contact_id` on tickets/events |
 
-### Phase 6 — candidates (not started)
+### Post–Phase 5 ops (do first)
 
-| Area | Idea |
-|------|------|
-| **Reporting** | Deeper dashboards, exports, scheduled reports |
-| **Automation** | In-app workflows beyond N8N webhooks |
-| **Quote/documents** | Consolidate `/documents` vs `/quotes` UX |
-| **Quality** | E2E or integration test suite in CI |
-| **Compliance** | Retention policy for audit logs; export for admins |
-| **Multi-workspace** | Single user in multiple tenants (not supported today) |
-| **Billing** | Subscriptions / usage metering (not in app) |
+| # | Item | Notes |
+|---|------|--------|
+| 1 | **VPS deploy** | Pull `main` @ `662422a`; rebuild Docker (`scripts/deploy-vps.sh`) |
+| 2 | **GA4 conversions** | Mark `generate_lead`, `booking_completed` in GA4 Admin |
+| 3 | **GSC follow-up** | Fix remaining 404s / canonical issues after sitemap deploy |
+| 4 | **AUDIT-FIX-TRACKER F1–F2, F5–F6** | Async contact combobox; batch signed URLs; storage cleanup; remove unused dashboard stats API |
+| 5 | **Audit log coverage** | Expand beyond settings / delete / team (quotes, imports, merge, catalog CRUD) |
+
+### Phase 6 — product (ordered backlog, not started)
+
+| # | Area | Idea |
+|---|------|------|
+| 6 | **Quote UX** | Align quote line-item copy with Product Catalog; consolidate `/documents` vs `/quotes` flows |
+| 7 | **Reporting** | Deeper dashboards, CSV exports, scheduled reports |
+| 8 | **Automation** | In-app workflows beyond N8N webhooks |
+| 9 | **Quality** | E2E or integration test suite in CI |
+| 10 | **Compliance** | Audit log retention policy; admin export |
+| 11 | **Multi-workspace** | Single user in multiple tenants (not supported today) |
+| 12 | **Billing** | Subscriptions / usage metering (not in app) |
 
 ### Known limitations
 
@@ -289,7 +306,7 @@ Historical phases map to git eras (not separate products):
 | `/opportunities` | Pipeline board |
 | `/tickets`, `/tickets/[id]` | Support |
 | `/quotes`, `/quotes/new`, `/quotes/[id]` | Quotes |
-| `/services` | Service catalog tool |
+| `/services` | Product catalog tool (quote line items) |
 | `/attachments` | Files |
 | `/calendar` | Events |
 | `/payments` | Payments |
@@ -300,4 +317,4 @@ Historical phases map to git eras (not separate products):
 
 ---
 
-*Last updated: 2026-05-27 (`main` @ `8fc9cee`).*
+*Last updated: 2026-05-27 (`main` @ `662422a`).*
