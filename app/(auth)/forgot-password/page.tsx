@@ -1,17 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { AuthBrandHeader } from "@/components/auth/auth-brand-header";
 import axios from "axios";
 import { formatApiError } from "@/lib/validation-errors";
 
-export default function ForgotPasswordPage() {
+const RESET_ERROR_MESSAGES: Record<string, string> = {
+  otp_expired:
+    "That reset link has expired. Request a new one below and use only the latest email (links expire in about an hour).",
+  reset_link_invalid:
+    "That reset link is invalid or was already used. Request a new one below.",
+  access_denied:
+    "That reset link is no longer valid. Request a new one below.",
+};
+
+function ForgotPasswordForm() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const code = searchParams.get("error");
+    if (code) {
+      setError(RESET_ERROR_MESSAGES[code] ?? RESET_ERROR_MESSAGES.reset_link_invalid);
+    }
+  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -93,5 +111,19 @@ export default function ForgotPasswordPage() {
         </Link>
       </p>
     </div>
+  );
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="surface-card p-8 border border-[var(--card-border)] shadow-[var(--shadow-md)]">
+          <p className="text-sm text-body-muted">Loading…</p>
+        </div>
+      }
+    >
+      <ForgotPasswordForm />
+    </Suspense>
   );
 }
