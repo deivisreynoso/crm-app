@@ -44,6 +44,7 @@ export async function resolveWorkspaceContext(
     .from("team_members")
     .select("owner_user_id, role")
     .eq("member_user_id", actorUserId)
+    .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
 

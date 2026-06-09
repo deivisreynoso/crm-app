@@ -1,14 +1,13 @@
 import { createServerSideClient } from "@/lib/supabase";
 
-import { getGoogleCalendarRedirectUri } from "@/lib/google/oauth-config";
+import {
+  getGoogleCalendarRedirectUri,
+  getGoogleOAuthClientId,
+  getGoogleOAuthClientSecret,
+  isGoogleCalendarConfigured,
+} from "@/lib/google/oauth-config";
 
-export function isGoogleCalendarConfigured(): boolean {
-  return Boolean(
-    process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
-  );
-}
-
-export { getGoogleCalendarRedirectUri };
+export { getGoogleCalendarRedirectUri, isGoogleCalendarConfigured };
 
 type TokenRow = {
   access_token: string | null;
@@ -39,8 +38,9 @@ export async function getGoogleCalendarAccessToken(
 
   if (!row.refresh_token) return null;
 
-  const clientId = process.env.GOOGLE_CLIENT_ID!;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET!;
+  const clientId = getGoogleOAuthClientId();
+  const clientSecret = getGoogleOAuthClientSecret();
+  if (!clientId || !clientSecret) return null;
 
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",

@@ -258,7 +258,13 @@
     "copied": "Copiado",
     "copyFailed": "Error al copiar",
     "expand": "Ver detalles",
-    "collapse": "Ocultar detalles"
+    "collapse": "Ocultar detalles",
+    "editNoteTitle": "Editar nota",
+    "editCallTitle": "Editar registro de llamada",
+    "deleteTitle": "¿Eliminar actividad?",
+    "deleteDescription": "Esta nota o registro de llamada se eliminará permanentemente del historial.",
+    "saving": "Guardando…",
+    "saveFailed": "No se pudo guardar la actividad"
   },
   "quickActions": {
     "toolbar": "Acciones rápidas",
@@ -289,7 +295,20 @@
     "open": "Abrir →",
     "created": "Creado",
     "due": "Vence",
-    "prioritySuffix": "prioridad"
+    "prioritySuffix": "prioridad",
+    "detailTitle": "Tarea",
+    "titleLabel": "Título",
+    "descriptionLabel": "Descripción",
+    "statusLabel": "Estado",
+    "priorityLabel": "Prioridad",
+    "statusOpen": "Abierta",
+    "statusInProgress": "En progreso",
+    "statusCompleted": "Completada",
+    "deleteTitle": "¿Eliminar tarea?",
+    "deleteDescription": "Esta tarea se eliminará permanentemente.",
+    "saving": "Guardando…",
+    "saveFailed": "No se pudo guardar la tarea",
+    "deleteFailed": "No se pudo eliminar la tarea"
   },
   "related": {
     "contacts": "Contactos",

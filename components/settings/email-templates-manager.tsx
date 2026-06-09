@@ -70,7 +70,8 @@ export function EmailTemplatesManager() {
     <div className="space-y-4">
       <div className="flex justify-between items-center gap-2 flex-wrap">
         <p className="text-sm text-body-muted">
-          Reusable email copy for outreach and follow-ups.
+          Reusable email copy for outreach and follow-ups. Google review templates
+          are managed under Google review invitations.
         </p>
         <Button
           size="sm"

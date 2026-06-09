@@ -14,6 +14,7 @@ import {
 import { saveContactEmail } from "@/lib/emails/save-contact-email";
 import { logEmailContactActivity } from "@/lib/activities/log-email-activity";
 import { uploadToDocumentsBucket } from "@/lib/storage/documents";
+import { syncContactEmailsFromGmail } from "@/lib/google/gmail-sync";
 import { triggerN8NWebhook } from "@/lib/n8n";
 import { getQuoteEmailDefaults } from "@/lib/crm/quote-pdf-labels";
 import { ensureAcceptToken, quoteAcceptPublicUrl } from "@/lib/quotes/accept-token";
@@ -218,6 +219,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
         await saveContactEmail(supabase, {
           user_id: workspaceOwnerId!,
           contact_id: doc.contact_id as string,
+          mailbox_user_id: userId!,
           direction: "outbound",
           gmail_message_id: sent.messageId,
           gmail_thread_id: sent.threadId ?? null,
@@ -251,6 +253,17 @@ export async function POST(req: NextRequest, context: RouteContext) {
       channel: "gmail",
       gmail_message_id: sent.messageId,
     });
+
+    if (doc.contact_id) {
+      void syncContactEmailsFromGmail(
+        userId!,
+        workspaceOwnerId!,
+        doc.contact_id as string,
+        to
+      ).catch((syncErr) => {
+        console.error("post-send quote email sync:", syncErr);
+      });
+    }
 
     return NextResponse.json({
       success: true,

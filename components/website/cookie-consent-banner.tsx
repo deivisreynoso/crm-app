@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,10 +25,11 @@ export function CookieConsentBanner({
   lang: Locale;
   copy: CookieCopy;
 }) {
-  const [visible, setVisible] = useState(
-    () =>
-      typeof window !== "undefined" && getAnalyticsConsent() === null
-  );
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    setVisible(getAnalyticsConsent() === null);
+  }, []);
 
   if (!visible) return null;
 

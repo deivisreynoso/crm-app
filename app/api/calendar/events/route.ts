@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
 
     let googleEventId: string | null = null;
     try {
-      googleEventId = await createGoogleCalendarEvent(workspaceOwnerId!, {
+      googleEventId = await createGoogleCalendarEvent(userId!, {
         title: row.title,
         description: row.description,
         location: row.location,

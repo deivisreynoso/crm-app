@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
-import { getGoogleCalendarRedirectUri } from "@/lib/google/oauth-config";
+import { getGoogleCalendarRedirectUri, getGoogleOAuthClientId } from "@/lib/google/oauth-config";
 
 /** Starts Google Calendar OAuth (configure env vars to enable). */
 export async function GET(req: NextRequest) {
   const { error } = await requireAuth();
   if (error) return error;
 
-  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientId = getGoogleOAuthClientId();
   const redirectUri = getGoogleCalendarRedirectUri(req.url);
 
   if (!clientId) {

@@ -12,7 +12,7 @@ export function useNotifications() {
       }>("/api/notifications");
       return data;
     },
-    refetchInterval: 60_000,
+    refetchInterval: 30_000,
   });
 }
 

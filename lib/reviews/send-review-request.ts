@@ -6,6 +6,8 @@ import { getGoogleGmailConnectedEmail, sendGmailMessage } from "@/lib/google/gma
 import { GOOGLE_REVIEWS_URL } from "@/lib/website/google-reviews-url";
 import { defaultReviewTemplateContent } from "@/lib/reviews/default-review-template";
 import { renderReviewEmail } from "@/lib/reviews/review-template-context";
+import { resolveGmailSendOptions } from "@/lib/emails/build-gmail-send-options";
+import { syncContactEmailsFromGmail } from "@/lib/google/gmail-sync";
 import { triggerN8NWebhook } from "@/lib/n8n";
 import type { CrmLocale } from "@/lib/crm/i18n";
 
@@ -21,6 +23,9 @@ export async function sendReviewRequest(
     contactId: string;
     ticketId?: string;
     uiLocale?: CrmLocale | null;
+    subjectOverride?: string;
+    bodyOverride?: string;
+    cc?: string;
   }
 ): Promise<SendReviewRequestResult> {
   const { data: contact, error: contactError } = await supabase
@@ -96,51 +101,65 @@ export async function sendReviewRequest(
     companyName = company?.name ?? null;
   }
 
-  let subject = "";
-  let body = "";
-  const templateId = settings?.review_request_template_id as string | null;
+  let rendered: { subject: string; body: string };
 
-  if (templateId) {
-    const { data: template } = await supabase
-      .from("email_templates")
-      .select("subject, body")
-      .eq("id", templateId)
-      .eq("user_id", input.workspaceOwnerId)
-      .maybeSingle();
+  if (input.subjectOverride && input.bodyOverride) {
+    rendered = {
+      subject: input.subjectOverride,
+      body: input.bodyOverride,
+    };
+  } else {
+    let subject = "";
+    let body = "";
+    const templateId = settings?.review_request_template_id as string | null;
 
-    if (template) {
-      subject = template.subject;
-      body = template.body;
+    if (templateId) {
+      const { data: template } = await supabase
+        .from("email_templates")
+        .select("subject, body")
+        .eq("id", templateId)
+        .eq("user_id", input.workspaceOwnerId)
+        .maybeSingle();
+
+      if (template) {
+        subject = template.subject;
+        body = template.body;
+      }
     }
-  }
 
-  if (!subject || !body) {
-    const locale =
-      input.uiLocale ??
-      (settings?.ui_locale === "en" || settings?.ui_locale === "es"
-        ? settings.ui_locale
-        : "en");
-    const fallback = defaultReviewTemplateContent(locale);
-    subject = fallback.subject;
-    body = fallback.body;
-  }
+    if (!subject || !body) {
+      const locale =
+        input.uiLocale ??
+        (settings?.ui_locale === "en" || settings?.ui_locale === "es"
+          ? settings.ui_locale
+          : "en");
+      const fallback = defaultReviewTemplateContent(locale);
+      subject = fallback.subject;
+      body = fallback.body;
+    }
 
-  const rendered = renderReviewEmail({
-    subject,
-    body,
-    contact,
-    companyName,
-    googleReviewUrl: reviewUrl,
-  });
+    rendered = renderReviewEmail({
+      subject,
+      body,
+      contact,
+      companyName,
+      googleReviewUrl: reviewUrl,
+    });
+  }
 
   if (!rendered.subject.trim() || !rendered.body.trim()) {
     return { ok: false, status: 400, error: "Review email subject and body are required." };
   }
 
+  const sendOptions = await resolveGmailSendOptions(input.actorUserId, {
+    cc: input.cc,
+  });
+
   const sent = await sendGmailMessage(input.actorUserId, {
     to,
     subject: rendered.subject,
     body: rendered.body,
+    ...sendOptions,
   });
 
   if (!sent) {
@@ -161,6 +180,7 @@ export async function sendReviewRequest(
       user_id: input.workspaceOwnerId,
       contact_id: input.contactId,
       ticket_id: input.ticketId ?? null,
+      mailbox_user_id: input.actorUserId,
       direction: "outbound",
       gmail_message_id: sent.messageId,
       gmail_thread_id: sent.threadId ?? null,
@@ -205,6 +225,16 @@ export async function sendReviewRequest(
     })
     .eq("id", input.contactId)
     .eq("user_id", input.workspaceOwnerId);
+
+  void syncContactEmailsFromGmail(
+    input.actorUserId,
+    input.workspaceOwnerId,
+    input.contactId,
+    to,
+    [contact.first_name, contact.last_name].filter(Boolean).join(" ") || to
+  ).catch((err) => {
+    console.error("post-review email sync:", err);
+  });
 
   void triggerN8NWebhook("review.requested", {
     contact_id: input.contactId,

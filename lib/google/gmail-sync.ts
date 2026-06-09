@@ -3,6 +3,7 @@ import { logEmailContactActivity } from "@/lib/activities/log-email-activity";
 import { saveContactEmail } from "@/lib/emails/save-contact-email";
 import { extractEmailAddress } from "@/lib/google/extract-email-address";
 import {
+  involvesContactAndUser,
   isDirectConversation,
   isSameEmailAsUser,
 } from "@/lib/google/gmail-conversation-filter";
@@ -10,13 +11,13 @@ import {
   emailDirection,
   parseGmailApiMessage,
 } from "@/lib/google/gmail-message";
+import { notifyInboundEmail } from "@/lib/notifications/notify-inbound-email";
 import {
   getGoogleGmailAccessToken,
   getGoogleGmailConnectedEmail,
 } from "@/lib/google/gmail";
 
 const MAX_MESSAGES = 50;
-/** Only search recent mail unless we're continuing a known CRM thread. */
 const RECENCY = "newer_than:2y";
 
 type GmailListResponse = {
@@ -49,7 +50,6 @@ export type GmailSyncResult = {
   pruned?: number;
 };
 
-/** Gmail search: only direct mail between me and this contact (not cc-only / whole mailbox). */
 function buildSearchQueries(contactEmail: string): string[] {
   const bare =
     extractEmailAddress(contactEmail) || contactEmail.trim().toLowerCase();
@@ -109,25 +109,30 @@ async function fetchParsedMessage(
 async function fetchAndSaveMessage(
   accessToken: string,
   messageId: string,
-  userId: string,
+  workspaceOwnerId: string,
+  mailboxUserId: string,
   contactId: string,
   contactEmail: string,
+  contactName: string,
   userEmail: string,
-  supabase: ReturnType<typeof createServerSideClient>
+  supabase: ReturnType<typeof createServerSideClient>,
+  options?: { fromKnownThread?: boolean }
 ): Promise<{ saved: boolean; storageError?: string }> {
   const parsed = await fetchParsedMessage(accessToken, messageId);
   if (!parsed) return { saved: false };
 
-  if (!isDirectConversation(parsed, userEmail, contactEmail)) {
-    return { saved: false };
-  }
+  const allowed = options?.fromKnownThread
+    ? involvesContactAndUser(parsed, userEmail, contactEmail)
+    : isDirectConversation(parsed, userEmail, contactEmail);
+
+  if (!allowed) return { saved: false };
 
   const direction = emailDirection(parsed.from, userEmail, contactEmail);
 
   const { data: existingRow } = await supabase
     .from("contact_emails")
     .select("id")
-    .eq("user_id", userId)
+    .eq("user_id", workspaceOwnerId)
     .eq("gmail_message_id", parsed.id)
     .maybeSingle();
 
@@ -135,8 +140,9 @@ async function fetchAndSaveMessage(
 
   try {
     await saveContactEmail(supabase, {
-      user_id: userId,
+      user_id: workspaceOwnerId,
       contact_id: contactId,
+      mailbox_user_id: mailboxUserId,
       direction,
       gmail_message_id: parsed.id,
       gmail_thread_id: parsed.threadId ?? null,
@@ -149,8 +155,8 @@ async function fetchAndSaveMessage(
 
     if (isNew) {
       await logEmailContactActivity(supabase, {
-        userId,
-        createdBy: userId,
+        userId: workspaceOwnerId,
+        createdBy: mailboxUserId,
         contactId,
         direction,
         subject: parsed.subject,
@@ -160,6 +166,17 @@ async function fetchAndSaveMessage(
         gmail_message_id: parsed.id,
         gmail_thread_id: parsed.threadId ?? null,
       });
+
+      if (direction === "inbound") {
+        void notifyInboundEmail(supabase, {
+          recipientUserId: mailboxUserId,
+          contactId,
+          contactName,
+          subject: parsed.subject,
+        }).catch((err) => {
+          console.error("notifyInboundEmail:", err);
+        });
+      }
     }
 
     return { saved: true };
@@ -169,10 +186,10 @@ async function fetchAndSaveMessage(
   }
 }
 
-/** Remove previously synced rows that are not a direct user ↔ contact conversation. */
 async function pruneInvalidStoredEmails(
   accessToken: string,
-  userId: string,
+  workspaceOwnerId: string,
+  mailboxUserId: string,
   contactId: string,
   contactEmail: string,
   userEmail: string,
@@ -180,18 +197,27 @@ async function pruneInvalidStoredEmails(
 ): Promise<number> {
   const { data: stored } = await supabase
     .from("contact_emails")
-    .select("id, gmail_message_id")
-    .eq("user_id", userId)
-    .eq("contact_id", contactId);
+    .select("id, gmail_message_id, mailbox_user_id")
+    .eq("user_id", workspaceOwnerId)
+    .eq("contact_id", contactId)
+    .or(`mailbox_user_id.is.null,mailbox_user_id.eq.${mailboxUserId}`);
 
   let pruned = 0;
 
   for (const row of stored ?? []) {
+    if (row.mailbox_user_id && row.mailbox_user_id !== mailboxUserId) {
+      continue;
+    }
+
     const parsed = await fetchParsedMessage(
       accessToken,
       row.gmail_message_id as string
     );
-    if (parsed && isDirectConversation(parsed, userEmail, contactEmail)) {
+    if (
+      parsed &&
+      (isDirectConversation(parsed, userEmail, contactEmail) ||
+        involvesContactAndUser(parsed, userEmail, contactEmail))
+    ) {
       continue;
     }
 
@@ -210,30 +236,38 @@ async function pruneInvalidStoredEmails(
   return pruned;
 }
 
-export async function syncContactEmailsFromGmail(
-  userId: string,
-  contactId: string,
-  contactEmail: string
-): Promise<GmailSyncResult> {
-  const bareContact =
-    extractEmailAddress(contactEmail) || contactEmail.trim().toLowerCase();
+type StoredThreadRow = {
+  gmail_thread_id: string | null;
+  mailbox_user_id: string | null;
+};
 
-  const accessToken = await getGoogleGmailAccessToken(userId);
-  const userEmail = await getGoogleGmailConnectedEmail(userId);
+async function syncFromMailbox(
+  mailboxUserId: string,
+  workspaceOwnerId: string,
+  contactId: string,
+  contactEmail: string,
+  contactName: string,
+  threadIds: Set<string>
+): Promise<{
+  synced: number;
+  listed: number;
+  pruned: number;
+  error?: string;
+  needs_reauth?: boolean;
+  storageError?: string;
+}> {
+  const accessToken = await getGoogleGmailAccessToken(mailboxUserId);
+  const userEmail = await getGoogleGmailConnectedEmail(mailboxUserId);
 
   if (!accessToken || !userEmail) {
-    return {
-      synced: 0,
-      listed: 0,
-      contact_email: bareContact,
-      error: "Gmail is not connected. Connect in Settings → Integrations.",
-    };
+    return { synced: 0, listed: 0, pruned: 0 };
   }
 
   const supabase = createServerSideClient();
   const pruned = await pruneInvalidStoredEmails(
     accessToken,
-    userId,
+    workspaceOwnerId,
+    mailboxUserId,
     contactId,
     contactEmail,
     userEmail,
@@ -250,7 +284,6 @@ export async function syncContactEmailsFromGmail(
         return {
           synced: 0,
           listed: 0,
-          contact_email: bareContact,
           pruned,
           error:
             "Gmail read access missing. Use Reconnect Gmail and approve all permissions.",
@@ -265,88 +298,197 @@ export async function syncContactEmailsFromGmail(
     }
   }
 
-  const { data: knownThreads } = await supabase
-    .from("contact_emails")
-    .select("gmail_thread_id")
-    .eq("user_id", userId)
-    .eq("contact_id", contactId)
-    .not("gmail_thread_id", "is", null);
-
-  for (const row of knownThreads ?? []) {
-    if (!row.gmail_thread_id) continue;
-    const threadIds = await listThreadMessageIds(
-      accessToken,
-      row.gmail_thread_id as string
-    );
-    threadIds.forEach((id) => messageIdSet.add(id));
+  for (const threadId of threadIds) {
+    const threadMessageIds = await listThreadMessageIds(accessToken, threadId);
+    threadMessageIds.forEach((id) => messageIdSet.add(id));
   }
 
   const listed = messageIdSet.size;
-
-  if (sameAsUser && listed === 0) {
-    return {
-      synced: 0,
-      listed: 0,
-      contact_email: bareContact,
-      pruned,
-      hint:
-        "This contact uses the same email as your connected Gmail. Use a different contact email, or send from the CRM first so we can track that thread.",
-    };
-  }
-
-  if (listed === 0) {
-    return {
-      synced: 0,
-      listed: 0,
-      contact_email: bareContact,
-      pruned,
-      hint:
-        `No direct Gmail conversation found with ${bareContact} in the last 2 years. ` +
-        "Only messages between you and this contact sync—not forwards, newsletters, or mail where they're only copied.",
-    };
-  }
-
   let synced = 0;
   let storageError: string | undefined;
 
   for (const id of messageIdSet) {
+    const parsed = await fetchParsedMessage(accessToken, id);
+    const fromKnownThread = Boolean(
+      parsed?.threadId && threadIds.has(parsed.threadId)
+    );
+
     const result = await fetchAndSaveMessage(
       accessToken,
       id,
-      userId,
+      workspaceOwnerId,
+      mailboxUserId,
       contactId,
       contactEmail,
+      contactName,
       userEmail,
-      supabase
+      supabase,
+      { fromKnownThread }
     );
     if (result.saved) synced += 1;
     if (result.storageError) storageError = result.storageError;
   }
 
-  if (synced === 0 && storageError) {
+  return { synced, listed, pruned, storageError };
+}
+
+function collectMailboxUsers(
+  actorUserId: string,
+  storedRows: StoredThreadRow[]
+): Set<string> {
+  const users = new Set<string>([actorUserId]);
+  for (const row of storedRows) {
+    if (row.mailbox_user_id) users.add(row.mailbox_user_id);
+  }
+  return users;
+}
+
+function collectThreadIdsForMailbox(
+  mailboxUserId: string,
+  actorUserId: string,
+  storedRows: StoredThreadRow[]
+): Set<string> {
+  const threads = new Set<string>();
+  for (const row of storedRows) {
+    if (!row.gmail_thread_id) continue;
+    const owner = row.mailbox_user_id ?? actorUserId;
+    if (owner === mailboxUserId) {
+      threads.add(row.gmail_thread_id);
+    }
+  }
+  return threads;
+}
+
+/**
+ * Pull Gmail messages for a contact into shared workspace storage.
+ * Uses the actor's mailbox plus any teammate mailboxes that sent CRM email in this thread.
+ */
+export async function syncContactEmailsFromGmail(
+  actorUserId: string,
+  workspaceOwnerId: string,
+  contactId: string,
+  contactEmail: string,
+  contactName?: string
+): Promise<GmailSyncResult> {
+  const bareContact =
+    extractEmailAddress(contactEmail) || contactEmail.trim().toLowerCase();
+  const displayName = contactName?.trim() || bareContact;
+
+  const actorEmail = await getGoogleGmailConnectedEmail(actorUserId);
+  if (!actorEmail) {
+    return {
+      synced: 0,
+      listed: 0,
+      contact_email: bareContact,
+      error: "Gmail is not connected. Connect in Settings → Integrations.",
+    };
+  }
+
+  const supabase = createServerSideClient();
+  const { data: storedRows } = await supabase
+    .from("contact_emails")
+    .select("gmail_thread_id, mailbox_user_id")
+    .eq("user_id", workspaceOwnerId)
+    .eq("contact_id", contactId);
+
+  const rows = (storedRows ?? []) as StoredThreadRow[];
+  const mailboxUsers = collectMailboxUsers(actorUserId, rows);
+
+  let totalSynced = 0;
+  let totalListed = 0;
+  let totalPruned = 0;
+  let lastError: string | undefined;
+  let needsReauth = false;
+  let storageError: string | undefined;
+
+  for (const mailboxUserId of mailboxUsers) {
+    const threadIds = collectThreadIdsForMailbox(
+      mailboxUserId,
+      actorUserId,
+      rows
+    );
+    const result = await syncFromMailbox(
+      mailboxUserId,
+      workspaceOwnerId,
+      contactId,
+      contactEmail,
+      displayName,
+      threadIds
+    );
+
+    totalSynced += result.synced;
+    totalListed += result.listed;
+    totalPruned += result.pruned;
+    if (result.error) lastError = result.error;
+    if (result.needs_reauth) needsReauth = true;
+    if (result.storageError) storageError = result.storageError;
+  }
+
+  if (lastError && totalSynced === 0) {
+    return {
+      synced: 0,
+      listed: totalListed,
+      contact_email: bareContact,
+      pruned: totalPruned,
+      error: lastError,
+      needs_reauth: needsReauth,
+    };
+  }
+
+  const sameAsUser = isSameEmailAsUser(actorEmail, contactEmail);
+
+  if (sameAsUser && totalListed === 0 && rows.length === 0) {
+    return {
+      synced: 0,
+      listed: 0,
+      contact_email: bareContact,
+      pruned: totalPruned,
+      hint:
+        "This contact uses the same email as your connected Gmail. Send from the CRM first so we can track that thread.",
+    };
+  }
+
+  if (totalListed === 0 && rows.length === 0) {
+    return {
+      synced: 0,
+      listed: 0,
+      contact_email: bareContact,
+      pruned: totalPruned,
+      hint:
+        `No direct Gmail conversation found with ${bareContact} in the last 2 years. ` +
+        "Send from the CRM or sync after the contact replies to your email.",
+    };
+  }
+
+  if (totalSynced === 0 && storageError) {
     const needsMigration = /does not exist|relation/i.test(storageError);
     return {
       synced: 0,
-      listed,
+      listed: totalListed,
       contact_email: bareContact,
-      pruned,
+      pruned: totalPruned,
       error: needsMigration
-        ? "Run migration 019_contact_emails.sql in Supabase, then sync again."
+        ? "Run migrations 019_contact_emails.sql and 046_contact_emails_mailbox_user.sql in Supabase."
         : `Could not save messages: ${storageError}`,
     };
   }
 
-  if (synced === 0) {
+  if (totalSynced === 0 && totalListed > 0) {
     return {
       synced: 0,
-      listed,
+      listed: totalListed,
       contact_email: bareContact,
-      pruned,
+      pruned: totalPruned,
       hint:
-        `Gmail returned ${listed} candidate message(s) but none were a direct exchange with ${bareContact}. ` +
-        "Forwards and unrelated mail are excluded.",
+        `Gmail returned ${totalListed} candidate message(s) but none matched this contact thread yet. ` +
+        "If they just replied, wait a moment and sync again.",
     };
   }
 
-  return { synced, listed, contact_email: bareContact, pruned };
+  return {
+    synced: totalSynced,
+    listed: totalListed,
+    contact_email: bareContact,
+    pruned: totalPruned,
+  };
 }

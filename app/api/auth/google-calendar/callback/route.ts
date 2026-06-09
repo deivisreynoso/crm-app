@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { createServerSideClient } from "@/lib/supabase";
-import { getGoogleCalendarRedirectUri } from "@/lib/google/oauth-config";
-import { resolveWorkspaceContext } from "@/lib/team/workspace";
+import {
+  getGoogleCalendarRedirectUri,
+  getGoogleOAuthClientId,
+  getGoogleOAuthClientSecret,
+} from "@/lib/google/oauth-config";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -19,8 +22,8 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const clientId = getGoogleOAuthClientId();
+  const clientSecret = getGoogleOAuthClientSecret();
   const redirectUri = getGoogleCalendarRedirectUri(req.url);
 
   if (!clientId || !clientSecret) {
@@ -55,11 +58,11 @@ export async function GET(req: NextRequest) {
 
   const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
   const supabase = createServerSideClient();
-  const { workspaceOwnerId } = await resolveWorkspaceContext(userId);
 
+  /** Per-user calendar (same model as Gmail) — each teammate connects their Workspace account. */
   await supabase.from("google_calendar_tokens").upsert(
     {
-      user_id: workspaceOwnerId,
+      user_id: userId,
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token ?? null,
       expires_at: expiresAt,

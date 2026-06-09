@@ -13,6 +13,7 @@ import { ContactLogActivity } from "@/components/contact/contact-log-activity";
 import { ActivityPanel } from "@/components/contact/activity-panel";
 import { TasksPanel } from "@/components/contact/tasks-panel";
 import { TaskDetailModal } from "@/components/contact/task-detail-modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { RecordSectionTabs } from "@/components/crm/record-section-tabs";
 import { EntityRelatedPanel } from "@/components/crm/entity-related-panel";
 import {
@@ -21,8 +22,10 @@ import {
   useCreateContactNote,
   useContactTasks,
   useCreateContactTask,
+  useDeleteContactTask,
   useContactActivityFeed,
 } from "@/hooks/useContacts";
+import type { ContactEmailMessage } from "@/hooks/useGmail";
 import { useOpportunities } from "@/hooks/useOpportunities";
 import { useTickets, useCreateTicket } from "@/hooks/useTickets";
 import { useDocuments, useUploadDocument } from "@/hooks/useDocuments";
@@ -48,7 +51,9 @@ export default function ContactDetailPage({ params }: PageProps) {
   const [mobileTab, setMobileTab] = useState<MobileTab>("overview");
   const [openTask, setOpenTask] = useState<Task | null>(null);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [replyToEmail, setReplyToEmail] = useState<ContactEmailMessage | null>(null);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const { canWrite } = useWorkspaceCapabilities();
   const { dict } = useCrmLocale();
@@ -62,6 +67,7 @@ export default function ContactDetailPage({ params }: PageProps) {
   const createNote = useCreateContactNote(id);
   const { data: tasks = [] } = useContactTasks(id);
   const createTask = useCreateContactTask(id);
+  const deleteTask = useDeleteContactTask(id);
   const { data: contactOpportunities = [] } = useOpportunities(undefined, id);
   const { data: contactTickets = [] } = useTickets({ contact_id: id });
   const { data: contactQuotes = [] } = useDocuments({
@@ -165,8 +171,10 @@ export default function ContactDetailPage({ params }: PageProps) {
         onSendEmail={() => setEmailModalOpen(true)}
       />
       <ActivityPanel
+        contactId={id}
         items={activityItems}
         isLoading={activityLoading}
+        canWrite={canWrite}
         timelineOnly
       />
     </>
@@ -176,10 +184,12 @@ export default function ContactDetailPage({ params }: PageProps) {
     <TasksPanel
       tasks={tasks}
       isAdding={createTask.isPending}
+      canWrite={canWrite}
       onAdd={async (input) => {
         await createTask.mutateAsync(input);
       }}
       onOpenTask={handleOpenTask}
+      onDeleteTask={canWrite ? setTaskToDelete : undefined}
     />
   );
 
@@ -213,6 +223,7 @@ export default function ContactDetailPage({ params }: PageProps) {
         contactId={id}
         task={openTask}
         open={taskModalOpen}
+        canWrite={canWrite}
         onClose={() => {
           setTaskModalOpen(false);
           setOpenTask(null);
@@ -221,13 +232,37 @@ export default function ContactDetailPage({ params }: PageProps) {
           void queryClient.invalidateQueries({ queryKey: ["contact-tasks", id] });
           void queryClient.invalidateQueries({ queryKey: ["contact-activity-feed", id] });
         }}
+        onDeleted={() => {
+          void queryClient.invalidateQueries({ queryKey: ["contact-tasks", id] });
+          void queryClient.invalidateQueries({ queryKey: ["contact-activity-feed", id] });
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!taskToDelete}
+        title={dict.tasks.deleteTitle}
+        description={dict.tasks.deleteDescription}
+        confirmLabel={act.delete}
+        cancelLabel={act.cancel}
+        destructive
+        loading={deleteTask.isPending}
+        onCancel={() => setTaskToDelete(null)}
+        onConfirm={async () => {
+          if (!taskToDelete) return;
+          await deleteTask.mutateAsync(taskToDelete.id);
+          setTaskToDelete(null);
+        }}
       />
 
       <SendEmailModal
         contact={contact}
         companyName={contact.company}
         open={emailModalOpen}
-        onClose={() => setEmailModalOpen(false)}
+        onClose={() => {
+          setEmailModalOpen(false);
+          setReplyToEmail(null);
+        }}
+        replyTo={replyToEmail}
         onSent={() => {
           void queryClient.invalidateQueries({ queryKey: ["contact-activity-feed", id] });
           void queryClient.invalidateQueries({ queryKey: ["contact-emails", id] });

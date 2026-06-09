@@ -16,6 +16,7 @@ export function NotificationPreferencesSettings() {
   const [taskReminders, setTaskReminders] = useState(true);
   const [oppReminders, setOppReminders] = useState(true);
   const [ticketNotifs, setTicketNotifs] = useState(true);
+  const [emailNotifs, setEmailNotifs] = useState(true);
   const [frequency, setFrequency] = useState("daily");
   const [timezone, setTimezone] = useState("UTC");
 
@@ -24,6 +25,7 @@ export function NotificationPreferencesSettings() {
     setTaskReminders(data.task_reminders);
     setOppReminders(data.opportunity_reminders);
     setTicketNotifs(data.ticket_notifications);
+    setEmailNotifs(data.email_notifications ?? true);
     setFrequency(data.email_frequency);
     setTimezone(data.timezone || "UTC");
   }, [data]);
@@ -87,6 +89,17 @@ export function NotificationPreferencesSettings() {
             }}
           />
           Service ticket updates
+        </label>
+        <label className="flex items-center gap-2 text-sm text-heading">
+          <input
+            type="checkbox"
+            checked={emailNotifs}
+            onChange={(e) => {
+              setEmailNotifs(e.target.checked);
+              void save({ email_notifications: e.target.checked });
+            }}
+          />
+          Email replies from contacts
         </label>
       </div>
       <div>

@@ -99,3 +99,41 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "Failed to update task" }, { status: 500 });
   }
 }
+
+export async function DELETE(_req: NextRequest, context: RouteContext) {
+  try {
+    const { workspaceOwnerId, error } = await requireAuth();
+    if (error) return error;
+
+    const { id: contactId, taskId } = await context.params;
+    if (!(await verifyContactInWorkspace(workspaceOwnerId!, contactId))) {
+      return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+    }
+
+    const supabase = createServerSideClient();
+    const { data, error: dbError } = await supabase
+      .from("tasks")
+      .delete()
+      .eq("id", taskId)
+      .eq("contact_id", contactId)
+      .eq("user_id", workspaceOwnerId!)
+      .select("id")
+      .maybeSingle();
+
+    if (dbError) {
+      return NextResponse.json(
+        { error: humanizeDbError(dbError.message) },
+        { status: 500 }
+      );
+    }
+
+    if (!data) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("DELETE task:", err);
+    return NextResponse.json({ error: "Failed to delete task" }, { status: 500 });
+  }
+}

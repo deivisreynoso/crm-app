@@ -110,6 +110,8 @@ export interface User {
   export interface ActivityFeedItem {
     id: string;
     source: 'note' | 'activity' | 'calendar';
+    /** Raw note/activity/calendar row id when applicable */
+    source_id?: string;
     type: string;
     content: string;
     created_at: string;

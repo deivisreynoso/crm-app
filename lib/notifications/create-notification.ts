@@ -3,18 +3,21 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export type NotificationKind =
   | "task_reminder"
   | "opportunity_reminder"
-  | "ticket_update";
+  | "ticket_update"
+  | "email_received";
 
 const PREF_KEY: Record<NotificationKind, keyof NotificationPrefs> = {
   task_reminder: "task_reminders",
   opportunity_reminder: "opportunity_reminders",
   ticket_update: "ticket_notifications",
+  email_received: "email_notifications",
 };
 
 type NotificationPrefs = {
   task_reminders: boolean;
   opportunity_reminders: boolean;
   ticket_notifications: boolean;
+  email_notifications: boolean;
 };
 
 export async function createNotification(
@@ -30,7 +33,9 @@ export async function createNotification(
 ) {
   const { data: prefs } = await supabase
     .from("notification_preferences")
-    .select("task_reminders, opportunity_reminders, ticket_notifications")
+    .select(
+      "task_reminders, opportunity_reminders, ticket_notifications, email_notifications"
+    )
     .eq("user_id", userId)
     .maybeSingle();
 

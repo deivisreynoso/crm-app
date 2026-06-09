@@ -1,19 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { useEmailTemplates } from "@/hooks/useEmailTemplates";
+import { EmailTemplatePicker } from "@/components/contact/email-template-picker";
 import {
   useGmailStatus,
   useSendContactEmail,
   useSendTicketEmail,
+  type ContactEmailMessage,
 } from "@/hooks/useGmail";
-import {
-  buildTemplateContext,
-  interpolateTemplate,
-} from "@/lib/documents/template-variables";
+import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
+import { replySubject } from "@/lib/emails/build-gmail-send-options";
+import { extractEmailAddress } from "@/lib/google/extract-email-address";
 import { formatApiError } from "@/lib/validation-errors";
 import type { Contact } from "@/types";
 
@@ -27,6 +27,7 @@ interface SendEmailModalProps {
   open: boolean;
   onClose: () => void;
   onSent?: () => void;
+  replyTo?: ContactEmailMessage | null;
 }
 
 export function SendEmailModal({
@@ -36,58 +37,57 @@ export function SendEmailModal({
   open,
   onClose,
   onSent,
+  replyTo,
 }: SendEmailModalProps) {
+  const { canManage } = useWorkspaceCapabilities();
   const { data: gmailStatus, isLoading: statusLoading } = useGmailStatus();
-  const { data: templates = [] } = useEmailTemplates();
   const sendContactEmail = useSendContactEmail(contact.id);
   const sendTicketEmail = useSendTicketEmail(ticketId ?? "");
   const sendEmail = ticketId ? sendTicketEmail : sendContactEmail;
 
   const [to, setTo] = useState(contact.email ?? "");
+  const [cc, setCc] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [templateId, setTemplateId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const templateContext = useMemo(
-    () =>
-      buildTemplateContext({
-        contact,
-        company: companyName ? { name: companyName } : null,
-      }),
-    [contact, companyName]
-  );
+  const isReply = Boolean(replyTo);
 
   useEffect(() => {
     if (!open) return;
-    setTo(contact.email ?? "");
-    setSubject("");
-    setBody("");
+    if (replyTo) {
+      const replyTarget =
+        replyTo.direction === "inbound"
+          ? extractEmailAddress(replyTo.from_email ?? "") || contact.email || ""
+          : extractEmailAddress(replyTo.to_email ?? "") || contact.email || "";
+      setTo(replyTarget);
+      setCc("");
+      setSubject(replySubject(replyTo.subject));
+      setBody("");
+    } else {
+      setTo(contact.email ?? "");
+      setCc("");
+      setSubject("");
+      setBody("");
+    }
     setTemplateId("");
     setError(null);
-  }, [open, contact.email]);
-
-  function applyTemplate(id: string) {
-    setTemplateId(id);
-    const template = templates.find((t) => t.id === id);
-    if (!template) return;
-    setSubject(interpolateTemplate(template.subject, templateContext));
-    setBody(interpolateTemplate(template.body, templateContext));
-  }
+  }, [open, contact.email, replyTo]);
 
   const connected = gmailStatus?.connected ?? false;
   const configured = gmailStatus?.configured ?? true;
+  const title = isReply ? "Reply to email" : "Send email";
 
   return (
-    <Modal open={open} onClose={onClose} title="Send email" size="lg">
+    <Modal open={open} onClose={onClose} title={title} size="lg">
       {statusLoading ? (
         <p className="text-sm text-body-muted">Checking Gmail connection…</p>
       ) : !configured ? (
         <div className="space-y-3 text-sm">
           <p className="text-body-muted">
-            Gmail is not configured on this server. Ask your admin to set{" "}
-            <code className="text-xs">GOOGLE_CLIENT_ID</code> and{" "}
-            <code className="text-xs">GOOGLE_CLIENT_SECRET</code>.
+            Gmail is not configured on this server. Ask your admin to set OAuth
+            credentials in Settings → Integrations.
           </p>
           <Button type="button" variant="outline" onClick={onClose}>
             Close
@@ -121,9 +121,11 @@ export function SendEmailModal({
             try {
               await sendEmail.mutateAsync({
                 to: to.trim(),
+                cc: cc.trim() || undefined,
                 subject: subject.trim(),
                 body: body.trim(),
                 template_id: templateId || undefined,
+                reply_to_gmail_message_id: replyTo?.gmail_message_id,
               });
               onSent?.();
               onClose();
@@ -138,32 +140,17 @@ export function SendEmailModal({
             </p>
           )}
 
-          {templates.length > 0 && (
-            <div>
-              <label className="block text-xs font-medium text-heading mb-1">
-                Template
-              </label>
-              <select
-                className="input-field w-full"
-                value={templateId}
-                onChange={(e) => {
-                  const id = e.target.value;
-                  if (!id) {
-                    setTemplateId("");
-                    return;
-                  }
-                  applyTemplate(id);
-                }}
-              >
-                <option value="">None</option>
-                {templates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <EmailTemplatePicker
+            contact={contact}
+            companyName={companyName}
+            templateId={templateId}
+            onTemplateIdChange={setTemplateId}
+            subject={subject}
+            onSubjectChange={setSubject}
+            body={body}
+            onBodyChange={setBody}
+            canManageTemplates={canManage}
+          />
 
           <div>
             <label className="block text-xs font-medium text-heading mb-1">To</label>
@@ -173,6 +160,17 @@ export function SendEmailModal({
               value={to}
               onChange={(e) => setTo(e.target.value)}
               required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-heading mb-1">Cc</label>
+            <input
+              type="text"
+              className="input-field w-full"
+              placeholder="Optional — comma-separated emails"
+              value={cc}
+              onChange={(e) => setCc(e.target.value)}
             />
           </div>
 
@@ -212,7 +210,7 @@ export function SendEmailModal({
               Cancel
             </Button>
             <Button type="submit" disabled={sendEmail.isPending}>
-              {sendEmail.isPending ? "Sending…" : "Send email"}
+              {sendEmail.isPending ? "Sending…" : isReply ? "Send reply" : "Send email"}
             </Button>
           </div>
         </form>

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { revokeGoogleToken } from "@/lib/google/revoke-google-token";
-import { getGoogleGmailRedirectUri } from "@/lib/google/oauth-config";
+import { getGoogleGmailRedirectUri, getGoogleOAuthClientId } from "@/lib/google/oauth-config";
 
 /**
  * Revokes the current Gmail grant, clears stored tokens, and starts OAuth again
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const { userId, error } = await requireAuth();
   if (error) return error;
 
-  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientId = getGoogleOAuthClientId();
   const redirectUri = getGoogleGmailRedirectUri(req.url);
 
   if (!clientId) {

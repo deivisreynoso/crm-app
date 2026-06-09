@@ -155,6 +155,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     const noteItems: ActivityFeedItem[] = (notesRes.data ?? []).map((n) => ({
       id: `note-${n.id}`,
       source: "note" as const,
+      source_id: n.id as string,
       type: n.activity_type ?? "note",
       content: n.content,
       created_at: n.created_at,

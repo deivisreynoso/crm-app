@@ -4,11 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { EmailTemplatePicker } from "@/components/contact/email-template-picker";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { useGmailStatus } from "@/hooks/useGmail";
 import { useRequestReview } from "@/hooks/useRequestReview";
+import { useReviewEmailTemplate } from "@/hooks/useReviewEmailTemplate";
+import { useUpdateEmailTemplate } from "@/hooks/useEmailTemplates";
+import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
-import { useEmailTemplates } from "@/hooks/useEmailTemplates";
 import { GOOGLE_REVIEWS_URL } from "@/lib/website/google-reviews-url";
 import { defaultReviewTemplateContent } from "@/lib/reviews/default-review-template";
 import { renderReviewEmail } from "@/lib/reviews/review-template-context";
@@ -44,26 +47,40 @@ export function RequestReviewModal({
 }: Props) {
   const { dict, locale } = useCrmLocale();
   const r = dict.reviewRequest;
+  const { canManage } = useWorkspaceCapabilities();
   const { data: gmailStatus, isLoading: gmailLoading } = useGmailStatus();
   const { data: settings } = useWorkspaceSettings();
-  const { data: templates = [] } = useEmailTemplates();
+  const { data: reviewTemplate } = useReviewEmailTemplate();
+  const updateTemplate = useUpdateEmailTemplate();
   const requestReview = useRequestReview(contact.id);
+
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [cc, setCc] = useState("");
+  const [templateId, setTemplateId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const reviewUrl =
     settings?.google_reviews_url?.trim() || GOOGLE_REVIEWS_URL;
   const connected = gmailStatus?.connected ?? false;
+  const contactEmail = contact.email?.trim() ?? "";
+  const reviewTemplateId = settings?.review_request_template_id ?? null;
 
-  const preview = useMemo(() => {
-    const template = settings?.review_request_template_id
-      ? templates.find((t) => t.id === settings.review_request_template_id)
-      : undefined;
-    const fallback = defaultReviewTemplateContent(locale);
-    const subject = template?.subject ?? fallback.subject;
-    const body = template?.body ?? fallback.body;
-    return renderReviewEmail({
-      subject,
-      body,
+  const baseTemplate = useMemo(() => {
+    if (reviewTemplate) {
+      return { subject: reviewTemplate.subject, body: reviewTemplate.body };
+    }
+    return defaultReviewTemplateContent(locale);
+  }, [reviewTemplate, locale]);
+
+  useEffect(() => {
+    if (!open) return;
+    setError(null);
+    setCc("");
+    setTemplateId(reviewTemplateId ?? "");
+    const rendered = renderReviewEmail({
+      subject: baseTemplate.subject,
+      body: baseTemplate.body,
       contact: {
         first_name: contact.first_name,
         last_name: contact.last_name,
@@ -74,25 +91,43 @@ export function RequestReviewModal({
       companyName,
       googleReviewUrl: reviewUrl,
     });
-  }, [settings, templates, contact, companyName, reviewUrl, locale]);
+    setSubject(rendered.subject);
+    setBody(rendered.body);
+  }, [
+    open,
+    baseTemplate,
+    contact,
+    companyName,
+    reviewUrl,
+    reviewTemplateId,
+  ]);
 
-  useEffect(() => {
-    if (open) setError(null);
-  }, [open]);
-
-  const contactEmail = contact.email?.trim() ?? "";
   const blocked =
     contact.review_request_opt_out ||
     !contactEmail ||
     !reviewUrl ||
     !connected;
 
+  async function handleSaveReviewTemplate(input: {
+    subject: string;
+    body: string;
+  }) {
+    if (!reviewTemplateId || !canManage) return;
+    await updateTemplate.mutateAsync({
+      id: reviewTemplateId,
+      input: { subject: input.subject.trim(), body: input.body },
+    });
+  }
+
   async function handleSend() {
     setError(null);
     try {
-      await requestReview.mutateAsync(
-        ticketId ? { ticket_id: ticketId } : undefined
-      );
+      await requestReview.mutateAsync({
+        ticket_id: ticketId,
+        subject: subject.trim(),
+        body: body.trim(),
+        cc: cc.trim() || undefined,
+      });
       onSent?.();
       onClose();
     } catch (err) {
@@ -129,13 +164,81 @@ export function RequestReviewModal({
           </p>
         ) : (
           <>
-            <div className="rounded-lg border border-[var(--card-border)] bg-[var(--surface-subtle)] p-3 space-y-2">
-              <p className="text-xs text-body-muted">To: {contactEmail}</p>
-              <p className="font-medium text-heading">{preview.subject}</p>
-              <pre className="text-xs text-body-muted whitespace-pre-wrap font-sans leading-relaxed max-h-48 overflow-y-auto">
-                {preview.body}
-              </pre>
+            {canManage && reviewTemplateId && reviewTemplate && (
+              <EmailTemplatePicker
+                contact={contact}
+                companyName={companyName}
+                templateId={templateId}
+                onTemplateIdChange={(id) => {
+                  setTemplateId(id);
+                  if (id === reviewTemplateId && reviewTemplate) {
+                    const rendered = renderReviewEmail({
+                      subject: reviewTemplate.subject,
+                      body: reviewTemplate.body,
+                      contact,
+                      companyName,
+                      googleReviewUrl: reviewUrl,
+                    });
+                    setSubject(rendered.subject);
+                    setBody(rendered.body);
+                  }
+                }}
+                subject={subject}
+                onSubjectChange={setSubject}
+                body={body}
+                onBodyChange={setBody}
+                canManageTemplates={canManage}
+                allowReviewTemplate
+                reviewTemplate={reviewTemplate}
+                reviewTemplateId={reviewTemplateId}
+                onSaveReviewTemplate={handleSaveReviewTemplate}
+              />
+            )}
+
+            <div>
+              <label className="block text-xs font-medium text-heading mb-1">To</label>
+              <input
+                type="email"
+                className="input-field w-full text-sm"
+                value={contactEmail}
+                readOnly
+              />
             </div>
+
+            <div>
+              <label className="block text-xs font-medium text-heading mb-1">Cc</label>
+              <input
+                type="text"
+                className="input-field w-full text-sm"
+                placeholder="Optional — comma-separated emails"
+                value={cc}
+                onChange={(e) => setCc(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-heading mb-1">
+                Subject
+              </label>
+              <input
+                type="text"
+                className="input-field w-full text-sm"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-heading mb-1">
+                Message
+              </label>
+              <textarea
+                className="input-field w-full min-h-[140px] text-sm"
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+              />
+            </div>
+
             {error && (
               <p className="text-sm text-[var(--error)] bg-red-500/10 rounded-lg px-3 py-2">
                 {error}

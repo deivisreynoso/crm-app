@@ -8,6 +8,8 @@ import { saveContactEmail } from "@/lib/emails/save-contact-email";
 import { logEmailContactActivity } from "@/lib/activities/log-email-activity";
 import { logTicketEmailNote } from "@/lib/activities/log-ticket-email-note";
 import { loadTicketEmailContext } from "@/lib/tickets/ticket-email-context";
+import { syncContactEmailsFromGmail } from "@/lib/google/gmail-sync";
+import { resolveGmailSendOptions } from "@/lib/emails/build-gmail-send-options";
 import { triggerN8NWebhook } from "@/lib/n8n";
 import {
   buildTemplateContext,
@@ -101,10 +103,16 @@ export async function POST(req: NextRequest, context: RouteContext) {
       );
     }
 
+    const sendOptions = await resolveGmailSendOptions(userId!, {
+      cc: parsed.data.cc,
+      reply_to_gmail_message_id: parsed.data.reply_to_gmail_message_id,
+    });
+
     const sent = await sendGmailMessage(userId!, {
       to,
       subject,
       body: emailBody,
+      ...sendOptions,
     });
 
     if (!sent) {
@@ -126,6 +134,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
         user_id: workspaceOwnerId!,
         contact_id: contactId,
         ticket_id: ticketId,
+        mailbox_user_id: userId!,
         direction: "outbound",
         gmail_message_id: sent.messageId,
         gmail_thread_id: sent.threadId ?? null,
@@ -167,6 +176,15 @@ export async function POST(req: NextRequest, context: RouteContext) {
       subject,
       gmail_message_id: sent.messageId,
       gmail_thread_id: sent.threadId,
+    });
+
+    void syncContactEmailsFromGmail(
+      userId!,
+      workspaceOwnerId!,
+      contactId,
+      to
+    ).catch((syncErr) => {
+      console.error("post-send ticket email sync:", syncErr);
     });
 
     return NextResponse.json({

@@ -7,18 +7,41 @@ import type { ParsedGmailMessage } from "@/lib/google/gmail-message";
 const AUTOMATED_FROM =
   /(?:^|@)(?:noreply|no-reply|donotreply|notifications?|mailer-daemon|postmaster)\b/i;
 
-/** True only for a direct 1:1-style exchange between the connected user and this contact. */
-export function isDirectConversation(
+/** True when both the connected user and contact appear in From/To/Cc/Reply-To. */
+export function involvesContactAndUser(
   parsed: ParsedGmailMessage,
   userEmail: string,
   contactEmail: string
 ): boolean {
   const user = extractEmailAddress(userEmail);
   const contact = extractEmailAddress(contactEmail);
-  if (!user || !contact) return false;
+  if (!user || !contact || user === contact) return false;
 
-  // Same address on contact + Gmail account pulls the whole mailbox — never match broadly.
-  if (user === contact) return false;
+  const parties = new Set<string>();
+  const from = extractEmailAddress(parsed.from);
+  if (from) parties.add(from);
+  for (const addr of [
+    ...parseAddressList(parsed.to),
+    ...parseAddressList(parsed.cc),
+    ...parseAddressList(parsed.replyTo),
+  ]) {
+    parties.add(addr);
+  }
+
+  return parties.has(user) && parties.has(contact);
+}
+
+/** True only for a direct 1:1-style exchange between the connected user and this contact. */
+export function isDirectConversation(
+  parsed: ParsedGmailMessage,
+  userEmail: string,
+  contactEmail: string
+): boolean {
+  if (!involvesContactAndUser(parsed, userEmail, contactEmail)) return false;
+
+  const user = extractEmailAddress(userEmail);
+  const contact = extractEmailAddress(contactEmail);
+  if (!user || !contact) return false;
 
   const from = extractEmailAddress(parsed.from);
   const toList = parseAddressList(parsed.to);

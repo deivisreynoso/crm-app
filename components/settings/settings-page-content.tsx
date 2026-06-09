@@ -5,8 +5,7 @@ import { Card } from "@/components/ui/card";
 import { CustomFieldManager } from "@/components/custom-fields/custom-field-manager";
 import { EmailTemplatesManager } from "@/components/settings/email-templates-manager";
 import { DuplicateReviewsPanel } from "@/components/settings/duplicate-reviews-panel";
-import { SettingsIntegrationsSection } from "@/components/settings/settings-integrations-section";
-import { GoogleWorkspaceSetup } from "@/components/settings/google-workspace-setup";
+import { GoogleWorkspacePanel } from "@/components/settings/google-workspace-panel";
 import { TeamSettings } from "@/components/settings/team-settings";
 import { WorkspaceLeadsSettings } from "@/components/settings/workspace-leads-settings";
 import { BookingAvailabilitySettings } from "@/components/settings/booking-availability-settings";
@@ -52,10 +51,10 @@ export function SettingsPageContent() {
       </SettingsSection>
 
       <SettingsSection
-        title="Google Workspace"
-        description="Connect Gmail and Calendar for email and scheduling."
+        title="Integrations"
+        description="Connect your Google Workspace mailbox and calendar. Each teammate uses their own credentials."
       >
-        <GoogleWorkspaceSetup />
+        <GoogleWorkspacePanel />
       </SettingsSection>
 
       {canManage && (
@@ -83,10 +82,6 @@ export function SettingsPageContent() {
             description="Default assignee for inbound website leads."
           >
             <WorkspaceLeadsSettings />
-          </SettingsSection>
-
-          <SettingsSection title={s?.integrations ?? "Integrations"}>
-            <SettingsIntegrationsSection />
           </SettingsSection>
 
           <SettingsSection

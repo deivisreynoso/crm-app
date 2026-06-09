@@ -2,6 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { createServerSideClient } from "@/lib/supabase";
 import { ensureUserProfile } from "@/lib/users/ensure-user-profile";
+import { userCanAccessCrm } from "@/lib/team/access";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -22,6 +23,9 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (error || !data.user) return null;
+
+        const allowed = await userCanAccessCrm(supabase, data.user.id);
+        if (!allowed) return null;
 
         const fullName = data.user.user_metadata?.full_name as
           | string

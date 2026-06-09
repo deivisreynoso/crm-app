@@ -1,32 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import axios from "axios";
 import { formatApiError } from "@/lib/validation-errors";
+import { useGoogleWorkspaceSetup } from "@/hooks/useGoogleWorkspace";
 import {
   useCalendarStatus,
   useGmailStatus,
 } from "@/hooks/useIntegrationsStatus";
 
-type IntegrationStatus = "connected" | "available" | "not_configured";
+type CardStatus = "connected" | "available" | "not_configured";
 
-function statusBadge(status: IntegrationStatus) {
-  if (status === "connected") return "Connected";
-  if (status === "not_configured") return "Setup required";
-  return "Available";
-}
-
-function statusVariant(status: IntegrationStatus) {
-  if (status === "connected") return "success" as const;
-  if (status === "not_configured") return "neutral" as const;
-  return "info" as const;
-}
-
-export function IntegrationsHub() {
+function GoogleWorkspacePanelInner() {
   const searchParams = useSearchParams();
+  const { data: setup, isLoading: setupLoading, refetch: refetchSetup } =
+    useGoogleWorkspaceSetup();
   const {
     data: gmail,
     isLoading: gmailLoading,
@@ -38,18 +30,17 @@ export function IntegrationsHub() {
     refetch: refetchCalendar,
   } = useCalendarStatus();
 
-  const [disconnectingCalendar, setDisconnectingCalendar] = useState(false);
   const [disconnectingGmail, setDisconnectingGmail] = useState(false);
+  const [disconnectingCalendar, setDisconnectingCalendar] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const calendarParam = searchParams.get("google_calendar");
     if (calendarParam === "connected") {
-      setBanner(
-        "Google Calendar connected. Meetings you create will sync to your calendar."
-      );
+      setBanner("Google Calendar connected.");
       void refetchCalendar();
+      void refetchSetup();
     } else if (calendarParam === "error") {
       setError("Google Calendar connection failed. Check OAuth settings and try again.");
     }
@@ -58,34 +49,22 @@ export function IntegrationsHub() {
     if (gmailParam === "connected") {
       setBanner("Gmail connected. You can send and sync email from contact records.");
       void refetchGmail();
+      void refetchSetup();
     } else if (gmailParam === "connected_no_read") {
       setError(
         "Gmail connected for sending only. Reconnect and approve all permissions to sync threads."
       );
       void refetchGmail();
+      void refetchSetup();
     } else if (gmailParam === "error") {
       const reason = searchParams.get("reason");
       setError(
         reason === "migration"
-          ? "Gmail authorized but credentials could not be saved. Run migration 018_google_gmail_tokens.sql, then reconnect."
+          ? "Gmail authorized but tokens could not be saved. Run migration 018_google_gmail_tokens.sql, then reconnect."
           : "Gmail connection failed. Check redirect URI and OAuth settings."
       );
     }
-  }, [searchParams, refetchCalendar, refetchGmail]);
-
-  async function handleDisconnectCalendar() {
-    setError(null);
-    setDisconnectingCalendar(true);
-    try {
-      await axios.delete("/api/integrations/google-calendar/disconnect");
-      setBanner("Google Calendar disconnected.");
-      void refetchCalendar();
-    } catch (err) {
-      setError(formatApiError(err, "Could not disconnect"));
-    } finally {
-      setDisconnectingCalendar(false);
-    }
-  }
+  }, [searchParams, refetchCalendar, refetchGmail, refetchSetup]);
 
   async function handleDisconnectGmail() {
     setError(null);
@@ -94,32 +73,51 @@ export function IntegrationsHub() {
       await axios.delete("/api/integrations/gmail/disconnect");
       setBanner("Gmail disconnected.");
       void refetchGmail();
+      void refetchSetup();
     } catch (err) {
-      setError(formatApiError(err, "Could not disconnect"));
+      setError(formatApiError(err, "Could not disconnect Gmail"));
     } finally {
       setDisconnectingGmail(false);
     }
   }
 
-  const gmailConnected = gmail?.connected ?? false;
-  const gmailConfigured = gmail?.configured ?? true;
-  const calendarConnected = calendar?.connected ?? false;
-  const calendarConfigured = calendar?.configured ?? true;
+  async function handleDisconnectCalendar() {
+    setError(null);
+    setDisconnectingCalendar(true);
+    try {
+      await axios.delete("/api/integrations/google-calendar/disconnect");
+      setBanner("Google Calendar disconnected.");
+      void refetchCalendar();
+      void refetchSetup();
+    } catch (err) {
+      setError(formatApiError(err, "Could not disconnect Calendar"));
+    } finally {
+      setDisconnectingCalendar(false);
+    }
+  }
 
-  const gmailStatus: IntegrationStatus = !gmailConfigured
+  if (setupLoading) {
+    return <p className="text-sm text-body-muted">Loading Google Workspace…</p>;
+  }
+
+  const oauthConfigured = setup?.oauth_configured ?? false;
+  const gmailConnected = gmail?.connected ?? false;
+  const calendarConnected = calendar?.connected ?? false;
+
+  const gmailStatus: CardStatus = !oauthConfigured
     ? "not_configured"
     : gmailConnected
       ? "connected"
       : "available";
 
-  const calendarStatus: IntegrationStatus = !calendarConfigured
+  const calendarStatus: CardStatus = !oauthConfigured
     ? "not_configured"
     : calendarConnected
       ? "connected"
       : "available";
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {banner && (
         <p className="text-sm text-emerald-700 bg-emerald-500/10 rounded-lg px-3 py-2">
           {banner}
@@ -132,25 +130,65 @@ export function IntegrationsHub() {
       )}
 
       <p className="text-sm text-body-muted">
-        Sign in with your workspace email, then connect <strong>your</strong> Google
-        Workspace mailbox and calendar. Each teammate connects their own account; CRM
-        data is shared across the team.
+        Sign in with your workspace email and password, then connect{" "}
+        <strong>your</strong> Google Workspace mailbox and calendar. Each teammate
+        uses their own Google account; CRM data is shared across the team.
       </p>
 
+      {setup && (
+        <ul className="space-y-2 rounded-lg border border-[var(--card-border)] bg-[var(--surface-subtle)] p-4">
+          {setup.checklist.map((item) => (
+            <li key={item.id} className="flex items-start gap-2 text-sm">
+              <span
+                className={`mt-0.5 shrink-0 w-4 h-4 rounded-full border flex items-center justify-center text-[10px] ${
+                  item.done
+                    ? "bg-emerald-600 border-emerald-600 text-white"
+                    : "border-[var(--card-border)] text-body-muted"
+                }`}
+                aria-hidden
+              >
+                {item.done ? "✓" : ""}
+              </span>
+              <span className={item.done ? "text-body-muted" : "text-heading"}>
+                {item.label}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {!oauthConfigured && setup && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm space-y-2">
+          <p className="font-medium text-heading">Server OAuth not configured yet</p>
+          <p className="text-body-muted">
+            Add these to your <code className="text-xs">.env.local</code> (or VPS
+            environment), restart the app, then use Connect below:
+          </p>
+          <div className="text-xs font-mono text-body-muted space-y-1">
+            <p>GOOGLE_CLIENT_ID=your-client-id</p>
+            <p>GOOGLE_CLIENT_SECRET=your-client-secret</p>
+            <p className="text-body-muted/80 pt-1">
+              (GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET also work)
+            </p>
+            <p>NEXT_PUBLIC_APP_URL=http://localhost:3000</p>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-3 sm:grid-cols-2">
-        <IntegrationCard
+        <ConnectionCard
           name="Gmail"
-          description="Send quotes and contact emails from your company address. Sync email threads on the contact Emails tab when read access is granted."
+          description="Send quotes and contact emails from your company address. Sync threads on the contact Emails tab when read access is granted."
           status={gmailLoading ? "available" : gmailStatus}
           actionLabel={
-            !gmailConfigured
-              ? "Not configured"
+            !oauthConfigured
+              ? "Configure server OAuth first"
               : gmailConnected
                 ? "Connected"
                 : "Connect mailbox"
           }
           onAction={
-            gmailConfigured && !gmailConnected
+            oauthConfigured && !gmailConnected
               ? () => {
                   window.location.href = "/api/auth/google-gmail";
                 }
@@ -172,29 +210,28 @@ export function IntegrationsHub() {
                   }
                 : undefined
           }
-          docsHint={
-            gmail?.redirect_uri
-              ? `Redirect URI (Google Cloud → Authorized redirect URIs):\n${gmail.redirect_uri}${
-                  gmail.email ? `\n\nConnected as: ${gmail.email}` : ""
-                }`
-              : undefined
+          hint={
+            gmail?.email
+              ? `Connected as ${gmail.email}`
+              : setup?.gmail.redirect_uri
+                ? `Redirect URI:\n${setup.gmail.redirect_uri}`
+                : undefined
           }
-          loading={gmailLoading}
         />
 
-        <IntegrationCard
+        <ConnectionCard
           name="Google Calendar"
-          description="Sync meetings you schedule in ClickIn 360 to your Google Calendar."
+          description="Sync meetings you create in ClickIn 360 to your Google Calendar."
           status={calendarLoading ? "available" : calendarStatus}
           actionLabel={
-            !calendarConfigured
-              ? "Not configured"
+            !oauthConfigured
+              ? "Configure server OAuth first"
               : calendarConnected
                 ? "Connected"
                 : "Connect calendar"
           }
           onAction={
-            calendarConfigured && !calendarConnected
+            oauthConfigured && !calendarConnected
               ? () => {
                   window.location.href = "/api/auth/google-calendar";
                 }
@@ -209,33 +246,52 @@ export function IntegrationsHub() {
                 }
               : undefined
           }
-          docsHint={
-            calendar?.redirect_uri
-              ? `Redirect URI:\n${calendar.redirect_uri}${
-                  calendar.email ? `\n\nSigned in as: ${calendar.email}` : ""
-                }`
+          hint={
+            setup?.calendar.redirect_uri
+              ? `Redirect URI:\n${setup.calendar.redirect_uri}`
               : undefined
           }
-          loading={calendarLoading}
         />
       </div>
+
+      {gmailConnected && gmail?.email && (
+        <p className="text-sm text-emerald-800 bg-emerald-500/10 rounded-lg px-3 py-2">
+          Your mailbox: <span className="font-medium">{gmail.email}</span>
+          {!gmail.read_access && (
+            <>
+              {" "}
+              — thread sync needs read access.{" "}
+              <Link href="/api/auth/google-gmail/reconnect" className="underline">
+                Reconnect Gmail
+              </Link>
+            </>
+          )}
+        </p>
+      )}
+
+      <Button type="button" size="sm" variant="ghost" onClick={() => {
+        void refetchSetup();
+        void refetchGmail();
+        void refetchCalendar();
+      }}>
+        Refresh status
+      </Button>
     </div>
   );
 }
 
-function IntegrationCard({
+function ConnectionCard({
   name,
   description,
   status,
   actionLabel,
   onAction,
   secondaryAction,
-  docsHint,
-  loading,
+  hint,
 }: {
   name: string;
   description: string;
-  status: IntegrationStatus;
+  status: CardStatus;
   actionLabel: string;
   onAction?: () => void;
   secondaryAction?: {
@@ -243,19 +299,24 @@ function IntegrationCard({
     onClick: () => void;
     disabled?: boolean;
   };
-  docsHint?: string;
-  loading?: boolean;
+  hint?: string;
 }) {
   return (
     <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-4 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-sm font-semibold text-heading">{name}</h3>
-        <Badge variant={statusVariant(status)}>{statusBadge(status)}</Badge>
+        <Badge variant={status === "connected" ? "success" : status === "not_configured" ? "neutral" : "info"}>
+          {status === "connected"
+            ? "Connected"
+            : status === "not_configured"
+              ? "Setup required"
+              : "Available"}
+        </Badge>
       </div>
       <p className="text-sm text-body-muted flex-1">{description}</p>
-      {docsHint && (
+      {hint && (
         <p className="text-xs text-body-muted whitespace-pre-wrap font-mono break-all">
-          {docsHint}
+          {hint}
         </p>
       )}
       <div className="flex flex-wrap gap-2">
@@ -264,7 +325,7 @@ function IntegrationCard({
             type="button"
             size="sm"
             variant={status === "connected" ? "outline" : "default"}
-            disabled={status === "not_configured" || loading}
+            disabled={status === "not_configured"}
             onClick={onAction}
           >
             {actionLabel}
@@ -285,5 +346,13 @@ function IntegrationCard({
         )}
       </div>
     </div>
+  );
+}
+
+export function GoogleWorkspacePanel() {
+  return (
+    <Suspense fallback={<p className="text-sm text-body-muted">Loading…</p>}>
+      <GoogleWorkspacePanelInner />
+    </Suspense>
   );
 }

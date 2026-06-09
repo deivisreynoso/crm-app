@@ -25,6 +25,8 @@ type TimelineLabels = {
   copyFailed: string;
   expand: string;
   collapse: string;
+  edit: string;
+  delete: string;
   emailReceived: string;
   emailSent: string;
   types: Record<string, string>;
@@ -35,6 +37,7 @@ type IconConfig = {
   Icon: LucideIcon;
   boxClass: string;
   iconClass: string;
+  rowTint?: string;
 };
 
 function getIconConfig(item: ActivityFeedItem): IconConfig {
@@ -68,10 +71,19 @@ function getIconConfig(item: ActivityFeedItem): IconConfig {
         iconClass: "text-emerald-700",
       };
     case "email":
+      if (item.email_direction === "inbound") {
+        return {
+          Icon: Mail,
+          boxClass: "bg-rose-50 border-rose-200",
+          iconClass: "text-rose-700",
+          rowTint: "bg-rose-50/60",
+        };
+      }
       return {
         Icon: Mail,
         boxClass: "bg-sky-50 border-sky-200",
         iconClass: "text-sky-700",
+        rowTint: "bg-sky-50/50",
       };
     case "meeting":
       return {
@@ -202,6 +214,9 @@ function TimelineRow({
   labels,
   displayTz,
   locale,
+  canWrite,
+  onEdit,
+  onDelete,
 }: {
   item: ActivityFeedItem;
   expanded: boolean;
@@ -210,14 +225,18 @@ function TimelineRow({
   labels: TimelineLabels;
   displayTz?: string;
   locale: string;
+  canWrite?: boolean;
+  onEdit?: (item: ActivityFeedItem) => void;
+  onDelete?: (item: ActivityFeedItem) => void;
 }) {
   const menuId = useId();
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
-  const { Icon, boxClass, iconClass } = getIconConfig(item);
+  const { Icon, boxClass, iconClass, rowTint } = getIconConfig(item);
   const name = authorName(item, labels);
   const timestamp = formatTimelineDateTime(item.created_at, displayTz, locale);
+  const editable = canWrite && item.source === "note" && !item.is_system;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -273,7 +292,8 @@ function TimelineRow({
 
       <div
         className={cn(
-          "min-w-0 flex-1 pb-5",
+          "min-w-0 flex-1 pb-5 rounded-lg -mx-1 px-1",
+          rowTint,
           !isLast && "border-b border-[var(--card-border)]/70"
         )}
       >
@@ -345,6 +365,32 @@ function TimelineRow({
                       ? labels.copyFailed
                       : labels.copy}
                 </button>
+                {editable && onEdit && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="w-full px-3 py-1.5 text-left text-sm text-heading hover:bg-[var(--surface-subtle)]"
+                    onClick={() => {
+                      onEdit(item);
+                      setMenuOpen(false);
+                    }}
+                  >
+                    {labels.edit}
+                  </button>
+                )}
+                {editable && onDelete && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="w-full px-3 py-1.5 text-left text-sm text-[var(--error)] hover:bg-red-500/10"
+                    onClick={() => {
+                      onDelete(item);
+                      setMenuOpen(false);
+                    }}
+                  >
+                    {labels.delete}
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -359,11 +405,17 @@ export function ActivityTimeline({
   labels,
   displayTz,
   locale = "en",
+  canWrite = false,
+  onEdit,
+  onDelete,
 }: {
   items: ActivityFeedItem[];
   labels: TimelineLabels;
   displayTz?: string;
   locale?: string;
+  canWrite?: boolean;
+  onEdit?: (item: ActivityFeedItem) => void;
+  onDelete?: (item: ActivityFeedItem) => void;
 }) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
 
@@ -397,6 +449,9 @@ export function ActivityTimeline({
             labels={labels}
             displayTz={displayTz}
             locale={locale}
+            canWrite={canWrite}
+            onEdit={onEdit}
+            onDelete={onDelete}
           />
         ))}
       </ul>

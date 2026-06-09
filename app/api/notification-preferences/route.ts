@@ -8,6 +8,7 @@ const DEFAULTS = {
   task_reminders: true,
   opportunity_reminders: true,
   ticket_notifications: true,
+  email_notifications: true,
   email_frequency: "daily",
   timezone: "UTC",
 };

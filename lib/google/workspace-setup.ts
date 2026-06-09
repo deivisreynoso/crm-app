@@ -1,3 +1,4 @@
+import { createServerSideClient } from "@/lib/supabase";
 import {
   getGoogleCalendarRedirectUri,
   getGoogleGmailRedirectUri,
@@ -26,9 +27,20 @@ export type GoogleWorkspaceSetupResponse = {
     redirect_uri: string;
     connect_path: string;
     status_path: string;
+    connected: boolean;
   };
   checklist: { id: string; label: string; done: boolean }[];
 };
+
+async function getCalendarConnected(actorUserId: string): Promise<boolean> {
+  const supabase = createServerSideClient();
+  const { data } = await supabase
+    .from("google_calendar_tokens")
+    .select("id")
+    .eq("user_id", actorUserId)
+    .maybeSingle();
+  return !!data?.id;
+}
 
 export async function buildGoogleWorkspaceSetup(
   requestUrl: string,
@@ -38,40 +50,49 @@ export async function buildGoogleWorkspaceSetup(
   const gmailRedirect = getGoogleGmailRedirectUri(requestUrl);
   const calendarRedirect = getGoogleCalendarRedirectUri(requestUrl);
   const connection = oauthConfigured
-    ? await getGoogleGmailConnection(actorUserId)
+    ? await getGoogleGmailConnection(actorUserId, { verifyRead: false })
     : { connected: false, email: null, read_access: false };
+  const calendarConnected = oauthConfigured
+    ? await getCalendarConnected(actorUserId)
+    : false;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "") ?? null;
 
   const checklist = [
     {
       id: "google_cloud",
-      label: "Create Google Cloud project and OAuth web client (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)",
+      label:
+        "Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your server environment",
       done: oauthConfigured,
     },
     {
       id: "gmail_api",
-      label: "Enable Gmail API in Google Cloud",
+      label: "Enable Gmail API and Google Calendar API in Google Cloud",
       done: oauthConfigured,
     },
     {
-      id: "redirect_uri",
-      label: `Add redirect URI: ${gmailRedirect}`,
+      id: "redirect_gmail",
+      label: `Register Gmail redirect URI: ${gmailRedirect}`,
       done: oauthConfigured,
     },
     {
-      id: "migration",
-      label: "Run migration 018_google_gmail_tokens.sql in Supabase",
-      done: true,
+      id: "redirect_calendar",
+      label: `Register Calendar redirect URI: ${calendarRedirect}`,
+      done: oauthConfigured,
     },
     {
-      id: "connect",
-      label: "Each user connects their Workspace mailbox in Settings → Integrations",
+      id: "connect_gmail",
+      label: "Connect your Workspace mailbox below",
       done: connection.connected,
     },
     {
+      id: "connect_calendar",
+      label: "Connect your Google Calendar below",
+      done: calendarConnected,
+    },
+    {
       id: "read_scope",
-      label: "Approve read access (sync replies into contact Emails tab)",
+      label: "Approve Gmail read access to sync threads on contact records",
       done: connection.read_access,
     },
   ];
@@ -97,6 +118,7 @@ export async function buildGoogleWorkspaceSetup(
       redirect_uri: calendarRedirect,
       connect_path: "/api/auth/google-calendar",
       status_path: "/api/integrations/google-calendar/status",
+      connected: calendarConnected,
     },
     checklist,
   };

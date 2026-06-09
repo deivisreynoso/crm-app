@@ -95,6 +95,15 @@ export const noteSchema = z.object({
   activity_type: z.enum(['call', 'email', 'meeting', 'note']).default('note'),
 });
 
+export const noteUpdateSchema = z
+  .object({
+    content: z.string().min(1, 'Note content is required').optional(),
+    activity_type: z.enum(['call', 'email', 'meeting', 'note']).optional(),
+  })
+  .refine((data) => data.content !== undefined || data.activity_type !== undefined, {
+    message: 'At least one field is required',
+  });
+
 export type NoteFormData = z.infer<typeof noteSchema>;
 
 export const taskSchema = z.object({
@@ -388,9 +397,11 @@ export type EmailTemplateFormData = z.infer<typeof emailTemplateSchema>;
 export const gmailSendSchema = z
   .object({
     to: z.string().email("Enter a valid recipient email"),
+    cc: z.string().max(2000).optional().or(z.literal("")),
     subject: z.string().max(998).optional().or(z.literal("")),
     body: z.string().max(100_000).optional().or(z.literal("")),
     template_id: z.string().uuid().optional(),
+    reply_to_gmail_message_id: z.string().min(1).optional(),
   })
   .refine(
     (data) =>
@@ -416,6 +427,7 @@ export const notificationPreferencesSchema = z.object({
   task_reminders: z.boolean().optional(),
   opportunity_reminders: z.boolean().optional(),
   ticket_notifications: z.boolean().optional(),
+  email_notifications: z.boolean().optional(),
   email_frequency: z.enum(["instant", "daily", "weekly", "off"]).optional(),
   timezone: z.string().optional().or(z.literal("")),
 });

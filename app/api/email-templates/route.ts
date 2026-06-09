@@ -23,7 +23,12 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json({ data: data ?? [] });
+    const filtered = (data ?? []).filter(
+      (row) =>
+        row.category !== "automation" && row.category !== "review_request"
+    );
+
+    return NextResponse.json({ data: filtered });
   } catch (err) {
     console.error("GET /api/email-templates:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

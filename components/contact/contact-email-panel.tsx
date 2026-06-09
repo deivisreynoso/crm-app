@@ -1,15 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Mail, RefreshCw } from "lucide-react";
+import { Mail, RefreshCw, Reply } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn, formatDateTime } from "@/lib/utils";
 import {
   useContactEmails,
   useGmailStatus,
-  useSendContactEmail,
-  useSendTicketEmail,
   useSyncContactEmails,
   useSyncTicketEmails,
   useTicketEmails,
@@ -21,7 +19,7 @@ import type { Contact } from "@/types";
 interface ContactEmailPanelProps {
   contact: Pick<Contact, "id" | "email" | "first_name" | "last_name">;
   ticketId?: string;
-  onOpenFullCompose?: () => void;
+  onOpenCompose?: (replyTo?: ContactEmailMessage) => void;
 }
 
 function groupByThread(messages: ContactEmailMessage[]) {
@@ -42,7 +40,7 @@ function groupByThread(messages: ContactEmailMessage[]) {
 export function ContactEmailPanel({
   contact,
   ticketId,
-  onOpenFullCompose,
+  onOpenCompose,
 }: ContactEmailPanelProps) {
   const { data: gmailStatus } = useGmailStatus();
   const contactEmailsQuery = useContactEmails(contact.id);
@@ -53,36 +51,42 @@ export function ContactEmailPanel({
   const syncContactEmails = useSyncContactEmails(contact.id);
   const syncTicketEmails = useSyncTicketEmails(ticketId ?? "");
   const syncEmails = ticketId ? syncTicketEmails : syncContactEmails;
-  const sendContactEmail = useSendContactEmail(contact.id);
-  const sendTicketEmail = useSendTicketEmail(ticketId ?? "");
-  const sendEmail = ticketId ? sendTicketEmail : sendContactEmail;
 
-  const [replyBody, setReplyBody] = useState("");
-  const [replySubject, setReplySubject] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
 
   const threads = useMemo(() => groupByThread(messages), [messages]);
-  const lastMessage = messages[messages.length - 1];
   const connected = gmailStatus?.connected ?? false;
   const readAccess = gmailStatus?.read_access ?? false;
   const needsReadReconnect = connected && !readAccess;
 
   const contactEmail = contact.email?.trim() ?? "";
+  const syncInFlight = useRef(false);
 
-  async function handleSync() {
-    setError(null);
-    setHint(null);
+  async function runSync(options?: { silent?: boolean }) {
+    if (syncInFlight.current) return;
+    syncInFlight.current = true;
+    if (!options?.silent) {
+      setError(null);
+      setHint(null);
+    }
     try {
       const { data } = await syncEmails.mutateAsync();
-      if (data.hint) setHint(data.hint);
-      if (data.synced === 0 && messages.length === 0 && !data.hint && !data.error) {
+      if (!options?.silent && data.hint) setHint(data.hint);
+      if (
+        !options?.silent &&
+        data.synced === 0 &&
+        messages.length === 0 &&
+        !data.hint &&
+        !data.error
+      ) {
         setHint(
           `No messages saved. Searched Gmail for conversations with ${data.contact_email ?? contactEmail}.`
         );
       }
       if (data.synced > 0) setHint(null);
     } catch (err: unknown) {
+      if (options?.silent) return;
       const axiosErr = err as {
         response?: { data?: { error?: string; needs_reauth?: boolean } };
       };
@@ -94,34 +98,22 @@ export function ContactEmailPanel({
       } else {
         setError(formatApiError(err, "Could not sync from Gmail"));
       }
+    } finally {
+      syncInFlight.current = false;
     }
   }
 
-  async function handleQuickReply(e: React.FormEvent) {
-    e.preventDefault();
-    if (!contactEmail || !replyBody.trim()) return;
-    setError(null);
+  useEffect(() => {
+    if (!connected || !readAccess || !contactEmail) return;
 
-    const subject =
-      replySubject.trim() ||
-      (lastMessage?.subject?.startsWith("Re:")
-        ? lastMessage.subject
-        : lastMessage?.subject
-          ? `Re: ${lastMessage.subject}`
-          : "Follow up");
+    void runSync({ silent: true });
+    const intervalId = window.setInterval(() => {
+      void runSync({ silent: true });
+    }, 120_000);
 
-    try {
-      await sendEmail.mutateAsync({
-        to: contactEmail,
-        subject,
-        body: replyBody.trim(),
-      });
-      setReplyBody("");
-      setReplySubject("");
-    } catch (err) {
-      setError(formatApiError(err, "Could not send email"));
-    }
-  }
+    return () => window.clearInterval(intervalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- poll when connection/contact changes
+  }, [connected, readAccess, contactEmail, contact.id, ticketId]);
 
   if (!contactEmail) {
     return (
@@ -158,8 +150,8 @@ export function ContactEmailPanel({
           Syncing with contact: <span className="font-medium">{contactEmail}</span>
         </p>
         <p className="text-xs text-body-muted w-full">
-          Replies sync when they land in your Gmail inbox—the contact can use any email
-          provider. Mail that never goes through Gmail (e.g. iCloud-only) will not appear.
+          Replies appear when they land in your Gmail inbox. New replies trigger an
+          in-app notification that opens this contact.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -167,15 +159,15 @@ export function ContactEmailPanel({
             size="sm"
             variant="outline"
             disabled={syncEmails.isPending}
-            onClick={() => void handleSync()}
+            onClick={() => void runSync()}
           >
             <RefreshCw
               className={cn("h-3.5 w-3.5 mr-1", syncEmails.isPending && "animate-spin")}
             />
             Sync from Gmail
           </Button>
-          {onOpenFullCompose && (
-            <Button type="button" size="sm" onClick={onOpenFullCompose}>
+          {onOpenCompose && (
+            <Button type="button" size="sm" onClick={() => onOpenCompose()}>
               <Mail className="h-3.5 w-3.5 mr-1" />
               Compose
             </Button>
@@ -210,18 +202,25 @@ export function ContactEmailPanel({
       ) : messages.length === 0 ? (
         <div className="text-center py-10 space-y-3 border border-dashed border-[var(--card-border)] rounded-lg">
           <p className="text-sm text-body-muted">
-            No messages yet. Send an email below or sync from Gmail to pull existing
+            No messages yet. Compose an email or sync from Gmail to pull existing
             threads.
           </p>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={syncEmails.isPending}
-            onClick={() => void handleSync()}
-          >
-            Sync from Gmail
-          </Button>
+          <div className="flex flex-wrap justify-center gap-2">
+            {onOpenCompose && (
+              <Button type="button" size="sm" onClick={() => onOpenCompose()}>
+                Compose email
+              </Button>
+            )}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={syncEmails.isPending}
+              onClick={() => void runSync()}
+            >
+              Sync from Gmail
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="space-y-4 max-h-[min(480px,60vh)] overflow-y-auto pr-1">
@@ -244,15 +243,39 @@ export function ContactEmailPanel({
                     className={cn(
                       "px-3 py-3 text-sm",
                       msg.direction === "outbound"
-                        ? "bg-[var(--primary)]/5"
-                        : "bg-[var(--card)]"
+                        ? "bg-sky-50/80 border-l-2 border-sky-300"
+                        : "bg-rose-50/80 border-l-2 border-rose-300"
                     )}
                   >
-                    <div className="flex flex-wrap items-center gap-2 mb-1 text-xs text-body-muted">
-                      <span className="font-medium text-heading">
-                        {msg.direction === "outbound" ? "You" : contact.first_name}
-                      </span>
-                      <time>{formatDateTime(msg.sent_at)}</time>
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-body-muted">
+                        <span className="font-medium text-heading">
+                          {msg.direction === "outbound" ? "You" : contact.first_name}
+                        </span>
+                        <span
+                          className={cn(
+                            "rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+                            msg.direction === "outbound"
+                              ? "bg-sky-100 text-sky-800"
+                              : "bg-rose-100 text-rose-800"
+                          )}
+                        >
+                          {msg.direction === "outbound" ? "Sent" : "Received"}
+                        </span>
+                        <time>{formatDateTime(msg.sent_at)}</time>
+                      </div>
+                      {onOpenCompose && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => onOpenCompose(msg)}
+                        >
+                          <Reply className="h-3.5 w-3.5 mr-1" />
+                          Reply
+                        </Button>
+                      )}
                     </div>
                     <p className="text-heading whitespace-pre-wrap">{msg.body}</p>
                   </li>
@@ -262,32 +285,6 @@ export function ContactEmailPanel({
           ))}
         </div>
       )}
-
-      <form
-        onSubmit={(e) => void handleQuickReply(e)}
-        className="space-y-3 p-4 rounded-lg border border-[var(--card-border)] bg-[var(--surface-subtle)]"
-      >
-        <p className="text-xs font-medium text-heading">Reply from CRM</p>
-        <input
-          type="text"
-          className="input-field w-full text-sm"
-          placeholder={
-            lastMessage?.subject ? `Re: ${lastMessage.subject}` : "Subject"
-          }
-          value={replySubject}
-          onChange={(e) => setReplySubject(e.target.value)}
-        />
-        <textarea
-          className="input-field w-full min-h-[100px] text-sm"
-          placeholder={`Write to ${contact.first_name}…`}
-          value={replyBody}
-          onChange={(e) => setReplyBody(e.target.value)}
-          required
-        />
-        <Button type="submit" size="sm" disabled={sendEmail.isPending}>
-          {sendEmail.isPending ? "Sending…" : "Send"}
-        </Button>
-      </form>
     </div>
   );
 }

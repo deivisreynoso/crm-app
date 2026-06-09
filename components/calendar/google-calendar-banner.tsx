@@ -1,28 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import axios from "axios";
+import { useCalendarStatus } from "@/hooks/useIntegrationsStatus";
 
 export function GoogleCalendarBanner() {
-  const [connected, setConnected] = useState<boolean | null>(null);
+  const { data, isLoading } = useCalendarStatus();
 
-  useEffect(() => {
-    void axios
-      .get<{ connected: boolean; configured: boolean }>(
-        "/api/integrations/google-calendar/status"
-      )
-      .then((res) => setConnected(res.data.connected))
-      .catch(() => setConnected(false));
-  }, []);
-
-  if (connected === null || connected) return null;
+  if (isLoading || data?.connected) return null;
 
   return (
     <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-heading flex flex-wrap items-center justify-between gap-2">
       <span>
-        Connect Google Calendar to sync meetings from ClickIn 360 to your Google
-        account.
+        Connect your Google Calendar to sync meetings you create in ClickIn 360.
       </span>
       <Link
         href="/settings"

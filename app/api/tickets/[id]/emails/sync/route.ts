@@ -33,10 +33,18 @@ export async function POST(_req: NextRequest, context: RouteContext) {
       );
     }
 
+    const contactName =
+      [ctx.contact.first_name, ctx.contact.last_name]
+        .filter(Boolean)
+        .join(" ")
+        .trim() || ctx.contact.email;
+
     const result = await syncContactEmailsFromGmail(
       userId!,
+      workspaceOwnerId!,
       ctx.contact.id,
-      ctx.contact.email
+      ctx.contact.email,
+      contactName
     );
 
     if (result.error) {

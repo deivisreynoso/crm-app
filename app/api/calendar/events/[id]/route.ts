@@ -13,6 +13,7 @@ import {
   deleteGoogleCalendarEvent,
   updateGoogleCalendarEvent,
 } from "@/lib/google/calendar";
+import { resolveCalendarUserId } from "@/lib/google/resolve-calendar-user";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -140,7 +141,15 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const eventRow = data as Record<string, unknown>;
     if (eventRow.google_event_id) {
       try {
-        await updateGoogleCalendarEvent(workspaceOwnerId!, String(eventRow.google_event_id), {
+        const syncUserId = await resolveCalendarUserId(
+          supabase,
+          [
+            eventRow.assigned_to as string | null,
+            userId,
+          ],
+          workspaceOwnerId!
+        );
+        await updateGoogleCalendarEvent(syncUserId, String(eventRow.google_event_id), {
           title: String(eventRow.title),
           description: (eventRow.description as string | null) ?? null,
           location: (eventRow.location as string | null) ?? null,
@@ -169,15 +178,20 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
 
     const { data: existing } = await supabase
       .from("calendar_events")
-      .select("google_event_id")
+      .select("google_event_id, assigned_to")
       .eq("id", id)
       .eq("user_id", workspaceOwnerId!)
       .maybeSingle();
 
     if (existing?.google_event_id) {
       try {
+        const syncUserId = await resolveCalendarUserId(
+          supabase,
+          [(existing as { assigned_to?: string }).assigned_to, userId],
+          workspaceOwnerId!
+        );
         await deleteGoogleCalendarEvent(
-          workspaceOwnerId!,
+          syncUserId,
           existing.google_event_id as string
         );
       } catch (syncErr) {

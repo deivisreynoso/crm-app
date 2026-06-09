@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { createServerSideClient } from "@/lib/supabase";
-import { getGoogleGmailRedirectUri } from "@/lib/google/oauth-config";
+import {
+  getGoogleGmailRedirectUri,
+  getGoogleOAuthClientId,
+  getGoogleOAuthClientSecret,
+} from "@/lib/google/oauth-config";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -18,8 +22,8 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const clientId = getGoogleOAuthClientId();
+  const clientSecret = getGoogleOAuthClientSecret();
   const redirectUri = getGoogleGmailRedirectUri(req.url);
 
   if (!clientId || !clientSecret) {
@@ -91,8 +95,10 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const { checkGmailReadAccess } = await import("@/lib/google/gmail");
-  const hasRead = await checkGmailReadAccess(userId);
+  const { getGoogleGmailConnection } = await import("@/lib/google/gmail");
+  const { read_access: hasRead } = await getGoogleGmailConnection(userId, {
+    verifyRead: true,
+  });
 
   return NextResponse.redirect(
     new URL(

@@ -52,7 +52,11 @@ function LoginForm() {
       });
 
       if (result?.error) {
-        setError(result.error);
+        setError(
+          result.error === "CredentialsSignin"
+            ? "Invalid email or password, or your account is not linked to a workspace. Ask your admin for an invite."
+            : result.error
+        );
       } else if (result?.ok) {
         router.push("/dashboard");
         router.refresh();

@@ -12,6 +12,7 @@ export type ParsedGmailMessage = {
   from: string;
   to: string;
   cc: string;
+  replyTo: string;
   subject: string;
   body: string;
   sentAt: string;
@@ -66,6 +67,7 @@ export function parseGmailApiMessage(message: {
   const from = headerValue(headers, "From");
   const to = headerValue(headers, "To");
   const cc = headerValue(headers, "Cc");
+  const replyTo = headerValue(headers, "Reply-To");
   const subject = headerValue(headers, "Subject");
   const body = extractBody(message.payload) || "(No message body)";
 
@@ -79,6 +81,7 @@ export function parseGmailApiMessage(message: {
     from,
     to,
     cc,
+    replyTo,
     subject,
     body,
     sentAt,

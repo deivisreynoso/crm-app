@@ -6,6 +6,31 @@ import { formatValidationDetails, humanizeDbError } from "@/lib/validation-error
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+export async function GET(_req: NextRequest, context: RouteContext) {
+  try {
+    const { workspaceOwnerId, error } = await requireAuth();
+    if (error) return error;
+
+    const { id } = await context.params;
+    const supabase = createServerSideClient();
+    const { data, error: dbError } = await supabase
+      .from("email_templates")
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", workspaceOwnerId!)
+      .maybeSingle();
+
+    if (dbError || !data) {
+      return NextResponse.json({ error: "Template not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(data);
+  } catch (err) {
+    console.error("GET /api/email-templates/[id]:", err);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
     const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();

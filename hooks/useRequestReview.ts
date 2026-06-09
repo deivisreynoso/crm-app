@@ -4,8 +4,12 @@ import axios from "axios";
 export function useRequestReview(contactId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input?: { ticket_id?: string }) =>
-      axios.post(`/api/contacts/${contactId}/request-review`, input ?? {}),
+    mutationFn: (input?: {
+      ticket_id?: string;
+      subject?: string;
+      body?: string;
+      cc?: string;
+    }) => axios.post(`/api/contacts/${contactId}/request-review`, input ?? {}),
     onSuccess: (_res, variables) => {
       void queryClient.invalidateQueries({ queryKey: ["contact", contactId] });
       void queryClient.invalidateQueries({

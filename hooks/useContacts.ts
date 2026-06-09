@@ -146,6 +146,38 @@ export function useCreateContactNote(contactId: string) {
   });
 }
 
+export function useUpdateContactNote(contactId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      noteId,
+      ...input
+    }: {
+      noteId: string;
+      content?: string;
+      activity_type?: string;
+    }) => axios.patch(`/api/contacts/${contactId}/notes/${noteId}`, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contact-notes", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["contact-activity-feed", contactId] });
+    },
+  });
+}
+
+export function useDeleteContactNote(contactId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (noteId: string) =>
+      axios.delete(`/api/contacts/${contactId}/notes/${noteId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contact-notes", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["contact-activity-feed", contactId] });
+    },
+  });
+}
+
 export function useContactTasks(contactId: string) {
   return useQuery({
     queryKey: ["contact-tasks", contactId],
@@ -174,6 +206,19 @@ export function useCreateContactTask(contactId: string) {
       const { data } = await axios.post<Task>(`/api/contacts/${contactId}/tasks`, task);
       return data;
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contact-tasks", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["contact-activity-feed", contactId] });
+    },
+  });
+}
+
+export function useDeleteContactTask(contactId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (taskId: string) =>
+      axios.delete(`/api/contacts/${contactId}/tasks/${taskId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contact-tasks", contactId] });
       queryClient.invalidateQueries({ queryKey: ["contact-activity-feed", contactId] });

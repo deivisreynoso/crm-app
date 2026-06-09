@@ -3,17 +3,15 @@ import {
   buildGmailRawMessage,
   type GmailAttachment,
 } from "@/lib/google/gmail-attachments";
-import { getGoogleGmailRedirectUri } from "@/lib/google/oauth-config";
+import {
+  getGoogleGmailRedirectUri,
+  getGoogleOAuthClientId,
+  getGoogleOAuthClientSecret,
+  isGoogleGmailConfigured,
+} from "@/lib/google/oauth-config";
 
 export type { GmailAttachment };
-
-export function isGoogleGmailConfigured(): boolean {
-  return Boolean(
-    process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
-  );
-}
-
-export { getGoogleGmailRedirectUri };
+export { getGoogleGmailRedirectUri, isGoogleGmailConfigured };
 
 export const GMAIL_OAUTH_SCOPES = [
   "https://www.googleapis.com/auth/gmail.send",
@@ -26,6 +24,7 @@ type TokenRow = {
   refresh_token: string | null;
   expires_at: string | null;
   email_address: string | null;
+  has_read_access?: boolean | null;
 };
 
 /** Returns a valid access token for the connected user, refreshing when expired. */
@@ -50,8 +49,9 @@ export async function getGoogleGmailAccessToken(
 
   if (!row.refresh_token) return null;
 
-  const clientId = process.env.GOOGLE_CLIENT_ID!;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET!;
+  const clientId = getGoogleOAuthClientId();
+  const clientSecret = getGoogleOAuthClientSecret();
+  if (!clientId || !clientSecret) return null;
 
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -90,7 +90,10 @@ export async function getGoogleGmailAccessToken(
   return tokens.access_token;
 }
 
-export async function getGoogleGmailConnection(userId: string): Promise<{
+export async function getGoogleGmailConnection(
+  userId: string,
+  options?: { verifyRead?: boolean }
+): Promise<{
   connected: boolean;
   email: string | null;
   read_access: boolean;
@@ -102,7 +105,7 @@ export async function getGoogleGmailConnection(userId: string): Promise<{
   const supabase = createServerSideClient();
   const { data } = await supabase
     .from("google_gmail_tokens")
-    .select("id, email_address")
+    .select("id, email_address, has_read_access")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -113,7 +116,18 @@ export async function getGoogleGmailConnection(userId: string): Promise<{
 
   const email =
     data?.email_address?.trim() || (await getGoogleGmailConnectedEmail(userId));
-  const read_access = await checkGmailReadAccess(userId);
+
+  let read_access = data?.has_read_access === true;
+  if (options?.verifyRead) {
+    read_access = await checkGmailReadAccess(userId);
+    await supabase
+      .from("google_gmail_tokens")
+      .update({
+        has_read_access: read_access,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId);
+  }
 
   return { connected: true, email, read_access };
 }
@@ -148,6 +162,10 @@ export type GmailSendInput = {
   to: string;
   subject: string;
   body: string;
+  cc?: string;
+  threadId?: string;
+  inReplyTo?: string;
+  references?: string;
   attachments?: GmailAttachment[];
 };
 
@@ -167,6 +185,9 @@ export async function sendGmailMessage(
   const fromEmail = await getGoogleGmailConnectedEmail(actorUserId);
   const raw = buildGmailRawMessage({ ...input, from: fromEmail });
 
+  const payload: { raw: string; threadId?: string } = { raw };
+  if (input.threadId) payload.threadId = input.threadId;
+
   const res = await fetch(
     "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
     {
@@ -175,7 +196,7 @@ export async function sendGmailMessage(
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ raw }),
+      body: JSON.stringify(payload),
     }
   );
 

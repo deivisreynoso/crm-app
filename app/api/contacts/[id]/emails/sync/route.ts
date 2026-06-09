@@ -15,7 +15,7 @@ export async function POST(_req: NextRequest, context: RouteContext) {
 
     const { data: contact, error: contactError } = await supabase
       .from("contacts")
-      .select("id, email")
+      .select("id, email, first_name, last_name")
       .eq("id", contactId)
       .eq("user_id", workspaceOwnerId!)
       .maybeSingle();
@@ -31,10 +31,16 @@ export async function POST(_req: NextRequest, context: RouteContext) {
       );
     }
 
+    const contactName =
+      [contact.first_name, contact.last_name].filter(Boolean).join(" ").trim() ||
+      contact.email;
+
     const result = await syncContactEmailsFromGmail(
       userId!,
+      workspaceOwnerId!,
       contactId,
-      contact.email
+      contact.email,
+      contactName
     );
 
     if (result.error) {

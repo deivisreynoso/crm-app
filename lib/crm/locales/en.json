@@ -258,7 +258,13 @@
     "copied": "Copied",
     "copyFailed": "Copy failed",
     "expand": "Show details",
-    "collapse": "Hide details"
+    "collapse": "Hide details",
+    "editNoteTitle": "Edit note",
+    "editCallTitle": "Edit call log",
+    "deleteTitle": "Delete activity?",
+    "deleteDescription": "This note or call log will be permanently removed from the timeline.",
+    "saving": "Saving…",
+    "saveFailed": "Could not save activity"
   },
   "quickActions": {
     "toolbar": "Quick actions",
@@ -289,7 +295,20 @@
     "open": "Open →",
     "created": "Created",
     "due": "Due",
-    "prioritySuffix": "priority"
+    "prioritySuffix": "priority",
+    "detailTitle": "Task",
+    "titleLabel": "Title",
+    "descriptionLabel": "Description",
+    "statusLabel": "Status",
+    "priorityLabel": "Priority",
+    "statusOpen": "Open",
+    "statusInProgress": "In progress",
+    "statusCompleted": "Completed",
+    "deleteTitle": "Delete task?",
+    "deleteDescription": "This task will be permanently removed.",
+    "saving": "Saving…",
+    "saveFailed": "Could not save task",
+    "deleteFailed": "Could not delete task"
   },
   "related": {
     "contacts": "Contacts",

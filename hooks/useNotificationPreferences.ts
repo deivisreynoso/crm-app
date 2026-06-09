@@ -8,6 +8,7 @@ export interface NotificationPreferences {
   task_reminders: boolean;
   opportunity_reminders: boolean;
   ticket_notifications: boolean;
+  email_notifications: boolean;
   email_frequency: string;
   timezone: string;
 }

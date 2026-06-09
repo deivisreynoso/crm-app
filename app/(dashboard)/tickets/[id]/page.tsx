@@ -16,7 +16,7 @@ import { TicketForm } from "@/components/tickets/ticket-form";
 import { TicketOverview } from "@/components/tickets/ticket-overview";
 import { useTicket, useUpdateTicket } from "@/hooks/useTickets";
 import { useTicketNotes, useCreateTicketNote } from "@/hooks/useTicketNotes";
-import { useTicketEmails } from "@/hooks/useGmail";
+import { useTicketEmails, type ContactEmailMessage } from "@/hooks/useGmail";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
 import { formatServiceTicketLabel } from "@/lib/service-ticket-number";
 import type { TicketFormInput } from "@/types";
@@ -30,6 +30,7 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
   const [tab, setTab] = useState<TicketTab>("details");
   const [editing, setEditing] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [replyToEmail, setReplyToEmail] = useState<ContactEmailMessage | null>(null);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const { dict } = useCrmLocale();
   const r = dict.reviewRequest;
@@ -89,8 +90,13 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
         email: linkedContact.email ?? "",
       }}
       ticketId={id}
-      onOpenFullCompose={
-        canWrite && contactEmail ? () => setEmailModalOpen(true) : undefined
+      onOpenCompose={
+        canWrite && contactEmail
+          ? (replyTo) => {
+              setReplyToEmail(replyTo ?? null);
+              setEmailModalOpen(true);
+            }
+          : undefined
       }
     />
   ) : (
@@ -100,17 +106,7 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
   );
 
   const activityPanel = (
-    <ActivityPanel
-      notes={notes}
-      isAdding={createNote.isPending}
-      onAdd={
-        canWrite
-          ? async (input) => {
-              await createNote.mutateAsync(input);
-            }
-          : undefined
-      }
-    />
+    <ActivityPanel notes={notes} />
   );
 
   const tabs = [
@@ -135,7 +131,11 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
           ticketId={id}
           companyName={ticket.company?.name}
           open={emailModalOpen}
-          onClose={() => setEmailModalOpen(false)}
+          onClose={() => {
+            setEmailModalOpen(false);
+            setReplyToEmail(null);
+          }}
+          replyTo={replyToEmail}
           onSent={() => {
             void queryClient.invalidateQueries({ queryKey: ["ticket-emails", id] });
             void queryClient.invalidateQueries({ queryKey: ["ticket-notes", id] });
