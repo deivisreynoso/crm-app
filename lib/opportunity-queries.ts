@@ -1,4 +1,5 @@
 import { createServerSideClient } from "@/lib/supabase";
+import { fetchContactRelatedCounts } from "@/lib/opportunities/contact-related-counts";
 
 const CONTACT_FIELDS =
   "id, first_name, last_name, email, company, company_id, tags";
@@ -88,6 +89,7 @@ export async function listOpportunitiesWithContacts(
     search?: string;
     createdFrom?: string;
     createdTo?: string;
+    includeContactCounts?: boolean;
   }
 ) {
   const supabase = createServerSideClient();
@@ -174,8 +176,29 @@ export async function listOpportunitiesWithContacts(
     ])
   );
 
+  let countsByContact = new Map<
+    string,
+    { quotes: number; appointments: number; tasks: number }
+  >();
+  if (options?.includeContactCounts) {
+    countsByContact = await fetchContactRelatedCounts(
+      supabase,
+      userId,
+      contactIds
+    );
+  }
+
   return filtered.map((o) => ({
     ...o,
     contact: contactMap.get(o.contact_id) ?? null,
+    ...(options?.includeContactCounts
+      ? {
+          contact_counts: countsByContact.get(o.contact_id) ?? {
+            quotes: 0,
+            appointments: 0,
+            tasks: 0,
+          },
+        }
+      : {}),
   }));
 }

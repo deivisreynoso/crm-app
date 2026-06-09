@@ -4,10 +4,14 @@ type BadgeVariant = "default" | "success" | "warning" | "error" | "info" | "neut
 
 const variants: Record<BadgeVariant, string> = {
   default: "bg-[var(--sidebar-active-bg)] text-[var(--primary)]",
-  success: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-  warning: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-  error: "bg-red-500/15 text-red-700 dark:text-red-400",
-  info: "bg-sky-500/15 text-sky-700 dark:text-sky-400",
+  success:
+    "bg-[color-mix(in_srgb,var(--success)_14%,transparent)] text-[var(--success)]",
+  warning:
+    "bg-[color-mix(in_srgb,var(--warning)_16%,transparent)] text-[color-mix(in_srgb,var(--warning)_80%,#0f1419)]",
+  error:
+    "bg-[color-mix(in_srgb,var(--error)_14%,transparent)] text-[var(--error)]",
+  info:
+    "bg-[color-mix(in_srgb,var(--secondary)_16%,transparent)] text-[color-mix(in_srgb,var(--secondary)_85%,#0f1419)]",
   neutral: "bg-[var(--sidebar-hover)] text-[var(--muted)]",
 };
 

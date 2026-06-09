@@ -245,6 +245,19 @@ h4 {
   background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
 }
 
+.text-brand-gradient {
+  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.count-badge-accent {
+  background: var(--error);
+  color: #ffffff;
+  box-shadow: 0 0 0 2px var(--card);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

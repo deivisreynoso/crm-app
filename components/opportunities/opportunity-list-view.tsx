@@ -12,11 +12,13 @@ import {
   DataTableHeadCell,
   DataTableRow,
 } from "@/components/ui/page-shell";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import type { OpportunityWithContact } from "@/types";
+import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { getPipelineStageAccentById } from "@/lib/constants/pipeline-stage-accent";
+import type { OpportunityWithContact, PipelineStage } from "@/types";
 
 interface OpportunityListViewProps {
   opportunities: OpportunityWithContact[];
+  stages?: PipelineStage[];
   onEdit: (opp: OpportunityWithContact) => void;
   onDelete: (opp: OpportunityWithContact) => void;
   deletingId?: string | null;
@@ -25,6 +27,7 @@ interface OpportunityListViewProps {
 
 export function OpportunityListView({
   opportunities,
+  stages = [],
   onEdit,
   onDelete,
   deletingId,
@@ -81,7 +84,18 @@ export function OpportunityListView({
               )}
             </DataTableCell>
             <DataTableCell>
-              <Badge variant="info">{opp.stage.replace(/_/g, " ")}</Badge>
+              {stages.length > 0 ? (
+                <span
+                  className={cn(
+                    "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize",
+                    getPipelineStageAccentById(opp.stage, stages).badgeClass
+                  )}
+                >
+                  {opp.stage.replace(/_/g, " ")}
+                </span>
+              ) : (
+                <Badge variant="info">{opp.stage.replace(/_/g, " ")}</Badge>
+              )}
             </DataTableCell>
             <DataTableCell>
               {opp.value != null

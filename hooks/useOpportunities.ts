@@ -11,6 +11,7 @@ export interface OpportunityListFilters {
   search?: string;
   createdFrom?: string;
   createdTo?: string;
+  includeContactCounts?: boolean;
 }
 
 export function useOpportunities(
@@ -31,6 +32,9 @@ export function useOpportunities(
             ...(filters.search ? { search: filters.search } : {}),
             ...(filters.createdFrom ? { created_from: filters.createdFrom } : {}),
             ...(filters.createdTo ? { created_to: filters.createdTo } : {}),
+            ...(filters.includeContactCounts
+              ? { include_contact_counts: "1" }
+              : {}),
           },
         }
       );

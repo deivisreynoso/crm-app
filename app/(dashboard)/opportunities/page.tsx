@@ -69,6 +69,7 @@ export default function OpportunitiesPage() {
       ...(searchFilter ? { search: searchFilter } : {}),
       ...(createdFrom ? { createdFrom } : {}),
       ...(createdTo ? { createdTo } : {}),
+      ...(viewMode === "board" ? { includeContactCounts: true } : {}),
     }
   );
 
@@ -257,14 +258,22 @@ export default function OpportunitiesPage() {
             <button
               type="button"
               onClick={() => setViewMode("board")}
-              className={`px-3 py-1.5 text-sm ${viewMode === "board" ? "bg-[var(--primary)] text-[var(--primary-foreground)]" : "text-body-muted hover:bg-[var(--sidebar-hover)]"}`}
+              className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                viewMode === "board"
+                  ? "brand-gradient text-white"
+                  : "text-body-muted hover:bg-[color-mix(in_srgb,var(--secondary)_10%,var(--card))] hover:text-[var(--secondary)]"
+              }`}
             >
               Board
             </button>
             <button
               type="button"
               onClick={() => setViewMode("list")}
-              className={`px-3 py-1.5 text-sm ${viewMode === "list" ? "bg-[var(--primary)] text-[var(--primary-foreground)]" : "text-body-muted hover:bg-[var(--sidebar-hover)]"}`}
+              className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                viewMode === "list"
+                  ? "bg-[var(--accent)] text-white"
+                  : "text-body-muted hover:bg-[color-mix(in_srgb,var(--accent)_10%,var(--card))] hover:text-[var(--accent)]"
+              }`}
             >
               List
             </button>
@@ -475,6 +484,7 @@ export default function OpportunitiesPage() {
           <DataTableShell>
             <OpportunityListView
               opportunities={opportunities}
+              stages={selectedPipeline.stages}
               onEdit={openEdit}
               onDelete={requestDelete}
               readOnly={!canWrite}

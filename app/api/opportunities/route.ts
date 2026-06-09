@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
       search: params.get("search") ?? undefined,
       createdFrom: params.get("created_from") ?? undefined,
       createdTo: params.get("created_to") ?? undefined,
+      includeContactCounts: params.get("include_contact_counts") === "1",
     });
 
     return NextResponse.json({ data });

@@ -196,8 +196,15 @@ export interface User {
     company_id?: string;
   }
 
+  export interface ContactRelatedCounts {
+    quotes: number;
+    appointments: number;
+    tasks: number;
+  }
+
   export interface OpportunityWithContact extends Opportunity {
     contact?: OpportunityContact | null;
+    contact_counts?: ContactRelatedCounts;
   }
   
   // Ticket (Case) types
