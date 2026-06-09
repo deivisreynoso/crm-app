@@ -8,6 +8,8 @@ ClickIn 360 — marketing site + CRM (Next.js, Supabase, Docker on VPS).
 
 **Deploy (VPS):** pull `main`, then run `./scripts/deploy-vps.sh` (uses Docker layer cache; ~2–8 min for code-only changes). Use `./scripts/deploy-vps.sh --no-cache` only when dependencies or Dockerfile change (~15–25 min on a small VPS).
 
+**Production checklist:** `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` must match your live host (e.g. `https://www.clickin360.com`). Supabase Auth → URL Configuration must allow `{APP_URL}/auth/callback` for forgot-password.
+
 ## Getting Started
 
 First, run the development server:

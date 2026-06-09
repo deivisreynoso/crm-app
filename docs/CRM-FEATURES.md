@@ -27,6 +27,10 @@ git log -1 --format='%h %s (%cs)'
 
 | Date | Commit | Type | Summary |
 |------|--------|------|---------|
+| 2026-06-09 | `72067cd` | infra | Faster VPS deploys: Dockerfile + dockerignore in repo, Docker layer cache by default, Next.js standalone image |
+| 2026-06-09 | `415cba2` | fix | **Forgot password:** server API builds production `redirectTo` from `NEXTAUTH_URL` / `NEXT_PUBLIC_APP_URL` (fixes localhost reset links) |
+| 2026-06-09 | `09cd574` | infra | Migration 048 orphan schema cleanup + `scripts/db-preflight-audit.sql` |
+| 2026-06-09 | `abc1320` | feature + infra | Mailgun transactional email; production OAuth redirect prefers `NEXT_PUBLIC_APP_URL` |
 | 2026-05-27 | `37c8ae2` | feature + fix | **Gmail:** compose with templates, Cc, reply threading; thread-aware sync (`mailbox_user_id`); inbound email notifications; unified Integrations UI; OAuth env aliases; note/task edit-delete; migration 048 DB cleanup |
 | 2026-05-27 | `5b6f6d1` | fix | Activity timeline author attribution and viewer timezone display |
 | 2026-05-27 | `33b5e51` | enhancement | Drag-and-drop pipeline stage reorder in Settings |
@@ -94,7 +98,7 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 ### Authentication & account
 
 - Login (NextAuth + Supabase password)
-- Forgot password / reset password (`/forgot-password`, `/reset-password`, `/auth/callback`)
+- Forgot password / reset password (`/forgot-password`, `/reset-password`, `/auth/callback`) — reset email via `POST /api/auth/forgot-password`; production requires Supabase redirect URL `https://www.clickin360.com/auth/callback` and `NEXT_PUBLIC_APP_URL` on the server
 - Account profile and password change
 - Workspace owner can delete own account (guarded)
 
@@ -338,4 +342,4 @@ Historical phases map to git eras (not separate products):
 
 ---
 
-*Last updated: 2026-05-27 (`main` @ `37c8ae2`).*
+*Last updated: 2026-06-09 (`main` @ `72067cd`).*

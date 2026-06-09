@@ -174,6 +174,23 @@ NEXTAUTH_URL=<same as NEXT_PUBLIC_APP_URL>
 
 **Programmatic CRM access:** Not officially supported without session cookies. Use Lead API for automation.
 
+#### Password reset (public)
+
+| Method | Path | Auth |
+|--------|------|------|
+| `POST` | `/api/auth/forgot-password` | None |
+
+**Body:** `{ "email": "user@example.com" }`
+
+Sends a Supabase reset email. The server sets `redirectTo` to `{NEXT_PUBLIC_APP_URL or NEXTAUTH_URL}/auth/callback?next=/reset-password` — not the browser origin.
+
+**Supabase (required for production):**
+
+- **Site URL:** `https://www.clickin360.com` (or your canonical CRM host)
+- **Redirect URLs:** `https://www.clickin360.com/auth/callback` (must match allow list exactly, including `www`)
+
+User flow: `/forgot-password` → email link → `/auth/callback?code=…&next=/reset-password` → `/reset-password`.
+
 ---
 
 ### 3.3 CRM → N8N (outbound only)
@@ -1322,6 +1339,7 @@ sequenceDiagram
 | Replies not syncing | Sender must connect Gmail with read scope (`/api/auth/google-gmail/reconnect`); migration 046 applied |
 | Integrations "Setup required" | Set `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (or `GOOGLE_OAUTH_*`); restart app |
 | OAuth redirect mismatch | Authorized redirect URIs in Google Cloud must match `{APP_URL}/api/auth/google-gmail/callback` and `…/google-calendar/callback` |
+| Reset email links to `localhost` | Set Supabase Site URL + add `{APP_URL}/auth/callback` to Redirect URLs; set `NEXT_PUBLIC_APP_URL` on VPS; redeploy; request a **new** reset email |
 
 ---
 
