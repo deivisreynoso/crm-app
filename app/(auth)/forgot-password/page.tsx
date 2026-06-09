@@ -4,8 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { AuthBrandHeader } from "@/components/auth/auth-brand-header";
-import { createClient } from "@/lib/supabase";
-import { passwordResetCallbackUrl } from "@/lib/auth/app-url";
+import axios from "axios";
+import { formatApiError } from "@/lib/validation-errors";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -26,21 +26,16 @@ export default function ForgotPasswordPage() {
 
     setIsLoading(true);
     try {
-      const supabase = createClient();
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmed, {
-        redirectTo: passwordResetCallbackUrl(),
+      const { data } = await axios.post<{ message?: string }>("/api/auth/forgot-password", {
+        email: trimmed,
       });
 
-      if (resetError) {
-        setError(resetError.message);
-        return;
-      }
-
       setNotice(
-        "If an account exists for that email, we sent a link to reset your password. Check your inbox and spam folder."
+        data.message ??
+          "If an account exists for that email, we sent a link to reset your password. Check your inbox and spam folder."
       );
-    } catch {
-      setError("Something went wrong. Please try again.");
+    } catch (err) {
+      setError(formatApiError(err, "Something went wrong. Please try again."));
     } finally {
       setIsLoading(false);
     }
