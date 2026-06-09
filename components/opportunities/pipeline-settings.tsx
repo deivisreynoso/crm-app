@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { PipelineStage } from "@/types";
 import { sortStages } from "@/lib/constants/pipelines";
 
@@ -24,6 +26,18 @@ function slugify(name: string): string {
     .replace(/^_|_$/g, "");
 }
 
+function reorderStages(
+  stages: PipelineStage[],
+  fromIndex: number,
+  toIndex: number
+): PipelineStage[] {
+  if (fromIndex === toIndex) return stages;
+  const next = [...stages];
+  const [moved] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, moved);
+  return next.map((stage, index) => ({ ...stage, order: index }));
+}
+
 export function PipelineSettings({
   pipelineName,
   stages,
@@ -40,6 +54,8 @@ export function PipelineSettings({
     sortStages(stages)
   );
   const [newStageName, setNewStageName] = useState("");
+  const [dragFromIndex, setDragFromIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   function handleAddStage() {
     if (!newStageName.trim()) return;
@@ -66,9 +82,24 @@ export function PipelineSettings({
     );
   }
 
+  function handleStageDrop(toIndex: number) {
+    if (dragFromIndex === null || dragFromIndex === toIndex) {
+      setDragFromIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+    setLocalStages((prev) => reorderStages(prev, dragFromIndex, toIndex));
+    setDragFromIndex(null);
+    setDragOverIndex(null);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    await onSave({ name: name.trim(), stages: localStages });
+    const ordered = sortStages(localStages).map((stage, index) => ({
+      ...stage,
+      order: index,
+    }));
+    await onSave({ name: name.trim(), stages: ordered });
   }
 
   return (
@@ -86,13 +117,59 @@ export function PipelineSettings({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">
+        <label className="block text-sm font-medium text-slate-700 mb-1">
           Stages
         </label>
+        <p className="text-xs text-slate-500 mb-2">
+          Drag stages to change their order on the board.
+        </p>
         <ul className="space-y-2 mb-3">
           {localStages.map((stage, index) => (
-            <li key={stage.id} className="flex gap-2 items-center">
-              <span className="text-xs text-slate-400 w-5">{index + 1}</span>
+            <li
+              key={stage.id}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                setDragOverIndex(index);
+              }}
+              onDragLeave={() => {
+                setDragOverIndex((current) =>
+                  current === index ? null : current
+                );
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                handleStageDrop(index);
+              }}
+              className={cn(
+                "flex gap-2 items-center rounded-md border border-transparent px-1 py-0.5 transition-colors",
+                dragOverIndex === index &&
+                  dragFromIndex !== null &&
+                  dragFromIndex !== index &&
+                  "border-[var(--secondary)] bg-[var(--sidebar-hover)]",
+                dragFromIndex === index && "opacity-50"
+              )}
+            >
+              <button
+                type="button"
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.effectAllowed = "move";
+                  e.dataTransfer.setData("text/plain", String(index));
+                  setDragFromIndex(index);
+                }}
+                onDragEnd={() => {
+                  setDragFromIndex(null);
+                  setDragOverIndex(null);
+                }}
+                className="flex h-8 w-8 shrink-0 cursor-grab items-center justify-center rounded-md text-slate-400 hover:bg-[var(--sidebar-hover)] hover:text-slate-600 active:cursor-grabbing"
+                aria-label={`Drag to reorder ${stage.name}`}
+              >
+                <GripVertical className="h-4 w-4" aria-hidden />
+              </button>
+              <span className="text-xs text-slate-400 w-5 tabular-nums">
+                {index + 1}
+              </span>
               <input
                 value={stage.name}
                 onChange={(e) => handleRenameStage(stage.id, e.target.value)}
