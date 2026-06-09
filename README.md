@@ -6,7 +6,7 @@ ClickIn 360 — marketing site + CRM (Next.js, Supabase, Docker on VPS).
 - [CRM API guide](./docs/CLICKIN360-CRM-API.md) — Lead API, integrations, session CRM routes
 - [Audit / hardening tracker](./docs/AUDIT-FIX-TRACKER.md)
 
-**Deploy (VPS):** pull `main`, then run `./scripts/deploy-vps.sh` (Docker Compose rebuild).
+**Deploy (VPS):** pull `main`, then run `./scripts/deploy-vps.sh` (uses Docker layer cache; ~2–8 min for code-only changes). Use `./scripts/deploy-vps.sh --no-cache` only when dependencies or Dockerfile change (~15–25 min on a small VPS).
 
 ## Getting Started
 

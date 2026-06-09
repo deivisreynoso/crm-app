@@ -289,7 +289,7 @@ Historical phases map to git eras (not separate products):
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | **VPS deploy** | Pull `main` @ `37c8ae2`; run migrations **044–048** if not applied; rebuild Docker (`scripts/deploy-vps.sh`) |
+| 1 | **VPS deploy** | Pull `main`; run migrations **044–048** if not applied; `./scripts/deploy-vps.sh` (cached build). Use `--no-cache` only when `package.json` or `Dockerfile` changes |
 | 2 | **GA4 conversions** | Mark `generate_lead`, `booking_completed` in GA4 Admin |
 | 3 | **GSC follow-up** | Fix remaining 404s / canonical issues after sitemap deploy |
 | 4 | **AUDIT-FIX-TRACKER F1–F2, F5–F6** | Async contact combobox; batch signed URLs; storage cleanup; remove unused dashboard stats API |

@@ -1,0 +1,31 @@
+# Dependencies and build output (rebuilt inside Docker)
+node_modules
+.next
+out
+build
+
+# Git and editor noise
+.git
+.gitignore
+.cursor
+.vscode
+*.md
+!README.md
+
+# Env and secrets — runtime via docker compose env_file, not image layers
+.env
+.env.*
+!.env.example
+
+# Local dev / test artifacts
+coverage
+.DS_Store
+*.pem
+npm-debug.log*
+.pnpm-debug.log*
+*.tsbuildinfo
+
+# Docker definitions (not needed in build context)
+Dockerfile*
+docker-compose*.yml
+docker-compose*.yaml
