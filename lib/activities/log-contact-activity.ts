@@ -15,6 +15,8 @@ export async function logContactActivity(
   supabase: SupabaseClient,
   input: {
     userId: string;
+    createdBy?: string | null;
+    createdByDisplayName?: string | null;
     contactId: string;
     type: ContactActivityType;
     description: string;
@@ -24,6 +26,8 @@ export async function logContactActivity(
   const { error } = await supabase.from("activities").insert([
     {
       user_id: input.userId,
+      created_by: input.createdBy ?? null,
+      created_by_display_name: input.createdByDisplayName ?? null,
       contact_id: input.contactId,
       type: input.type,
       description: input.description,

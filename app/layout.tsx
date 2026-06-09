@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Montserrat, Poppins } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/providers";
-import { ThemeInitScript } from "@/components/theme-init";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -34,9 +33,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning className="light">
-      <head>
-        <ThemeInitScript />
-      </head>
       <body
         suppressHydrationWarning
         className={`${poppins.variable} ${montserrat.variable} antialiased`}

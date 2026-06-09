@@ -143,6 +143,7 @@ export async function POST(req: NextRequest) {
     if (parsed.data.contact_id) {
       await logContactActivity(supabase, {
         userId: workspaceOwnerId!,
+        createdBy: userId,
         contactId: parsed.data.contact_id,
         type: "created",
         description: `Service ticket created: ${label}`,

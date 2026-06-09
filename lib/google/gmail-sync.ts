@@ -150,6 +150,7 @@ async function fetchAndSaveMessage(
     if (isNew) {
       await logEmailContactActivity(supabase, {
         userId,
+        createdBy: userId,
         contactId,
         direction,
         subject: parsed.subject,

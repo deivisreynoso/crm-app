@@ -3,6 +3,7 @@ import { logContactActivity } from "@/lib/activities/log-contact-activity";
 
 export type EmailActivityInput = {
   userId: string;
+  createdBy?: string | null;
   contactId: string;
   direction: "outbound" | "inbound";
   subject: string;
@@ -45,6 +46,7 @@ export async function logEmailContactActivity(
 
   await logContactActivity(supabase, {
     userId: input.userId,
+    createdBy: input.createdBy,
     contactId: input.contactId,
     type: "email",
     description: `${label}: ${subject}`,

@@ -233,6 +233,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
       await logEmailContactActivity(supabase, {
         userId: workspaceOwnerId!,
+        createdBy: userId,
         contactId: doc.contact_id as string,
         direction: "outbound",
         subject,

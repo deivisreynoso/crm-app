@@ -2,7 +2,6 @@
 
 import { use, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { User } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -52,8 +51,6 @@ export default function ContactDetailPage({ params }: PageProps) {
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const { canWrite } = useWorkspaceCapabilities();
-  const { data: session } = useSession();
-  const viewerName = session?.user?.name ?? session?.user?.email ?? null;
   const { dict } = useCrmLocale();
   const c = dict.contacts;
   const act = dict.actions;
@@ -169,8 +166,6 @@ export default function ContactDetailPage({ params }: PageProps) {
       />
       <ActivityPanel
         items={activityItems}
-        contactTimezone={contact.timezone}
-        viewerName={viewerName}
         isLoading={activityLoading}
         timelineOnly
       />

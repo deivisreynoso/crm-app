@@ -1,6 +1,7 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { createServerSideClient } from "@/lib/supabase";
+import { ensureUserProfile } from "@/lib/users/ensure-user-profile";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -26,11 +27,29 @@ export const authOptions: NextAuthOptions = {
           | string
           | undefined;
 
-        return {
+        const { data: membership } = await supabase
+          .from("team_members")
+          .select("display_name, email")
+          .eq("member_user_id", data.user.id)
+          .maybeSingle();
+
+        const teamName = membership?.display_name?.trim();
+        const displayName =
+          teamName || fullName?.trim() || data.user.email || "";
+
+        const user = {
           id: data.user.id,
           email: data.user.email,
-          name: fullName?.trim() || data.user.email,
+          name: displayName,
         };
+
+        await ensureUserProfile(supabase, {
+          userId: data.user.id,
+          email: data.user.email ?? membership?.email,
+          displayName,
+        });
+
+        return user;
       },
     }),
   ],
@@ -42,6 +61,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.email = user.email;
+        if (user.name) token.name = user.name;
       }
       return token;
     },
@@ -49,6 +69,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user && token.id) {
         session.user.id = token.id;
         if (token.email) session.user.email = token.email;
+        if (token.name) session.user.name = token.name as string;
       }
       return session;
     },

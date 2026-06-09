@@ -103,14 +103,10 @@ function typeLabel(item: ActivityFeedItem, labels: TimelineLabels): string {
   return labels.types[item.type] ?? item.type;
 }
 
-function authorName(
-  item: ActivityFeedItem,
-  labels: TimelineLabels,
-  viewerName?: string | null
-): string {
+function authorName(item: ActivityFeedItem, labels: TimelineLabels): string {
   if (item.author_name?.trim()) return item.author_name.trim();
   if (item.is_system) return labels.authorSystem;
-  return viewerName?.trim() || labels.authorTeam;
+  return labels.authorTeam;
 }
 
 function summaryLine(item: ActivityFeedItem, labels: TimelineLabels): string {
@@ -204,7 +200,6 @@ function TimelineRow({
   onToggle,
   isLast,
   labels,
-  viewerName,
   displayTz,
   locale,
 }: {
@@ -213,7 +208,6 @@ function TimelineRow({
   onToggle: () => void;
   isLast: boolean;
   labels: TimelineLabels;
-  viewerName?: string | null;
   displayTz?: string;
   locale: string;
 }) {
@@ -222,7 +216,7 @@ function TimelineRow({
   const [menuOpen, setMenuOpen] = useState(false);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const { Icon, boxClass, iconClass } = getIconConfig(item);
-  const name = authorName(item, labels, viewerName);
+  const name = authorName(item, labels);
   const timestamp = formatTimelineDateTime(item.created_at, displayTz, locale);
 
   useEffect(() => {
@@ -363,13 +357,11 @@ function TimelineRow({
 export function ActivityTimeline({
   items,
   labels,
-  viewerName,
   displayTz,
   locale = "en",
 }: {
   items: ActivityFeedItem[];
   labels: TimelineLabels;
-  viewerName?: string | null;
   displayTz?: string;
   locale?: string;
 }) {
@@ -403,7 +395,6 @@ export function ActivityTimeline({
             onToggle={() => toggle(item.id)}
             isLast={index === items.length - 1}
             labels={labels}
-            viewerName={viewerName}
             displayTz={displayTz}
             locale={locale}
           />

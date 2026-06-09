@@ -1,6 +1,6 @@
 /** Log when a DB column is dropped due to schema drift (optional migration columns). */
 export function logDroppedOptionalColumn(
-  operation: "insert" | "update",
+  operation: "insert" | "update" | "select",
   column: string
 ) {
   console.warn(

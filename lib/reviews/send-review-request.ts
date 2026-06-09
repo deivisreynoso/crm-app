@@ -176,6 +176,7 @@ export async function sendReviewRequest(
 
   await logContactActivity(supabase, {
     userId: input.workspaceOwnerId,
+    createdBy: input.actorUserId,
     contactId: input.contactId,
     type: "review_request",
     description: `Google review invitation sent: ${rendered.subject}`,

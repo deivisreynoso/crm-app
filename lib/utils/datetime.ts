@@ -1,10 +1,27 @@
+/**
+ * Postgres `timestamp` (no time zone) values from Supabase are UTC wall time
+ * without a suffix — parse them as UTC, not browser-local.
+ */
+export function parseStoredTimestamp(value: string | Date): Date {
+  if (value instanceof Date) return value;
+  const raw = value.trim();
+  if (!raw) return new Date(Number.NaN);
+
+  if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(raw)) {
+    return new Date(raw);
+  }
+
+  const normalized = raw.includes("T") ? raw : raw.replace(" ", "T");
+  return new Date(`${normalized}Z`);
+}
+
 /** Format date/time in a specific IANA timezone (falls back to local). */
 export function formatDateTimeInTimeZone(
   date: string | Date,
   timeZone?: string | null,
   locale = "en-US"
 ): string {
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = parseStoredTimestamp(date);
   if (Number.isNaN(d.getTime())) return "";
 
   const options: Intl.DateTimeFormatOptions = {
@@ -27,6 +44,7 @@ export function formatDateTimeInTimeZone(
   return d.toLocaleString(locale, options);
 }
 
+/** Contact record timezone first — for contact-centric fields (e.g. review sent at). */
 export function resolveDisplayTimeZone(
   contactTimezone?: string | null,
   userTimezone?: string | null
@@ -36,6 +54,27 @@ export function resolveDisplayTimeZone(
   const ut = userTimezone?.trim();
   if (ut) return ut;
   return undefined;
+}
+
+const LEGACY_DEFAULT_TIMEZONE = "UTC";
+
+/** Viewer timezone: saved preference, treating legacy UTC default as unset, then browser. */
+export function resolveViewerTimeZone(
+  savedTimezone?: string | null,
+  browserTimezone?: string | null
+): string {
+  const saved = savedTimezone?.trim();
+  if (saved && saved !== LEGACY_DEFAULT_TIMEZONE) return saved;
+
+  const browser = browserTimezone?.trim();
+  if (browser) return browser;
+
+  return saved || LEGACY_DEFAULT_TIMEZONE;
+}
+
+export function browserTimeZone(): string {
+  if (typeof Intl === "undefined" || !Intl.DateTimeFormat) return "UTC";
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 }
 
 const CRM_LOCALE_MAP: Record<string, string> = {
@@ -49,7 +88,7 @@ export function formatTimelineDateTime(
   timeZone?: string | null,
   locale = "en-US"
 ): string {
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = parseStoredTimestamp(date);
   if (Number.isNaN(d.getTime())) return "";
 
   const intlLocale = CRM_LOCALE_MAP[locale] ?? locale;

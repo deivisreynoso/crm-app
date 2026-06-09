@@ -93,6 +93,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     await logContactActivity(supabase, {
       userId: workspaceOwnerId!,
+      createdBy: userId,
       contactId,
       type: "task",
       description: `Task created: ${parsed.data.title}`,

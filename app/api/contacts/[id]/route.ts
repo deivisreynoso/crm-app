@@ -138,6 +138,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     if (changedKeys.length > 0) {
       await logContactActivity(supabase, {
         userId: workspaceOwnerId!,
+        createdBy: userId,
         contactId: id,
         type: "update",
         description: `Contact updated: ${changedKeys.slice(0, 5).join(", ")}${changedKeys.length > 5 ? "…" : ""}`,

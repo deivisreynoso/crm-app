@@ -1,6 +1,6 @@
 "use client";
 
-import { useDisplayTimeZone } from "@/hooks/useDisplayTimeZone";
+import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import type { ActivityType } from "@/lib/constants/activity";
 import type { ActivityFeedItem, Note } from "@/types";
@@ -9,8 +9,6 @@ import { ActivityTimeline } from "@/components/contact/activity-timeline";
 interface ActivityPanelProps {
   items?: ActivityFeedItem[];
   notes?: Note[];
-  contactTimezone?: string | null;
-  viewerName?: string | null;
   isLoading?: boolean;
   isAdding?: boolean;
   onAdd?: (input: { content: string; activity_type: ActivityType }) => Promise<void>;
@@ -32,15 +30,13 @@ function notesToFeedItems(notes: Note[]): ActivityFeedItem[] {
 export function ActivityPanel({
   items: itemsProp,
   notes,
-  contactTimezone,
-  viewerName,
   isLoading,
   timelineOnly = false,
 }: ActivityPanelProps) {
   const { dict, locale } = useCrmLocale();
   const a = dict.activity;
   const items = itemsProp ?? (notes ? notesToFeedItems(notes) : []);
-  const displayTz = useDisplayTimeZone(contactTimezone);
+  const displayTz = useViewerTimeZone();
 
   const timelineLabels = {
     authorSystem: a.authorSystem,
@@ -72,7 +68,6 @@ export function ActivityPanel({
     <ActivityTimeline
       items={items}
       labels={timelineLabels}
-      viewerName={viewerName}
       displayTz={displayTz}
       locale={locale}
     />
