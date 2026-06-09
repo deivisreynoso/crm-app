@@ -12,11 +12,14 @@ import {
   Users,
 } from "lucide-react";
 
+export type NavIconAccent = "navy" | "sky" | "magenta" | "success";
+
 export interface NavItem {
   href: string;
   label: string;
   labelKey?: keyof typeof import("./crm/locales/en.json")["nav"];
   icon: LucideIcon;
+  iconAccent?: NavIconAccent;
   description?: string;
   /** Hide from sidebar when user cannot write (e.g. viewer demo) */
   requiresWrite?: boolean;
@@ -28,6 +31,7 @@ export const MAIN_NAV: NavItem[] = [
     label: "Home",
     labelKey: "home",
     icon: LayoutDashboard,
+    iconAccent: "navy",
     description: "Dashboard overview",
   },
   {
@@ -35,6 +39,7 @@ export const MAIN_NAV: NavItem[] = [
     label: "Contacts",
     labelKey: "contacts",
     icon: Users,
+    iconAccent: "sky",
     description: "People at your companies",
   },
   {
@@ -42,6 +47,7 @@ export const MAIN_NAV: NavItem[] = [
     label: "Pipelines",
     labelKey: "pipelines",
     icon: TrendingUp,
+    iconAccent: "success",
     description: "Sales pipeline board",
   },
   {
@@ -49,6 +55,7 @@ export const MAIN_NAV: NavItem[] = [
     label: "Service Tickets",
     labelKey: "tickets",
     icon: Ticket,
+    iconAccent: "magenta",
     description: "Customer support",
   },
   {
@@ -56,6 +63,7 @@ export const MAIN_NAV: NavItem[] = [
     label: "Analytics",
     labelKey: "analytics",
     icon: BarChart3,
+    iconAccent: "sky",
     description: "Pipeline metrics and charts",
   },
   {
@@ -63,6 +71,7 @@ export const MAIN_NAV: NavItem[] = [
     label: "Payments",
     labelKey: "payments",
     icon: CreditCard,
+    iconAccent: "success",
     description: "Payment history",
   },
 ];
@@ -73,6 +82,7 @@ export const SECONDARY_NAV: NavItem[] = [
     label: "Quotes",
     labelKey: "quotes",
     icon: FileText,
+    iconAccent: "navy",
     description: "Quotes & PDF export",
   },
   {
@@ -80,6 +90,7 @@ export const SECONDARY_NAV: NavItem[] = [
     label: "Product Catalog",
     labelKey: "services",
     icon: Layers,
+    iconAccent: "magenta",
     description: "Quote product catalog",
     requiresWrite: true,
   },
@@ -88,6 +99,7 @@ export const SECONDARY_NAV: NavItem[] = [
     label: "Attachments",
     labelKey: "attachments",
     icon: Paperclip,
+    iconAccent: "sky",
     description: "Uploaded files",
   },
   {
@@ -95,6 +107,7 @@ export const SECONDARY_NAV: NavItem[] = [
     label: "Calendar",
     labelKey: "calendar",
     icon: Calendar,
+    iconAccent: "navy",
     description: "Meetings & events",
   },
 ];

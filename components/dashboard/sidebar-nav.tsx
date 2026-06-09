@@ -5,20 +5,46 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
-import { MAIN_NAV, SECONDARY_NAV, type NavItem } from "@/lib/navigation";
+import { MAIN_NAV, SECONDARY_NAV, type NavIconAccent, type NavItem } from "@/lib/navigation";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
+
+export const navIconAccentStyles: Record<
+  NavIconAccent,
+  { idle: string; active: string }
+> = {
+  navy: {
+    idle: "bg-[color-mix(in_srgb,var(--primary)_14%,transparent)] text-[var(--primary)]",
+    active: "bg-[var(--primary)] text-[var(--primary-foreground)]",
+  },
+  sky: {
+    idle: "bg-[color-mix(in_srgb,var(--secondary)_20%,transparent)] text-[var(--secondary)]",
+    active: "bg-[var(--secondary)] text-[#0f1419]",
+  },
+  magenta: {
+    idle: "bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] text-[var(--accent)]",
+    active: "bg-[var(--accent)] text-white",
+  },
+  success: {
+    idle: "bg-[color-mix(in_srgb,var(--success)_16%,transparent)] text-[var(--success)]",
+    active: "bg-[var(--success)] text-white",
+  },
+};
 
 function NavLink({
   href,
   label,
   icon: Icon,
+  iconAccent = "navy",
   isActive,
 }: {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  iconAccent?: NavIconAccent;
   isActive: boolean;
 }) {
+  const accent = navIconAccentStyles[iconAccent];
+
   return (
     <Link
       href={href}
@@ -30,14 +56,14 @@ function NavLink({
       )}
       aria-current={isActive ? "page" : undefined}
     >
-      <Icon
+      <span
         className={cn(
-          "h-4 w-4 shrink-0",
-          isActive ? "text-[var(--sidebar-active-fg)]" : "text-[var(--sidebar-text-muted)] group-hover:text-[var(--secondary)]"
+          "flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors duration-150",
+          isActive ? accent.active : accent.idle
         )}
-        strokeWidth={1.75}
-        aria-hidden
-      />
+      >
+        <Icon className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+      </span>
       <span className="truncate">{label}</span>
     </Link>
   );
@@ -72,6 +98,7 @@ function NavSection({
             href={item.href}
             label={label}
             icon={item.icon}
+            iconAccent={item.iconAccent}
             isActive={isActive}
           />
         );

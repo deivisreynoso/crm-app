@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { navIconAccentStyles } from "@/components/dashboard/sidebar-nav";
 
 export function SidebarFooter() {
   const pathname = usePathname();
@@ -21,15 +22,16 @@ export function SidebarFooter() {
         )}
         aria-current={isActive ? "page" : undefined}
       >
-        <Settings
+        <span
           className={cn(
-            "h-4 w-4 shrink-0",
+            "flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors duration-150",
             isActive
-              ? "text-[var(--sidebar-active-fg)]"
-              : "text-[var(--sidebar-text-muted)]"
+              ? navIconAccentStyles.navy.active
+              : navIconAccentStyles.navy.idle
           )}
-          strokeWidth={1.75}
-        />
+        >
+          <Settings className="h-4 w-4" strokeWidth={1.75} />
+        </span>
         Settings
       </Link>
     </div>
