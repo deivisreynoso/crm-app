@@ -1,5 +1,26 @@
-export function getGreeting(): string {
-  const hour = new Date().getHours();
+export function getHourInTimeZone(
+  timeZone?: string | null,
+  date = new Date()
+): number {
+  try {
+    const tz = timeZone?.trim();
+    if (tz) {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        hour: "numeric",
+        hour12: false,
+        timeZone: tz,
+      }).formatToParts(date);
+      const hour = Number(parts.find((p) => p.type === "hour")?.value);
+      if (!Number.isNaN(hour)) return hour;
+    }
+  } catch {
+    /* invalid timezone */
+  }
+  return date.getHours();
+}
+
+export function getGreeting(timeZone?: string | null): string {
+  const hour = getHourInTimeZone(timeZone);
   if (hour < 12) return "Good morning";
   if (hour < 17) return "Good afternoon";
   return "Good evening";

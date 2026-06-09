@@ -1,17 +1,36 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   useMarkNotificationRead,
   useNotifications,
 } from "@/hooks/useNotifications";
+import { getNotificationHref } from "@/lib/notifications/notification-link";
 
 export function NotificationBell() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const { data, isLoading } = useNotifications();
   const markRead = useMarkNotificationRead();
+
+  async function handleNotificationClick(
+    id: string,
+    isRead: boolean,
+    href: string | null
+  ) {
+    if (!isRead) {
+      try {
+        await markRead.mutateAsync(id);
+      } catch {
+        /* still navigate */
+      }
+    }
+    setOpen(false);
+    if (href) router.push(href);
+  }
 
   const items = data?.data ?? [];
   const unread = data?.unreadCount ?? 0;
@@ -50,16 +69,19 @@ export function NotificationBell() {
               <p className="p-4 text-sm text-body-muted">No notifications yet</p>
             ) : (
               <ul className="divide-y divide-[var(--card-border)]">
-                {items.map((n) => (
+                {items.map((n) => {
+                  const href = getNotificationHref(n);
+                  return (
                   <li key={n.id}>
                     <button
                       type="button"
                       onClick={() => {
-                        if (!n.is_read) void markRead.mutateAsync(n.id);
+                        void handleNotificationClick(n.id, n.is_read, href);
                       }}
                       className={cn(
                         "w-full text-left px-4 py-3 hover:bg-[var(--sidebar-hover)] transition-colors",
-                        !n.is_read && "bg-[var(--sidebar-active-bg)]/40"
+                        !n.is_read && "bg-[var(--sidebar-active-bg)]/40",
+                        href && "cursor-pointer"
                       )}
                     >
                       <p className="text-sm font-medium text-heading">{n.title}</p>
@@ -70,7 +92,8 @@ export function NotificationBell() {
                       )}
                     </button>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
           </div>

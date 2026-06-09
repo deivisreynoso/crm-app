@@ -2,7 +2,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getDashboardStats } from "@/lib/dashboard-stats";
 import { resolveWorkspaceContext } from "@/lib/team/workspace";
-import { getGreeting, getUserDisplayName } from "@/lib/user-display";
+import { getUserDisplayName } from "@/lib/user-display";
+import { DashboardGreeting } from "@/components/dashboard/dashboard-greeting";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/dashboard/stat-card";
@@ -35,7 +36,6 @@ export default async function DashboardPage() {
       };
 
   const { firstName } = getUserDisplayName(session?.user ?? {});
-  const greeting = getGreeting();
 
   return (
     <div className="space-y-8">
@@ -46,7 +46,7 @@ export default async function DashboardPage() {
             Dashboard
           </p>
           <h1 className="text-3xl font-bold mt-1 tracking-tight">
-            {greeting}, {firstName}
+            <DashboardGreeting firstName={firstName} />
           </h1>
           <p className="text-white/90 mt-2 text-sm max-w-lg">
             Here&apos;s what&apos;s happening with your CRM today.

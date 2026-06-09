@@ -1,12 +1,14 @@
 -- Orphan notes when parent records are deleted (notes.entity_id has no FK).
 -- Composite indexes for common workspace list + activity feed queries.
 
-CREATE OR REPLACE FUNCTION delete_notes_for_entity()
+CREATE OR REPLACE FUNCTION public.delete_notes_for_entity()
 RETURNS TRIGGER
 LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public
 AS $$
 BEGIN
-  DELETE FROM notes
+  DELETE FROM public.notes
   WHERE entity_type = TG_ARGV[0]
     AND entity_id = OLD.id;
   RETURN OLD;

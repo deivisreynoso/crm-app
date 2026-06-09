@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
+import { useNotificationPreferences } from "@/hooks/useNotificationPreferences";
 import { getGreeting, getUserDisplayName } from "@/lib/user-display";
 
 interface DashboardHeaderProps {
@@ -13,8 +15,14 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ user }: DashboardHeaderProps) {
   const router = useRouter();
+  const { data: prefs } = useNotificationPreferences();
   const { firstName } = getUserDisplayName(user);
-  const greeting = getGreeting();
+  const greeting = useMemo(() => {
+    const tz =
+      prefs?.timezone?.trim() ||
+      Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return getGreeting(tz);
+  }, [prefs?.timezone]);
 
   function handleSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
