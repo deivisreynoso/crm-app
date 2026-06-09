@@ -588,7 +588,6 @@ Quotes use the `documents` table (types `estimate`, `proposal`, `contract`). Req
 | `PUT` | `/api/documents/[id]/line-items` | Replace line items + `tax_rate`; recalculates subtotal/tax/total. |
 | `POST` | `/api/documents/[id]/pdf` | Generate PDF (merges variables, header/footer, line-item table). |
 | `POST` | `/api/documents/[id]/send-via-gmail` | Send quote as PDF via the signed-in user's Gmail / Workspace mailbox. |
-| `POST` | `/api/documents/[id]/send` | **Deprecated (410)** — use `send-via-gmail`. |
 | `GET` | `/api/quote-services` | Service catalog for line items. |
 | `POST` | `/api/quote-services` | Add catalog service (`name`, `unit_price`, …). |
 | `PATCH` | `/api/quote-services/[id]` | Update catalog service. |
@@ -847,6 +846,12 @@ Triggers `contact.deleted`.
 
 **POST body:** `{ "content": "...", "activity_type": "note|call|email|meeting" }`
 
+#### `PATCH|DELETE /api/contacts/[id]/notes/[noteId]`
+
+**PATCH body:** `{ "content"?, "activity_type"? }` — at least one field required. Author or workspace admin only.
+
+**DELETE:** Author or workspace admin only.
+
 #### `GET|POST /api/contacts/[id]/tasks`
 
 **POST body:** `{ "title", "description?", "status?", "priority?", "due_date?", "assigned_to?" }`
@@ -855,11 +860,11 @@ Triggers `contact.deleted`.
 
 #### `GET /api/contacts/[id]/activity-feed`
 
-Timeline of activities.
+Timeline of activities (notes, logged calls/meetings, email metadata).
 
 #### Email (Gmail / Google Workspace — per user)
 
-Each CRM user connects their own mailbox (`google_gmail_tokens.user_id` = actor). Sends use that user's OAuth token, not the workspace owner.
+Each CRM user connects their own mailbox (`google_gmail_tokens.user_id` = actor). Sends and sync use that user's OAuth token. Outbound rows are stored under the workspace owner with `mailbox_user_id` set to the sender so replies sync correctly.
 
 | Method | Path |
 |--------|------|
@@ -867,7 +872,59 @@ Each CRM user connects their own mailbox (`google_gmail_tokens.user_id` = actor)
 | `POST` | `/api/contacts/[id]/emails/sync` |
 | `POST` | `/api/contacts/[id]/emails/send` |
 
-Send body: `{ "to", "subject", "body" }` or `{ "template_id" }`.
+**Send body** (`gmailSendSchema`):
+
+```json
+{
+  "to": "customer@example.com",
+  "subject": "Follow up",
+  "body": "Plain-text message.",
+  "cc": "colleague@example.com, other@example.com",
+  "template_id": "optional-uuid",
+  "reply_to_gmail_message_id": "optional-gmail-message-id-for-threading"
+}
+```
+
+Either `template_id` **or** both `subject` and `body` are required. With `template_id`, missing `subject`/`body` are filled from the template (variable interpolation). `cc` is optional comma-separated addresses. `reply_to_gmail_message_id` sets In-Reply-To / References for Gmail threading.
+
+**Send responses:**
+
+| Status | Body |
+|--------|------|
+| `200` | `{ "success": true, "message_id", "thread_id" }` |
+| `403` | `{ "error", "needs_gmail_connect": true }` — Gmail not connected |
+| `404` | Contact or template not found |
+
+After send, the API saves to `contact_emails`, logs activity, fires `email.sent` webhook, and triggers a background sync.
+
+**Sync body:** none (POST with empty body).
+
+**Sync responses:**
+
+| Status | Body |
+|--------|------|
+| `200` | `{ "synced", "listed", "contact_email", "hint"? }` |
+| `403` | `{ "error", "synced", "needs_reauth"?: true }` — no read scope or not connected |
+| `400` | Contact has no email |
+
+Sync searches Gmail for threads involving the contact's email across connected mailboxes (actor + thread mailbox owners).
+
+#### Google review request
+
+`POST /api/contacts/[id]/request-review`
+
+Requires workspace write role. Uses workspace review template unless overridden.
+
+```json
+{
+  "ticket_id": "optional-uuid",
+  "subject": "optional override",
+  "body": "optional override",
+  "cc": "optional comma-separated"
+}
+```
+
+**Response:** `{ "success": true }` or `{ "error", "code" }` (e.g. opt-out, missing Gmail, missing review URL).
 
 #### Send quote via Gmail
 
@@ -940,7 +997,7 @@ PATCH triggers `opportunity.updated`; DELETE triggers `opportunity.deleted`.
 |--------|------|--------|
 | `GET` | `/api/tickets/[id]/emails` | Thread for ticket contact (`ticket_id` set on send, or unscoped contact mail) |
 | `POST` | `/api/tickets/[id]/emails/sync` | Same as contact sync for the linked contact |
-| `POST` | `/api/tickets/[id]/emails/send` | Body same as `POST /api/contacts/[id]/emails/send`; tags `ticket_id` on save |
+| `POST` | `/api/tickets/[id]/emails/send` | Same body as contact send (`gmailSendSchema`); tags `ticket_id` on save |
 
 ---
 
@@ -966,6 +1023,10 @@ Legacy UI URLs `/accounts` and `/accounts/[id]` redirect to `/contacts` and `/co
 | `GET`, `PATCH`, `DELETE` | `/api/pipelines/[id]` |
 
 **POST body:** `{ "name", "stages": [{ "id", "name", "order" }] }`
+
+**PATCH** `/api/pipelines/[id]` — update name and/or stage list (including reorder via `order` values).
+
+`POST /api/pipelines/seed` — idempotent default pipeline for workspace (owner/admin).
 
 ---
 
@@ -1031,16 +1092,20 @@ Returns `default_currency`, `default_sales_assignee`, `booking_availability`, `u
 
 ### 9.10 Integrations
 
+Google OAuth uses `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (or legacy `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`). Redirect URIs default to `{NEXT_PUBLIC_APP_URL}/api/auth/google-gmail/callback` and `…/google-calendar/callback` unless overridden by env.
+
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/integrations/google-calendar/status` | Connected? |
-| `POST` | `/api/integrations/google-calendar/disconnect` | Disconnect |
-| `GET` | `/api/auth/google-calendar` | Start OAuth |
-| `GET` | `/api/integrations/google-workspace/setup` | OAuth checklist + per-user mailbox status |
+| `GET` | `/api/integrations/google-calendar/status` | Calendar connected for signed-in user |
+| `POST` | `/api/integrations/google-calendar/disconnect` | Disconnect signed-in user's Calendar |
+| `GET` | `/api/auth/google-calendar` | Start Calendar OAuth |
+| `GET` | `/api/integrations/google-workspace/setup` | OAuth checklist + per-user Gmail/Calendar status |
 | `GET` | `/api/integrations/gmail/status` | Gmail status (signed-in user) |
 | `DELETE` | `/api/integrations/gmail/disconnect` | Disconnect signed-in user's Gmail |
 | `GET` | `/api/auth/google-gmail` | Start Gmail OAuth |
 | `GET` | `/api/auth/google-gmail/reconnect` | Re-consent (send + read scopes) |
+
+Calendar events created in CRM sync using the connected account of the event assignee, then actor, then workspace owner (`resolveCalendarUserId`).
 
 ---
 
@@ -1056,13 +1121,25 @@ Returns `default_currency`, `default_sales_assignee`, `booking_availability`, `u
 | **Custom fields** | `GET|POST /api/custom-fields`, `GET|PATCH|DELETE /api/custom-fields/[id]` |
 | **Tags** | `GET|POST /api/contact-tags`, `GET|PATCH|DELETE /api/contact-tags/[id]` |
 | **Notifications** | `GET|POST /api/notifications`, `PATCH /api/notifications/[id]` |
-| **Notification prefs** | `GET|PATCH /api/notification-preferences` |
+| **Notification prefs** | `GET|PATCH /api/notification-preferences` — includes `email_notifications` (inbound email), `task_reminders`, `opportunity_reminders`, `ticket_notifications`, `email_frequency`, `timezone` |
 | **Saved filters** | `GET|POST /api/saved-filters`, `GET|PATCH|DELETE /api/saved-filters/[id]` |
 | **Quotes (documents)** | `/api/documents`, line-items, pdf, send-via-gmail, `/api/quote-services` |
-| **Templates** | `/api/document-templates`, `/api/email-templates` |
+| **Templates** | `/api/document-templates`, `/api/email-templates` (list excludes `automation` and `review_request` categories; use `GET /api/email-templates/[id]` for any template by id) |
 
 Validators: `lib/validators/index.ts`  
 Types: `types/index.ts`
+
+#### Email templates
+
+| Method | Path | Notes |
+|--------|------|--------|
+| `GET` | `/api/email-templates` | List workspace templates; **excludes** `category` `automation` and `review_request` |
+| `POST` | `/api/email-templates` | Create (`name`, `subject`, `body`, optional `category`) |
+| `GET` | `/api/email-templates/[id]` | Single template (any category, including review) |
+| `PATCH` | `/api/email-templates/[id]` | Update |
+| `DELETE` | `/api/email-templates/[id]` | Delete |
+
+Review invitation copy is managed via Settings (review URL + review template), not the general template picker list.
 
 ---
 
@@ -1216,6 +1293,15 @@ sequenceDiagram
 | `NEXT_PUBLIC_N8N_WEBCHAT_EMBED_URL` | Optional | Chat iframe |
 | `NEXT_PUBLIC_N8N_WEBCHAT_SCRIPT_URL` | Optional | Chat script |
 | Supabase keys | Yes | `NEXT_PUBLIC_SUPABASE_URL`, service role, etc. |
+| `MAILGUN_API_KEY` | Transactional email | Mailgun sending key (team invites, automations) |
+| `MAILGUN_DOMAIN` | Transactional email | Verified domain, e.g. `mail.clickin360.com` |
+| `MAILGUN_FROM` | Transactional email | e.g. `ClickIn 360 <no-reply@mail.clickin360.com>` |
+| `MAILGUN_API_BASE` | Optional | `https://api.mailgun.net` (US) or `https://api.eu.mailgun.net` (EU) |
+| `SMTP_*` | Optional fallback | Legacy nodemailer if Mailgun is not set |
+| `GOOGLE_CLIENT_ID` | Google OAuth | Or `GOOGLE_OAUTH_CLIENT_ID` |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth | Or `GOOGLE_OAUTH_CLIENT_SECRET` |
+| `GOOGLE_GMAIL_REDIRECT_URI` | Optional | Override Gmail OAuth callback URL |
+| `GOOGLE_CALENDAR_REDIRECT_URI` | Optional | Override Calendar OAuth callback URL |
 
 ---
 
@@ -1232,6 +1318,10 @@ sequenceDiagram
 | CRM `401` | Log in again; check `NEXTAUTH_*` |
 | Google Calendar empty on lead book | Expected — lead path uses CRM calendar only |
 | N8N not receiving events | Set `N8N_WEBHOOK_URL`; path must match event name |
+| Gmail send `403` | Connect Gmail in Settings → Integrations; check `needs_gmail_connect` in response |
+| Replies not syncing | Sender must connect Gmail with read scope (`/api/auth/google-gmail/reconnect`); migration 046 applied |
+| Integrations "Setup required" | Set `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (or `GOOGLE_OAUTH_*`); restart app |
+| OAuth redirect mismatch | Authorized redirect URIs in Google Cloud must match `{APP_URL}/api/auth/google-gmail/callback` and `…/google-calendar/callback` |
 
 ---
 
@@ -1276,8 +1366,10 @@ See [§9](#9-crm-api-session). Full route list matches files under `app/api/**/r
 | N8N outbound | `lib/n8n.ts` |
 | Validators | `lib/validators/index.ts` |
 | Contact company sync | `lib/contacts/enrich-company-from-contact.ts` |
-| Migrations | `migrations/035_*` … `037_*` (contact delete cascade, notes triggers, contact-required parents) |
+| Migrations | `migrations/035_*` … `048_*` (contact-centric parents, Gmail sync, notifications, DB cleanup) |
+| Gmail sync | `lib/google/gmail-sync.ts`, `lib/emails/save-contact-email.ts` |
+| Google OAuth | `lib/google/oauth-config.ts` |
 
 ---
 
-*Last updated: 2026-05-27 (`main` @ Phase 5 / contact-centric model). Update this file when adding or changing API routes.*
+*Last updated: 2026-05-27 (`main` @ `37c8ae2`). Update this file when adding or changing API routes.*

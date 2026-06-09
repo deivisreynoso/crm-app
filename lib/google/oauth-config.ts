@@ -21,6 +21,39 @@ export function getGoogleOAuthClientSecret(): string | undefined {
   );
 }
 
+function isLocalOrigin(origin: string): boolean {
+  try {
+    const { hostname } = new URL(origin);
+    return (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "0.0.0.0"
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Public origin for OAuth redirect URIs. Prefer NEXT_PUBLIC_APP_URL so Docker/VPS
+ * builds do not use the container's internal localhost when the browser hits the real domain.
+ */
+function resolveOAuthOrigin(requestUrl?: string): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
+  if (appUrl) return appUrl;
+
+  if (requestUrl) {
+    try {
+      const origin = new URL(requestUrl).origin;
+      if (!isLocalOrigin(origin)) return origin;
+    } catch {
+      /* fall through */
+    }
+  }
+
+  return "http://localhost:3000";
+}
+
 /**
  * Redirect URI sent to Google. Must match **exactly** an entry in Google Cloud Console
  * → APIs & Services → Credentials → OAuth client → Authorized redirect URIs.
@@ -29,38 +62,14 @@ export function getGoogleCalendarRedirectUri(requestUrl?: string): string {
   const fromEnv = process.env.GOOGLE_CALENDAR_REDIRECT_URI?.trim();
   if (fromEnv) return fromEnv;
 
-  if (requestUrl) {
-    try {
-      const origin = new URL(requestUrl).origin;
-      return `${origin}${GOOGLE_CALENDAR_CALLBACK_PATH}`;
-    } catch {
-      /* fall through */
-    }
-  }
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
-  if (appUrl) return `${appUrl}${GOOGLE_CALENDAR_CALLBACK_PATH}`;
-
-  return `http://localhost:3000${GOOGLE_CALENDAR_CALLBACK_PATH}`;
+  return `${resolveOAuthOrigin(requestUrl)}${GOOGLE_CALENDAR_CALLBACK_PATH}`;
 }
 
 export function getGoogleGmailRedirectUri(requestUrl?: string): string {
   const fromEnv = process.env.GOOGLE_GMAIL_REDIRECT_URI?.trim();
   if (fromEnv) return fromEnv;
 
-  if (requestUrl) {
-    try {
-      const origin = new URL(requestUrl).origin;
-      return `${origin}${GOOGLE_GMAIL_CALLBACK_PATH}`;
-    } catch {
-      /* fall through */
-    }
-  }
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
-  if (appUrl) return `${appUrl}${GOOGLE_GMAIL_CALLBACK_PATH}`;
-
-  return `http://localhost:3000${GOOGLE_GMAIL_CALLBACK_PATH}`;
+  return `${resolveOAuthOrigin(requestUrl)}${GOOGLE_GMAIL_CALLBACK_PATH}`;
 }
 
 export function isGoogleOAuthConfigured(): boolean {
@@ -84,10 +93,10 @@ export function getGoogleOAuthEnvStatus(requestUrl?: string) {
     redirectUri,
     redirectUriSource: process.env.GOOGLE_CALENDAR_REDIRECT_URI?.trim()
       ? "GOOGLE_CALENDAR_REDIRECT_URI"
-      : requestUrl
-        ? "request origin"
-        : process.env.NEXT_PUBLIC_APP_URL
-          ? "NEXT_PUBLIC_APP_URL"
+      : process.env.NEXT_PUBLIC_APP_URL?.trim()
+        ? "NEXT_PUBLIC_APP_URL"
+        : requestUrl
+          ? "request origin"
           : "default localhost:3000",
   };
 }

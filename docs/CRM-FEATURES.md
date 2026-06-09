@@ -27,6 +27,11 @@ git log -1 --format='%h %s (%cs)'
 
 | Date | Commit | Type | Summary |
 |------|--------|------|---------|
+| 2026-05-27 | `37c8ae2` | feature + fix | **Gmail:** compose with templates, Cc, reply threading; thread-aware sync (`mailbox_user_id`); inbound email notifications; unified Integrations UI; OAuth env aliases; note/task edit-delete; migration 048 DB cleanup |
+| 2026-05-27 | `5b6f6d1` | fix | Activity timeline author attribution and viewer timezone display |
+| 2026-05-27 | `33b5e51` | enhancement | Drag-and-drop pipeline stage reorder in Settings |
+| 2026-05-27 | `f2a9f2c` | enhancement | Pipeline board brand accents and contact activity counts |
+| 2026-05-27 | `d735d0f` | fix | Timezone-aware greetings and notification deep links |
 | 2026-05-27 | `662422a` | fix + enhancement | GA4 gtag retry/consent; CRM workspace scoping (opportunities, documents, pipelines); tickets/tasks edge cases |
 | 2026-05-27 | `cb348eb` | feature | GA4 custom events on marketing site (CTA, scroll, booking, chat, FAQ) |
 | 2026-05-27 | `215f28f` | infra | `robots.txt` + `sitemap.xml` for Search Console |
@@ -58,9 +63,10 @@ git log -1 --format='%h %s (%cs)'
 | Database | Supabase Postgres + RLS on tenant tables |
 | Server data access | Service role in API routes (not browser Supabase for CRM entities) |
 | Files | Supabase Storage (documents, quote logos) |
-| Email | Gmail API (per connected user) |
-| Calendar | Google Calendar OAuth (workspace-level tokens) |
-| Automation | N8N via outbound webhooks + Lead API (`x-website-secret`) |
+| Email (sales) | Gmail API (per connected user; read + send scopes) |
+| Email (automated) | Mailgun HTTP API (`no-reply@…`); team invites today |
+| Calendar | Google Calendar OAuth (per connected user; assignee → actor → owner fallback) |
+| Automation | N8N via outbound webhooks + Lead API (`x-website-secret`) — no in-app email automations |
 | Deploy | Docker Compose on VPS (`main` branch) |
 | i18n | CRM UI: English / Spanish; marketing site: `/en`, `/es` |
 
@@ -108,8 +114,11 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 - Activity timestamps use contact timezone → user notification timezone → browser
 - Appointments appear on activity timeline; website reschedule updates existing event (no duplicate)
 - Notes, tasks (with assignee/due), activity feed (notes + activities including email metadata)
-- **Gmail:** send email, sync thread into `contact_emails`, activity logging
-- **Google review request** from contact (template + opt-out)
+- **Notes & tasks:** edit and delete from activity timeline / tasks panel (author or admin)
+- **Gmail:** send with **templates**, **Cc**, and **reply** (In-Reply-To threading); sync thread into `contact_emails`; auto-sync after send and on panel load (~2 min)
+- **Email timeline colors:** inbound rose, outbound sky blue
+- **Inbound email notifications** (preference `email_notifications`; deep link to contact)
+- **Google review request** from contact — editable subject/body/Cc; workspace review template in Settings (not in general template list)
 - Duplicate detection queue (scan by email/phone), merge or dismiss pairs
 - **CSV import / export**
 - **CRM UI i18n:** contact detail, tickets, calendar forms, quick actions, related panel (EN/ES via Settings → Platform language)
@@ -151,7 +160,7 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 
 - Month view, upcoming list, contact-related events
 - **Requires linked contact** on create (website bookings always set `contact_id`)
-- Google Calendar sync (workspace)
+- Google Calendar sync (per user who connected; event assignee preferred)
 - **Appointments** (website bookings) vs **meetings** — rose vs location-based colors, legend
 - `event_kind` column (migration 032)
 - Booking availability in Settings (Lead API uses this)
@@ -171,19 +180,18 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 
 ### Notifications
 
-- In-app notifications (tickets, tasks, opportunities, etc.)
-- Per-user notification preferences
+- In-app notifications (tickets, tasks, opportunities, inbound email, etc.)
+- Per-user notification preferences (`email_notifications`, task/opportunity/ticket toggles, timezone)
 
 ### Settings (owner / admin)
 
 - Platform language (EN/ES)
-- Google Workspace setup (Gmail + Calendar connect/disconnect)
+- **Integrations** — unified Google Workspace panel (OAuth checklist, Gmail + Calendar connect/disconnect per user)
 - Quote branding and services catalog entry point
 - Booking availability
 - Website leads (default assignee)
-- Integrations section
-- Google review invitation URL + email template
-- Email templates manager (create, **edit**, delete)
+- Google review invitation URL + review email template (category `review_request`)
+- Email templates manager (create, edit, delete) — excludes automation and review templates from the general list
 - Duplicate contacts panel
 - Team invites and roles (`sales`, `admin`, `viewer`)
 - **Audit log** (read-only; owner/admin)
@@ -191,7 +199,8 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 
 ### Settings (all members)
 
-- Language card, Gmail connection for sending as self
+- Language card
+- **Integrations** — connect own Gmail and Google Calendar for send/sync and calendar events
 
 ### Integrations (external)
 
@@ -215,13 +224,13 @@ See [CLICKIN360-CRM-API.md](./CLICKIN360-CRM-API.md) for endpoints.
 - `audit_logs`: RLS + revoke client roles; service-role writes; admin API read
 - Workspace parent validation (`assert-workspace-parents`)
 - Search sanitization, stripped insert/update columns
-- No SMTP send route (Gmail-only for quotes)
+- Quotes and contact mail use Gmail; system mail (invites, future automations) uses Mailgun when `MAILGUN_*` env is set
 
 ---
 
 ## Database migrations
 
-Production should run migrations **001–037** in order. Notable groups:
+Production should run migrations **001–048** in order. Notable groups:
 
 | Range | Theme |
 |-------|--------|
@@ -233,6 +242,12 @@ Production should run migrations **001–037** in order. Notable groups:
 | 035 | Contact delete CASCADE on `calendar_events` |
 | 036 | Notes cleanup triggers + list/feed composite indexes |
 | 037 | Require `contact_id` on tickets and calendar events; backfill from legacy company-only rows |
+| 038–043 | Team profiles, author names, pipeline UX (see repo `migrations/`) |
+| 044 | `has_read_access` on `google_gmail_tokens` (read scope tracking) |
+| 045 | Remove automation email templates |
+| 046 | `mailbox_user_id` on `contact_emails` (correct Gmail thread ownership) |
+| 047 | `email_notifications` on `notification_preferences` |
+| 048 | Orphan schema cleanup (legacy OAuth tables, automations, WhatsApp tables) |
 
 ---
 
@@ -248,7 +263,7 @@ Historical phases map to git eras (not separate products):
 | **4 — Operations** | Contact merge, in-app notifications, payments, ticket improvements | ✅ Shipped |
 | **5 — Production platform** | Website↔CRM, team/roles, quotes, contact UX, security, audit log | ✅ **Shipped** on `main` (`8fc9cee`) — migrations **035–037** applied in Supabase |
 
-**Phase 5 is complete.** **Phase 6 is in progress** — ops hardening and marketing analytics shipped on `main` @ `662422a`; product roadmap items below are not started.
+**Phase 5 is complete.** **Phase 6 is in progress** — Gmail compose/sync, integrations UI, and pipeline UX shipped on `main` @ `37c8ae2`; product roadmap items below remain backlog.
 
 ---
 
@@ -264,12 +279,17 @@ Historical phases map to git eras (not separate products):
 | **Marketing GA4 + SEO** | Cookie consent, custom events, robots/sitemap (`ab07aca`–`cb348eb`) |
 | **Activity timeline** | Salesforce-style feed on contact detail (`ab07aca`) |
 | **Migrations 035–037** | Contact delete cascades; required `contact_id` on tickets/events |
+| **Gmail compose & sync** | Templates, Cc, reply, thread sync, inbound notifications (`37c8ae2`; migrations 044–047) |
+| **Integrations UI** | Per-user Gmail + Calendar OAuth; env aliases `GOOGLE_CLIENT_ID` / `GOOGLE_OAUTH_*` |
+| **Note/task edit-delete** | Timeline and tasks panel (`37c8ae2`) |
+| **Pipeline stage reorder** | Settings drag-and-drop (`33b5e51`) |
+| **Migration 048** | DB orphan cleanup — run preflight (`scripts/db-preflight-audit.sql`) first |
 
 ### Post–Phase 5 ops (do first)
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | **VPS deploy** | Pull `main` @ `662422a`; rebuild Docker (`scripts/deploy-vps.sh`) |
+| 1 | **VPS deploy** | Pull `main` @ `37c8ae2`; run migrations **044–048** if not applied; rebuild Docker (`scripts/deploy-vps.sh`) |
 | 2 | **GA4 conversions** | Mark `generate_lead`, `booking_completed` in GA4 Admin |
 | 3 | **GSC follow-up** | Fix remaining 404s / canonical issues after sitemap deploy |
 | 4 | **AUDIT-FIX-TRACKER F1–F2, F5–F6** | Async contact combobox; batch signed URLs; storage cleanup; remove unused dashboard stats API |
@@ -290,7 +310,8 @@ Historical phases map to git eras (not separate products):
 ### Known limitations
 
 - CRM does not use Supabase Auth session for data reads; all tenant access is API + service role.
-- Gmail is per-user; Calendar tokens are workspace-scoped (documented in code comments).
+- Gmail and Google Calendar are **per-user** — each teammate connects their own account in Settings → Integrations.
+- Customer email replies sync only when the **mailbox that sent** (or owns the thread) is connected with read scope.
 - Viewer role is intentionally read-only demo mode.
 - `audit_logs` table existed for a long time before writes; historical rows may be empty.
 
@@ -317,4 +338,4 @@ Historical phases map to git eras (not separate products):
 
 ---
 
-*Last updated: 2026-05-27 (`main` @ `662422a`).*
+*Last updated: 2026-05-27 (`main` @ `37c8ae2`).*

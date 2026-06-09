@@ -86,7 +86,7 @@ export function TeamSettings() {
       if (data.invite_url) {
         setInviteUrl(data.invite_url);
         setMsg(
-          "Invitation created. Share the link below or use the email we sent (if SMTP is configured)."
+          "Invitation created. Share the link below or check the invite email we sent."
         );
       } else {
         setMsg(

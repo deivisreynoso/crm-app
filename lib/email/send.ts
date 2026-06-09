@@ -1,3 +1,6 @@
+import { isMailgunConfigured } from "@/lib/email/mailgun-config";
+import { sendMailgunEmail } from "@/lib/email/mailgun";
+
 export interface SendEmailOptions {
   to: string;
   subject: string;
@@ -5,8 +8,30 @@ export interface SendEmailOptions {
   text?: string;
 }
 
-/** Sends email when SMTP env vars are configured. */
+function isSmtpConfigured(): boolean {
+  const host = process.env.SMTP_HOST?.trim();
+  const user = process.env.SMTP_USER?.trim();
+  const pass = process.env.SMTP_PASS?.trim();
+  const from = process.env.SMTP_FROM?.trim() ?? user;
+  return Boolean(host && user && pass && from);
+}
+
+/** True when Mailgun or legacy SMTP env vars are set. */
+export function isTransactionalEmailConfigured(): boolean {
+  return isMailgunConfigured() || isSmtpConfigured();
+}
+
+/**
+ * Sends automated / transactional email (team invites, system notifications).
+ * Prefers Mailgun when configured; falls back to SMTP (nodemailer).
+ * Sales compose still uses Gmail — see lib/google/gmail.ts.
+ */
 export async function sendEmail(options: SendEmailOptions): Promise<void> {
+  if (isMailgunConfigured()) {
+    await sendMailgunEmail(options);
+    return;
+  }
+
   const host = process.env.SMTP_HOST;
   const port = process.env.SMTP_PORT;
   const user = process.env.SMTP_USER;
@@ -15,7 +40,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
 
   if (!host || !user || !pass || !from) {
     throw new Error(
-      "Email is not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and SMTP_FROM."
+      "Email is not configured. Set MAILGUN_API_KEY, MAILGUN_DOMAIN, and MAILGUN_FROM (or SMTP_* vars)."
     );
   }
 
