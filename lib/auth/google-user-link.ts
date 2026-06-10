@@ -2,6 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ensureUserProfile } from "@/lib/users/ensure-user-profile";
 import { linkPendingTeamMemberByEmail } from "@/lib/team/link-member";
 import { userCanAccessCrm } from "@/lib/team/access";
+import {
+  findCanonicalUserIdByEmail,
+  resolveCanonicalCrmUserId,
+} from "@/lib/auth/canonical-user";
 
 export type GoogleProfile = {
   email: string;
@@ -40,6 +44,10 @@ export async function resolveGoogleLoginUser(
   let userId = await findAuthUserIdByEmail(supabase, email);
 
   if (!userId) {
+    userId = await findCanonicalUserIdByEmail(supabase, email);
+  }
+
+  if (!userId) {
     const { data: created, error } = await supabase.auth.admin.createUser({
       email,
       email_confirm: true,
@@ -52,17 +60,20 @@ export async function resolveGoogleLoginUser(
     userId = created.user.id;
   }
 
-  await linkPendingTeamMemberByEmail(supabase, userId, email);
+  const canonicalUserId = await resolveCanonicalCrmUserId(supabase, userId, email);
 
-  const allowed = await userCanAccessCrm(supabase, userId, email);
+  await linkPendingTeamMemberByEmail(supabase, canonicalUserId, email);
+
+  const allowed = await userCanAccessCrm(supabase, canonicalUserId, email);
   if (!allowed) return null;
 
   const displayName = profile.name?.trim() || email;
+
   await ensureUserProfile(supabase, {
-    userId,
+    userId: canonicalUserId,
     email,
     displayName,
   });
 
-  return { userId, email, name: displayName };
+  return { userId: canonicalUserId, email, name: displayName };
 }

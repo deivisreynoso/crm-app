@@ -4,6 +4,7 @@ import GoogleProvider from "next-auth/providers/google";
 import { createServerSideClient } from "@/lib/supabase";
 import { ensureUserProfile } from "@/lib/users/ensure-user-profile";
 import { userCanAccessCrm } from "@/lib/team/access";
+import { resolveCanonicalCrmUserId } from "@/lib/auth/canonical-user";
 import { resolveGoogleLoginUser } from "@/lib/auth/google-user-link";
 import {
   credentialsLoginAllowed,
@@ -74,18 +75,20 @@ export const authOptions: NextAuthOptions = {
 
         const admin = createServerSideClient();
 
-        const allowed = await userCanAccessCrm(
+        const userId = await resolveCanonicalCrmUserId(
           admin,
           data.user.id,
-          data.user.email
+          email
         );
+
+        const allowed = await userCanAccessCrm(admin, userId, email);
         if (!allowed) {
           throw new Error(
             "Your account is not linked to a workspace. Ask your admin for a new team invitation."
           );
         }
 
-        const role = await resolveUserRole(admin, data.user.id);
+        const role = await resolveUserRole(admin, userId);
         if (!credentialsLoginAllowed(role)) {
           throw new Error(loginMethodError("credentials", role));
         }
@@ -97,7 +100,7 @@ export const authOptions: NextAuthOptions = {
         const { data: membership } = await admin
           .from("team_members")
           .select("display_name, email")
-          .eq("member_user_id", data.user.id)
+          .eq("member_user_id", userId)
           .maybeSingle();
 
         const teamName = membership?.display_name?.trim();
@@ -105,13 +108,13 @@ export const authOptions: NextAuthOptions = {
           teamName || fullName?.trim() || data.user.email || "";
 
         const user = {
-          id: data.user.id,
+          id: userId,
           email: data.user.email,
           name: displayName,
         };
 
         await ensureUserProfile(admin, {
-          userId: data.user.id,
+          userId,
           email: data.user.email ?? membership?.email,
           displayName,
         });
