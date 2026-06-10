@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { MfaSettings } from "@/components/settings/mfa-settings";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,15 @@ export function AccountSettings() {
   const [error, setError] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [signatureHtml, setSignatureHtml] = useState("");
+  const [signatureMsg, setSignatureMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    void axios
+      .get<{ email_signature_html?: string }>("/api/account/profile")
+      .then((res) => setSignatureHtml(res.data.email_signature_html ?? ""))
+      .catch(() => undefined);
+  }, []);
 
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -112,6 +122,42 @@ export function AccountSettings() {
             Save profile
           </Button>
         </form>
+      </SettingsSection>
+
+      <SettingsSection
+        title="Email signature"
+        description="Appended when you send email from the CRM via Gmail."
+      >
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setSignatureMsg(null);
+            try {
+              await axios.patch("/api/account/profile", {
+                email_signature_html: signatureHtml,
+              });
+              setSignatureMsg("Signature saved.");
+            } catch (err) {
+              setError(formatApiError(err, "Could not save signature"));
+            }
+          }}
+          className="space-y-4 max-w-2xl"
+        >
+          <textarea
+            className="input-field w-full min-h-[120px] font-mono text-sm"
+            value={signatureHtml}
+            onChange={(e) => setSignatureHtml(e.target.value)}
+            placeholder="<p>Best regards,<br/>Your Name</p>"
+          />
+          {signatureMsg && <p className="text-sm text-emerald-700">{signatureMsg}</p>}
+          <Button type="submit" size="sm" variant="outline">
+            Save signature
+          </Button>
+        </form>
+      </SettingsSection>
+
+      <SettingsSection title="Multi-factor authentication" description="Optional extra sign-in security.">
+        <MfaSettings />
       </SettingsSection>
 
       <SettingsSection title="Password" description="Update your sign-in password.">

@@ -1,7 +1,6 @@
 "use client";
 
 import { PageHeader } from "@/components/ui/page-shell";
-import { Card } from "@/components/ui/card";
 import { CustomFieldManager } from "@/components/custom-fields/custom-field-manager";
 import { EmailTemplatesManager } from "@/components/settings/email-templates-manager";
 import { DuplicateReviewsPanel } from "@/components/settings/duplicate-reviews-panel";
@@ -9,10 +8,9 @@ import { GoogleWorkspacePanel } from "@/components/settings/google-workspace-pan
 import { TeamSettings } from "@/components/settings/team-settings";
 import { WorkspaceLeadsSettings } from "@/components/settings/workspace-leads-settings";
 import { BookingAvailabilitySettings } from "@/components/settings/booking-availability-settings";
-import { QuoteServicesSettings } from "@/components/settings/quote-services-settings";
-import { QuoteBrandingSettings } from "@/components/settings/quote-branding-settings";
 import { GoogleReviewRequestSettings } from "@/components/settings/google-review-request-settings";
 import { AuditLogsPanel } from "@/components/settings/audit-logs-panel";
+import { AdminIntegrationsPanel } from "@/components/settings/admin-integrations-panel";
 import { SettingsSection } from "@/components/settings/settings-section";
 import { CrmLanguageSwitcher } from "@/components/crm/crm-language-switcher";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
@@ -41,13 +39,19 @@ export function SettingsPageContent() {
         }
       />
 
+      <SettingsSection title={s?.emailTemplates ?? "Email templates"}>
+        <EmailTemplatesManager />
+      </SettingsSection>
+
       <SettingsSection
-        title={s?.language ?? "Platform language"}
-        description={
-          s?.languageHelp ?? "Applies to CRM navigation and common labels."
-        }
+        title={dict.settings?.reviewRequests ?? "Google review invitations"}
+        description={dict.settings?.reviewRequestsHelp}
       >
-        <CrmLanguageSwitcher />
+        <GoogleReviewRequestSettings />
+      </SettingsSection>
+
+      <SettingsSection title={s?.bookingAvailability ?? "Booking availability"}>
+        <BookingAvailabilitySettings />
       </SettingsSection>
 
       <SettingsSection
@@ -55,26 +59,25 @@ export function SettingsPageContent() {
         description="Connect your Google Workspace mailbox and calendar. Each teammate uses their own credentials."
       >
         <GoogleWorkspacePanel />
+        <p className="text-xs text-body-muted mt-4">
+          Google Drive connection will appear here in a future release.
+        </p>
       </SettingsSection>
 
-      {canManage && (
+      {canManage ? (
         <>
           <SettingsSection
-            title={dict.settings?.quoteBranding ?? "Quote branding"}
-            description="Logo and company name on quote PDFs."
+            title={s?.language ?? "Platform language"}
+            description={s?.languageHelp ?? "Applies to CRM navigation and common labels."}
           >
-            <QuoteBrandingSettings />
+            <CrmLanguageSwitcher />
           </SettingsSection>
 
           <SettingsSection
-            title={s?.quoteServices ?? "Product catalog"}
-            description={s?.quoteServicesSettingsHelp}
+            title="Admin integrations"
+            description="N8N, WhatsApp, Stripe, Mailgun, and Google Analytics configuration status."
           >
-            <QuoteServicesSettings />
-          </SettingsSection>
-
-          <SettingsSection title={s?.bookingAvailability ?? "Booking availability"}>
-            <BookingAvailabilitySettings />
+            <AdminIntegrationsPanel />
           </SettingsSection>
 
           <SettingsSection
@@ -82,17 +85,6 @@ export function SettingsPageContent() {
             description="Default assignee for inbound website leads."
           >
             <WorkspaceLeadsSettings />
-          </SettingsSection>
-
-          <SettingsSection
-            title={dict.settings?.reviewRequests ?? "Google review invitations"}
-            description={dict.settings?.reviewRequestsHelp}
-          >
-            <GoogleReviewRequestSettings />
-          </SettingsSection>
-
-          <SettingsSection title={s?.emailTemplates ?? "Email templates"}>
-            <EmailTemplatesManager />
           </SettingsSection>
 
           <SettingsSection title={s?.duplicateContacts ?? "Duplicate contacts"}>
@@ -114,18 +106,7 @@ export function SettingsPageContent() {
             <CustomFieldManager />
           </SettingsSection>
         </>
-      )}
-
-      {!canManage && (
-        <Card padding="lg">
-          <p className="text-sm text-body-muted">
-            {(
-              s?.memberNotice ??
-              "You are signed in as a workspace teammate ({role}). CRM data is shared with your team. Workspace settings are managed by the owner or an admin."
-            ).replace("{role}", ctx?.role ?? "sales")}
-          </p>
-        </Card>
-      )}
+      ) : null}
     </div>
   );
 }

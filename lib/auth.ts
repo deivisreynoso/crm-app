@@ -6,6 +6,7 @@ import { ensureUserProfile } from "@/lib/users/ensure-user-profile";
 import { userCanAccessCrm } from "@/lib/team/access";
 import { resolveCanonicalCrmUserId } from "@/lib/auth/canonical-user";
 import { resolveGoogleLoginUser } from "@/lib/auth/google-user-link";
+import { findSupabaseAuthUserIdByEmail } from "@/lib/auth/supabase-auth-user";
 import {
   credentialsLoginAllowed,
   googleLoginAllowed,
@@ -109,6 +110,7 @@ export const authOptions: NextAuthOptions = {
 
         const user = {
           id: userId,
+          authUserId: data.user.id,
           email: data.user.email,
           name: displayName,
         };
@@ -151,7 +153,11 @@ export const authOptions: NextAuthOptions = {
         return loginMethodError("google", role);
       }
 
+      const authUserId =
+        (await findSupabaseAuthUserIdByEmail(admin, email!)) ?? linked.userId;
+
       user.id = linked.userId;
+      user.authUserId = authUserId;
       user.email = linked.email;
       user.name = linked.name;
       return true;
@@ -159,6 +165,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
+        token.authUserId = user.authUserId ?? user.id;
         token.email = user.email;
         if (user.name) token.name = user.name;
         if (account?.provider) token.authProvider = account.provider;
@@ -168,6 +175,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user && token.id) {
         session.user.id = token.id as string;
+        session.user.authUserId = (token.authUserId as string) ?? (token.id as string);
         if (token.email) session.user.email = token.email as string;
         if (token.name) session.user.name = token.name as string;
       }

@@ -42,7 +42,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { error: updateError } = await supabase.auth.admin.updateUserById(userId!, {
+    const authUserId = session!.user?.authUserId ?? userId!;
+
+    const { error: updateError } = await supabase.auth.admin.updateUserById(authUserId, {
       password: parsed.data.new_password,
     });
 

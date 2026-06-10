@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
 import type { PublicQuoteView } from "@/lib/quotes/load-public-quote";
+import { getQuoteAcceptCopy } from "@/lib/quotes/public-accept-copy";
 
 export function QuoteAcceptCustomerPage({ token }: { token: string }) {
   const [quote, setQuote] = useState<PublicQuoteView | null>(null);
@@ -12,8 +13,14 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [disclaimerAck, setDisclaimerAck] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState<"accept" | "reject" | null>(null);
+
+  const copy = useMemo(
+    () => getQuoteAcceptCopy(quote?.locale ?? "en"),
+    [quote?.locale]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -24,7 +31,7 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
         );
         if (!cancelled) setQuote(data.data);
       } catch {
-        if (!cancelled) setError("This quote link is invalid or has expired.");
+        if (!cancelled) setError(copy.invalid);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -32,16 +39,32 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, copy.invalid]);
 
   async function respond(action: "accept" | "reject") {
+    if (action === "accept") {
+      if (!name.trim()) {
+        setError(copy.nameRequired);
+        return;
+      }
+      if (!email.trim()) {
+        setError(copy.emailRequired);
+        return;
+      }
+      if (!disclaimerAck) {
+        setError(copy.disclaimerAck);
+        return;
+      }
+    }
+
     setSubmitting(true);
     setError(null);
     try {
       await axios.post(`/api/quotes/public/${encodeURIComponent(token)}`, {
         action,
-        name: name.trim() || undefined,
-        email: email.trim() || undefined,
+        name: name.trim(),
+        email: email.trim(),
+        disclaimer_acknowledged: action === "accept" ? true : undefined,
       });
       setDone(action);
       setQuote((q) =>
@@ -68,7 +91,7 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <p className="text-slate-600">Loading quote…</p>
+        <p className="text-slate-600">{copy.loading}</p>
       </div>
     );
   }
@@ -95,23 +118,19 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
       <div className="max-w-lg mx-auto bg-white rounded-xl border border-slate-200 shadow-sm p-8">
         {quote.logo_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={quote.logo_url}
-            alt=""
-            className="max-h-14 mb-6 object-contain"
-          />
+          <img src={quote.logo_url} alt="" className="max-h-14 mb-6 object-contain" />
         ) : quote.company_display_name ? (
-          <p className="text-lg font-bold text-slate-900 mb-6">
-            {quote.company_display_name}
-          </p>
+          <p className="text-lg font-bold text-slate-900 mb-6">{quote.company_display_name}</p>
         ) : null}
 
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Quote
+          {copy.quoteLabel}
         </p>
         <h1 className="text-xl font-bold text-slate-900 mt-1">{quote.title}</h1>
         {quote.quote_reference && (
-          <p className="text-sm text-slate-500 mt-1">Ref. {quote.quote_reference}</p>
+          <p className="text-sm text-slate-500 mt-1">
+            {copy.ref} {quote.quote_reference}
+          </p>
         )}
 
         <ul className="mt-6 space-y-2 border-t border-slate-100 pt-4 text-sm">
@@ -128,15 +147,8 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
         </ul>
 
         <div className="mt-4 pt-4 border-t border-slate-200 text-right space-y-1 text-sm">
-          <p>Subtotal: {formatCurrency(quote.subtotal, quote.currency)}</p>
-          {quote.tax_rate > 0 && (
-            <p>
-              Tax ({quote.tax_rate}%):{" "}
-              {formatCurrency(quote.tax_amount, quote.currency)}
-            </p>
-          )}
           <p className="text-lg font-bold text-slate-900">
-            Total: {formatCurrency(quote.total_amount, quote.currency)}
+            {copy.total}: {formatCurrency(quote.total_amount, quote.currency)}
           </p>
         </div>
 
@@ -150,32 +162,46 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
           <div className="mt-8 p-4 rounded-lg bg-slate-50 text-center">
             <p className="font-semibold text-slate-900">
               {quote.status === "accepted" || done === "accept"
-                ? "Thank you — this quote has been accepted."
-                : "This quote has been declined."}
+                ? copy.accepted
+                : copy.rejected}
             </p>
           </div>
         ) : (
           <div className="mt-8 space-y-4">
             <div>
               <label className="text-xs font-medium text-slate-700 block mb-1">
-                Your name (optional)
+                {copy.name} *
               </label>
               <input
                 className="input-field w-full"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                required
               />
             </div>
             <div>
               <label className="text-xs font-medium text-slate-700 block mb-1">
-                Email (optional)
+                {copy.email} *
               </label>
               <input
                 type="email"
                 className="input-field w-full"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
               />
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+              <p>{copy.disclaimer}</p>
+              <label className="mt-3 flex items-start gap-2 text-slate-800">
+                <input
+                  type="checkbox"
+                  checked={disclaimerAck}
+                  onChange={(e) => setDisclaimerAck(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <span>{copy.disclaimerAck}</span>
+              </label>
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <div className="flex flex-col sm:flex-row gap-2">
@@ -185,7 +211,7 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
                 disabled={submitting}
                 onClick={() => void respond("accept")}
               >
-                Accept quote
+                {copy.accept}
               </Button>
               <Button
                 type="button"
@@ -194,7 +220,7 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
                 disabled={submitting}
                 onClick={() => void respond("reject")}
               >
-                Decline
+                {copy.decline}
               </Button>
             </div>
           </div>

@@ -36,6 +36,8 @@ const settingsPatchSchema = z.object({
     .optional()
     .or(z.literal("")),
   review_request_template_id: z.string().uuid().nullable().optional(),
+  quote_primary_color: z.string().max(32).optional().or(z.literal("")),
+  quote_font_family: z.string().max(80).optional().or(z.literal("")),
 });
 
 async function loadSettings(workspaceOwnerId: string) {
@@ -43,7 +45,7 @@ async function loadSettings(workspaceOwnerId: string) {
   let { data, error: dbError } = await supabase
     .from("user_settings")
     .select(
-      "default_currency, default_sales_assignee, booking_availability, ui_locale, quote_logo_storage_path, quote_company_name, google_reviews_url, review_request_template_id, updated_at"
+      "default_currency, default_sales_assignee, booking_availability, ui_locale, quote_logo_storage_path, quote_company_name, quote_primary_color, quote_font_family, google_reviews_url, review_request_template_id, updated_at"
     )
     .eq("user_id", workspaceOwnerId)
     .maybeSingle();
@@ -55,7 +57,7 @@ async function loadSettings(workspaceOwnerId: string) {
       .from("user_settings")
       .insert({ user_id: workspaceOwnerId, default_currency: "USD" })
       .select(
-      "default_currency, default_sales_assignee, booking_availability, ui_locale, quote_logo_storage_path, quote_company_name, google_reviews_url, review_request_template_id, updated_at"
+      "default_currency, default_sales_assignee, booking_availability, ui_locale, quote_logo_storage_path, quote_company_name, quote_primary_color, quote_font_family, google_reviews_url, review_request_template_id, updated_at"
     )
       .single();
 
@@ -122,6 +124,8 @@ export async function PATCH(req: NextRequest) {
       parsed.data.booking_availability === undefined &&
       parsed.data.ui_locale === undefined &&
       parsed.data.quote_company_name === undefined &&
+      parsed.data.quote_primary_color === undefined &&
+      parsed.data.quote_font_family === undefined &&
       parsed.data.google_reviews_url === undefined &&
       parsed.data.review_request_template_id === undefined
     ) {
@@ -148,6 +152,12 @@ export async function PATCH(req: NextRequest) {
     if (parsed.data.quote_company_name !== undefined) {
       patch.quote_company_name = parsed.data.quote_company_name?.trim() || null;
     }
+    if (parsed.data.quote_primary_color !== undefined) {
+      patch.quote_primary_color = parsed.data.quote_primary_color?.trim() || null;
+    }
+    if (parsed.data.quote_font_family !== undefined) {
+      patch.quote_font_family = parsed.data.quote_font_family?.trim() || null;
+    }
     if (parsed.data.google_reviews_url !== undefined) {
       patch.google_reviews_url = parsed.data.google_reviews_url?.trim() || null;
     }
@@ -159,7 +169,7 @@ export async function PATCH(req: NextRequest) {
       .from("user_settings")
       .upsert(patch, { onConflict: "user_id" })
       .select(
-      "default_currency, default_sales_assignee, booking_availability, ui_locale, quote_logo_storage_path, quote_company_name, google_reviews_url, review_request_template_id, updated_at"
+      "default_currency, default_sales_assignee, booking_availability, ui_locale, quote_logo_storage_path, quote_company_name, quote_primary_color, quote_font_family, google_reviews_url, review_request_template_id, updated_at"
     )
       .single();
 

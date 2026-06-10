@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isQuoteDocument } from "@/lib/documents/kinds";
+import { resolveCrmLocale } from "@/lib/crm/i18n";
 import { resolveQuoteLogoUrl } from "@/lib/storage/quote-logo";
 import type { QuoteLineItem } from "@/types";
 
@@ -17,6 +18,7 @@ export type PublicQuoteView = {
   currency: string;
   company_display_name: string | null;
   logo_url: string | null;
+  locale: "en" | "es";
   line_items: QuoteLineItem[];
   accepted_at: string | null;
   rejected_at: string | null;
@@ -41,11 +43,23 @@ export async function loadPublicQuoteByToken(
     .eq("document_id", doc.id)
     .order("sort_order");
 
+  let contactLocale: string | null = null;
+  if (doc.contact_id) {
+    const { data: contact } = await supabase
+      .from("contacts")
+      .select("preferred_language")
+      .eq("id", doc.contact_id)
+      .maybeSingle();
+    contactLocale = (contact?.preferred_language as string | null) ?? null;
+  }
+
   const { data: settings } = await supabase
     .from("user_settings")
-    .select("default_currency, quote_company_name, quote_logo_storage_path")
+    .select("default_currency, quote_company_name, quote_logo_storage_path, ui_locale")
     .eq("user_id", doc.user_id)
     .maybeSingle();
+
+  const locale = resolveCrmLocale(contactLocale ?? (settings?.ui_locale as string | null));
 
   const logoUrl = await resolveQuoteLogoUrl(
     supabase,
@@ -74,6 +88,7 @@ export async function loadPublicQuoteByToken(
     currency: (settings?.default_currency as string) || "USD",
     company_display_name: (settings?.quote_company_name as string | null) ?? null,
     logo_url: logoUrl,
+    locale,
     line_items: lineItems,
     accepted_at: (doc.accepted_at as string | null) ?? null,
     rejected_at: (doc.rejected_at as string | null) ?? null,

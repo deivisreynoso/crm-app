@@ -7,11 +7,30 @@ import { z } from "zod";
 
 type RouteContext = { params: Promise<{ token: string }> };
 
-const respondSchema = z.object({
-  action: z.enum(["accept", "reject"]),
-  name: z.string().max(200).optional(),
-  email: z.string().email().optional().or(z.literal("")),
-});
+const respondSchema = z
+  .object({
+    action: z.enum(["accept", "reject"]),
+    name: z.string().max(200).optional(),
+    email: z.string().email().optional().or(z.literal("")),
+    disclaimer_acknowledged: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.action === "accept") {
+      if (!data.name?.trim()) {
+        ctx.addIssue({ code: "custom", message: "Name is required.", path: ["name"] });
+      }
+      if (!data.email?.trim()) {
+        ctx.addIssue({ code: "custom", message: "Email is required.", path: ["email"] });
+      }
+      if (!data.disclaimer_acknowledged) {
+        ctx.addIssue({
+          code: "custom",
+          message: "You must acknowledge the terms before accepting.",
+          path: ["disclaimer_acknowledged"],
+        });
+      }
+    }
+  });
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
@@ -68,6 +87,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
           signed_at: now,
           response_name: responseName,
           response_email: responseEmail,
+          acceptance_disclaimer_acknowledged_at: now,
           updated_at: now,
         }
       : {

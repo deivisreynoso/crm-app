@@ -108,6 +108,7 @@ export async function POST(req: NextRequest) {
       },
       calendar_selection: cal ?? null,
       ga_client_id: parsed.data.ga_client_id ?? null,
+      language: requestLang,
     });
 
     return NextResponse.json(result, { status: 201 });

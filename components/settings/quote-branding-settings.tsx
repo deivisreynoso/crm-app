@@ -22,12 +22,16 @@ export function QuoteBrandingSettings() {
   const update = useUpdateWorkspaceSettings();
   const inputRef = useRef<HTMLInputElement>(null);
   const [companyName, setCompanyName] = useState("");
+  const [primaryColor, setPrimaryColor] = useState("#1e3a5f");
+  const [fontFamily, setFontFamily] = useState("Helvetica");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setCompanyName(settings?.quote_company_name ?? "");
-  }, [settings?.quote_company_name]);
+    setPrimaryColor(settings?.quote_primary_color ?? "#1e3a5f");
+    setFontFamily(settings?.quote_font_family ?? "Helvetica");
+  }, [settings?.quote_company_name, settings?.quote_primary_color, settings?.quote_font_family]);
 
   const displayName = companyName;
 
@@ -138,6 +142,44 @@ export function QuoteBrandingSettings() {
           }}
           placeholder="ClickIn 360"
         />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 max-w-2xl">
+        <div>
+          <label className="text-sm font-medium text-heading block mb-1">
+            Primary color
+          </label>
+          <input
+            type="color"
+            className="h-10 w-full rounded border border-[var(--card-border)]"
+            value={primaryColor}
+            onChange={(e) => setPrimaryColor(e.target.value)}
+            onBlur={() => {
+              if (primaryColor !== (settings?.quote_primary_color ?? "#1e3a5f")) {
+                void update.mutateAsync({ quote_primary_color: primaryColor });
+              }
+            }}
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium text-heading block mb-1">
+            Typography
+          </label>
+          <select
+            className="input-field w-full"
+            value={fontFamily}
+            onChange={(e) => {
+              const next = e.target.value;
+              setFontFamily(next);
+              void update.mutateAsync({ quote_font_family: next });
+            }}
+          >
+            <option value="Helvetica">Helvetica</option>
+            <option value="Arial">Arial</option>
+            <option value="Georgia">Georgia</option>
+            <option value="Times New Roman">Times New Roman</option>
+          </select>
+        </div>
       </div>
 
       {error && <p className="text-sm text-[var(--error)]">{error}</p>}

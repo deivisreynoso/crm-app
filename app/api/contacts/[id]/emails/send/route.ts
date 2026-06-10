@@ -13,6 +13,7 @@ import {
   buildTemplateContext,
   interpolateTemplate,
 } from "@/lib/documents/template-variables";
+import { appendEmailSignature } from "@/lib/email/signature";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -90,6 +91,16 @@ export async function POST(req: NextRequest, context: RouteContext) {
         { status: 400 }
       );
     }
+
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("email_signature_html")
+      .eq("id", userId!)
+      .maybeSingle();
+    emailBody = appendEmailSignature(
+      emailBody,
+      profile?.email_signature_html as string | null | undefined
+    );
 
     const sendOptions = await resolveGmailSendOptions(userId!, {
       cc: parsed.data.cc,

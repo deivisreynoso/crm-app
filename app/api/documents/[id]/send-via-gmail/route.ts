@@ -102,13 +102,22 @@ export async function POST(req: NextRequest, context: RouteContext) {
       );
     }
 
+    let contactLocale: string | null = null;
+    if (doc.contact_id) {
+      const { data: contact } = await supabase
+        .from("contacts")
+        .select("preferred_language")
+        .eq("id", doc.contact_id)
+        .maybeSingle();
+      contactLocale = (contact?.preferred_language as string | null) ?? null;
+    }
+
     const { data: settings } = await supabase
       .from("user_settings")
       .select("ui_locale")
       .eq("user_id", workspaceOwnerId!)
       .maybeSingle();
-    const uiLocale = (settings?.ui_locale as string | null) ?? null;
-    const emailDefaults = getQuoteEmailDefaults(uiLocale);
+    const uiLocale = contactLocale ?? (settings?.ui_locale as string | null) ?? null;
 
     const quoteRef =
       (doc.quote_reference as string | null)?.trim() ||
@@ -125,21 +134,12 @@ export async function POST(req: NextRequest, context: RouteContext) {
       accept_token: doc.accept_token as string | null,
     });
     const acceptUrl = acceptToken ? quoteAcceptPublicUrl(acceptToken) : null;
-    const acceptLinkBlock = acceptUrl
-      ? uiLocale === "es"
-        ? `\n\nAceptar o rechazar en línea:\n${acceptUrl}`
-        : `\n\nAccept or decline online:\n${acceptUrl}`
-      : "";
+    const emailDefaults = getQuoteEmailDefaults(uiLocale, acceptUrl);
 
     const subject =
       parsed.data.subject?.trim() ||
       `${emailDefaults.subjectPrefix} ${quoteRef ?? (doc.title as string)}`;
-    const baseBody = parsed.data.body?.trim() || emailDefaults.body;
-    const emailBody = acceptLinkBlock
-      ? baseBody.includes(acceptUrl!)
-        ? baseBody
-        : `${baseBody}${acceptLinkBlock}`
-      : baseBody;
+    const emailBody = parsed.data.body?.trim() || emailDefaults.body;
 
     const { buffer, fileName } = await generateDocumentPdfBuffer(
       supabase,

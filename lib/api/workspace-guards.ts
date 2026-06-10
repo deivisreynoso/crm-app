@@ -10,6 +10,9 @@ const PUBLIC_API_PREFIXES = [
   "/api/website/",
   "/api/team/invites/",
   "/api/quotes/public/",
+  "/api/integrations/n8n/",
+  "/api/integrations/whatsapp/",
+  "/api/webhooks/stripe",
 ];
 
 /** Integration APIs authenticated by shared secret, not session role */
@@ -43,14 +46,19 @@ export function isViewerWriteAllowed(pathname: string) {
 const WORKSPACE_MANAGE_WRITE_PREFIXES = [
   "/api/settings",
   "/api/custom-fields",
-  "/api/email-templates",
   "/api/document-templates",
   "/api/duplicate-reviews",
 ];
 
+/** GET routes that require manage role even though they are reads */
+const WORKSPACE_MANAGE_READ_PREFIXES = ["/api/audit-logs", "/api/settings/integrations"];
+
 export function requiresWorkspaceManage(pathname: string, method: string) {
   const m = method.toUpperCase();
-  if (m === "GET" || m === "HEAD") return false;
+  if (m === "GET" || m === "HEAD") {
+    return WORKSPACE_MANAGE_READ_PREFIXES.some((p) => pathname.startsWith(p));
+  }
+  if (pathname.startsWith("/api/settings/member")) return false;
   if (pathname.startsWith("/api/settings/quote-logo")) return true;
   if (pathname === "/api/settings" && m === "PATCH") return true;
   if (pathname === "/api/team/members" && m === "POST") return true;

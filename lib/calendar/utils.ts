@@ -10,12 +10,7 @@ import {
   startOfWeek,
 } from "date-fns";
 
-export type LocationType =
-  | "physical"
-  | "zoom"
-  | "google_meet"
-  | "teams"
-  | "other";
+export type LocationType = "physical" | "google_meet" | "other";
 
 export const LOCATION_TYPES: {
   value: LocationType;
@@ -30,22 +25,10 @@ export const LOCATION_TYPES: {
     placeholder: "Street address or meeting room",
   },
   {
-    value: "zoom",
-    label: "Zoom",
-    color: "#38b6ff",
-    placeholder: "https://zoom.us/j/...",
-  },
-  {
     value: "google_meet",
     label: "Google Meet",
     color: "#10b981",
-    placeholder: "https://meet.google.com/...",
-  },
-  {
-    value: "teams",
-    label: "Microsoft Teams",
-    color: "#7c3aed",
-    placeholder: "https://teams.microsoft.com/...",
+    placeholder: "Meet link is generated automatically",
   },
   {
     value: "other",

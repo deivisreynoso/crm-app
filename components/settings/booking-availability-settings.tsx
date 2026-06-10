@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FormLabel } from "@/components/ui/form-label";
-import { useWorkspaceSettings, useUpdateWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import type { BookingAvailabilityConfig } from "@/lib/website/booking-availability";
 import { DEFAULT_BOOKING_AVAILABILITY } from "@/lib/website/booking-availability";
 import { formatApiError } from "@/lib/validation-errors";
+import axios from "axios";
 
 const DAY_OPTIONS = [
   { value: 1, label: "Mon" },
@@ -26,11 +27,11 @@ const TIMEZONES = [
 ];
 
 export function BookingAvailabilitySettings() {
-  const { data: settings, isLoading } = useWorkspaceSettings();
-  const update = useUpdateWorkspaceSettings();
+  const { data: settings, isLoading, refetch } = useWorkspaceSettings();
   const [config, setConfig] = useState<BookingAvailabilityConfig>(DEFAULT_BOOKING_AVAILABILITY);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (settings?.booking_availability) {
@@ -49,11 +50,15 @@ export function BookingAvailabilitySettings() {
     e.preventDefault();
     setError(null);
     setMsg(null);
+    setSaving(true);
     try {
-      await update.mutateAsync({ booking_availability: config });
+      await axios.patch("/api/settings/member", { booking_availability: config });
+      await refetch();
       setMsg("Booking availability saved.");
     } catch (err) {
       setError(formatApiError(err, "Could not save availability"));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -190,7 +195,7 @@ export function BookingAvailabilitySettings() {
 
       {error && <p className="text-sm text-[var(--error)]">{error}</p>}
       {msg && <p className="text-sm text-emerald-700">{msg}</p>}
-      <Button type="submit" size="sm" disabled={update.isPending}>
+      <Button type="submit" size="sm" disabled={saving}>
         Save availability
       </Button>
     </form>

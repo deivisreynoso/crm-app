@@ -241,6 +241,7 @@ export async function createLeadFromWebsite(input: {
   calendar_selection?: WebsiteCalendarSelection | null;
   ga_client_id?: string | null;
   conversation_transcript?: string | null;
+  language?: string | null;
 }): Promise<WebsiteLeadResult> {
   const envOwner = process.env.WEBSITE_LEADS_USER_ID?.trim();
   if (!envOwner) {
@@ -274,6 +275,9 @@ export async function createLeadFromWebsite(input: {
     );
   }
 
+  const preferredLanguage =
+    input.language === "es" || input.language === "en" ? input.language : null;
+
   const customFields: Record<string, unknown> = {
     platform: q.platform ?? null,
     friction_area: frictionToString(q.friction_area),
@@ -297,6 +301,7 @@ export async function createLeadFromWebsite(input: {
         email,
         phone,
         company,
+        preferred_language: preferredLanguage,
         status: "lead",
         source: input.source,
         platform: q.platform ?? null,

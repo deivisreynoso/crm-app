@@ -6,6 +6,7 @@ import {
   findCanonicalUserIdByEmail,
   resolveCanonicalCrmUserId,
 } from "@/lib/auth/canonical-user";
+import { findSupabaseAuthUserIdByEmail } from "@/lib/auth/supabase-auth-user";
 
 export type GoogleProfile = {
   email: string;
@@ -13,35 +14,13 @@ export type GoogleProfile = {
   image?: string | null;
 };
 
-async function findAuthUserIdByEmail(
-  supabase: SupabaseClient,
-  email: string
-): Promise<string | null> {
-  let page = 1;
-  const perPage = 200;
-  const normalized = email.toLowerCase().trim();
-
-  while (page <= 10) {
-    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
-    if (error || !data.users.length) return null;
-
-    const match = data.users.find((u) => u.email?.toLowerCase() === normalized);
-    if (match?.id) return match.id;
-
-    if (data.users.length < perPage) break;
-    page += 1;
-  }
-
-  return null;
-}
-
 /** Resolve Supabase auth user for a Google sign-in (existing invite user only). */
 export async function resolveGoogleLoginUser(
   supabase: SupabaseClient,
   profile: GoogleProfile
 ): Promise<{ userId: string; email: string; name: string } | null> {
   const email = profile.email.trim().toLowerCase();
-  let userId = await findAuthUserIdByEmail(supabase, email);
+  let userId = await findSupabaseAuthUserIdByEmail(supabase, email);
 
   if (!userId) {
     userId = await findCanonicalUserIdByEmail(supabase, email);

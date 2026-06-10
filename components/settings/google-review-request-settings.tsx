@@ -4,10 +4,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { useEmailTemplates } from "@/hooks/useEmailTemplates";
-import {
-  useUpdateWorkspaceSettings,
-  useWorkspaceSettings,
-} from "@/hooks/useWorkspaceSettings";
+import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { GOOGLE_REVIEWS_URL } from "@/lib/website/google-reviews-url";
 import { formatApiError } from "@/lib/validation-errors";
@@ -15,14 +12,14 @@ import { formatApiError } from "@/lib/validation-errors";
 export function GoogleReviewRequestSettings() {
   const { dict, locale } = useCrmLocale();
   const s = dict.settings;
-  const { data: settings, isLoading } = useWorkspaceSettings();
+  const { data: settings, isLoading, refetch } = useWorkspaceSettings();
   const { data: templates = [] } = useEmailTemplates();
-  const update = useUpdateWorkspaceSettings();
 
   const [reviewUrl, setReviewUrl] = useState("");
   const [templateId, setTemplateId] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!settings) return;
@@ -34,14 +31,18 @@ export function GoogleReviewRequestSettings() {
     e.preventDefault();
     setError(null);
     setMessage(null);
+    setSaving(true);
     try {
-      await update.mutateAsync({
+      await axios.patch("/api/settings/member", {
         google_reviews_url: reviewUrl.trim(),
         review_request_template_id: templateId || null,
       });
+      await refetch();
       setMessage("Saved.");
     } catch (err) {
       setError(formatApiError(err, "Could not save"));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -122,7 +123,7 @@ export function GoogleReviewRequestSettings() {
         </p>
       )}
 
-      <Button type="submit" size="sm" disabled={update.isPending}>
+      <Button type="submit" size="sm" disabled={saving}>
         {s?.saveReviewSettings ?? "Save"}
       </Button>
     </form>

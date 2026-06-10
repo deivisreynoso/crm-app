@@ -10,6 +10,7 @@ import {
 } from "@/lib/api/assert-workspace-parents";
 import { enrichCompanyIdFromContact } from "@/lib/contacts/enrich-company-from-contact";
 import { createGoogleCalendarEvent } from "@/lib/google/calendar";
+import { resolveCalendarUserId } from "@/lib/google/resolve-calendar-user";
 
 function emptyToNull(value: string | undefined): string | null {
   return value?.trim() ? value.trim() : null;
@@ -93,16 +94,28 @@ export async function POST(req: NextRequest) {
       parsed.data.company_id
     );
 
+    const assigneeId =
+      parsed.data.assigned_to?.trim() || userId!;
+
+    const calendarUserId = await resolveCalendarUserId(
+      supabase,
+      [assigneeId, userId],
+      workspaceOwnerId!
+    );
+
+    const isGoogleMeet = parsed.data.location_type === "google_meet";
+
     const row = {
       user_id: workspaceOwnerId!,
       contact_id: parsed.data.contact_id.trim(),
       company_id: companyId,
       opportunity_id: parsed.data.opportunity_id?.trim() || null,
+      assigned_to: assigneeId,
       title: parsed.data.title.trim(),
       description: emptyToNull(parsed.data.description),
       start_time: parsed.data.start_time,
       end_time: parsed.data.end_time,
-      location: emptyToNull(parsed.data.location),
+      location: isGoogleMeet ? null : emptyToNull(parsed.data.location),
       location_type: parsed.data.location_type ?? null,
       updated_at: new Date().toISOString(),
     };
@@ -111,7 +124,7 @@ export async function POST(req: NextRequest) {
       (payload) =>
         supabase.from("calendar_events").insert([payload]).select().single(),
       row,
-      ["location_type", "updated_at"]
+      ["location_type", "updated_at", "assigned_to"]
     );
 
     if (dbError) {
@@ -122,27 +135,37 @@ export async function POST(req: NextRequest) {
     }
 
     let googleEventId: string | null = null;
+    let meetLink: string | null = null;
     try {
-      googleEventId = await createGoogleCalendarEvent(userId!, {
+      const createdGoogle = await createGoogleCalendarEvent(calendarUserId, {
         title: row.title,
         description: row.description,
         location: row.location,
         start_time: row.start_time,
         end_time: row.end_time,
+        addGoogleMeet: isGoogleMeet,
       });
+      googleEventId = createdGoogle.eventId;
+      meetLink = createdGoogle.meetLink;
     } catch (syncErr) {
       console.error("Google Calendar sync on create:", syncErr);
     }
 
     const created = data as { id?: string } | null;
-    if (googleEventId && created?.id) {
+    if ((googleEventId || meetLink) && created?.id) {
+      const syncPatch: Record<string, unknown> = {
+        is_synced: Boolean(googleEventId),
+        updated_at: new Date().toISOString(),
+      };
+      if (googleEventId) syncPatch.google_event_id = googleEventId;
+      if (meetLink) {
+        syncPatch.location = meetLink;
+        syncPatch.location_type = "google_meet";
+      }
+
       const { data: synced } = await supabase
         .from("calendar_events")
-        .update({
-          google_event_id: googleEventId,
-          is_synced: true,
-          updated_at: new Date().toISOString(),
-        })
+        .update(syncPatch)
         .eq("id", created.id)
         .eq("user_id", workspaceOwnerId!)
         .select()

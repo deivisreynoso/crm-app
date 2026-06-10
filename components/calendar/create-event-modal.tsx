@@ -44,7 +44,7 @@ export function CreateEventModal({
   const [opportunityId, setOpportunityId] = useState("");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
-  const [locationType, setLocationType] = useState<LocationType>("zoom");
+  const [locationType, setLocationType] = useState<LocationType>("google_meet");
   const [location, setLocation] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -79,7 +79,7 @@ export function CreateEventModal({
     setOpportunityId("");
     setStart(toLocalInput(startDt.toISOString()));
     setEnd(toLocalInput(endDt.toISOString()));
-    setLocationType("zoom");
+    setLocationType("google_meet");
     setLocation("");
   }, [open, initial, initialDate, defaultContactId]);
 

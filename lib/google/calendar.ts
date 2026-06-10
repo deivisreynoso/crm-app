@@ -85,6 +85,12 @@ export type GoogleCalendarEventInput = {
   location?: string | null;
   start_time: string;
   end_time: string;
+  addGoogleMeet?: boolean;
+};
+
+export type GoogleCalendarEventResult = {
+  eventId: string | null;
+  meetLink: string | null;
 };
 
 function calendarIdForRow(row: TokenRow | null): string {
@@ -94,9 +100,9 @@ function calendarIdForRow(row: TokenRow | null): string {
 export async function createGoogleCalendarEvent(
   userId: string,
   event: GoogleCalendarEventInput
-): Promise<string | null> {
+): Promise<GoogleCalendarEventResult> {
   const accessToken = await getGoogleCalendarAccessToken(userId);
-  if (!accessToken) return null;
+  if (!accessToken) return { eventId: null, meetLink: null };
 
   const supabase = createServerSideClient();
   const { data: tokenRow } = await supabase
@@ -107,7 +113,7 @@ export async function createGoogleCalendarEvent(
 
   const calendarId = calendarIdForRow(tokenRow as TokenRow | null);
 
-  const body = {
+  const body: Record<string, unknown> = {
     summary: event.title,
     description: event.description ?? undefined,
     location: event.location ?? undefined,
@@ -115,25 +121,47 @@ export async function createGoogleCalendarEvent(
     end: { dateTime: new Date(event.end_time).toISOString() },
   };
 
-  const res = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
+  if (event.addGoogleMeet) {
+    body.conferenceData = {
+      createRequest: {
+        requestId: `meet-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        conferenceSolutionKey: { type: "hangoutsMeet" },
       },
-      body: JSON.stringify(body),
-    }
+    };
+  }
+
+  const url = new URL(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`
   );
+  if (event.addGoogleMeet) {
+    url.searchParams.set("conferenceDataVersion", "1");
+  }
+
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
 
   if (!res.ok) {
     console.error("Google Calendar create failed:", await res.text());
-    return null;
+    return { eventId: null, meetLink: null };
   }
 
-  const created = (await res.json()) as { id?: string };
-  return created.id ?? null;
+  const created = (await res.json()) as {
+    id?: string;
+    hangoutLink?: string;
+    conferenceData?: { entryPoints?: { uri?: string }[] };
+  };
+  const meetLink =
+    created.hangoutLink ??
+    created.conferenceData?.entryPoints?.find((e) => e.uri)?.uri ??
+    null;
+
+  return { eventId: created.id ?? null, meetLink };
 }
 
 export async function updateGoogleCalendarEvent(

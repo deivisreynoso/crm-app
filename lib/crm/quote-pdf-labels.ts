@@ -40,7 +40,10 @@ export function getDefaultQuoteTitle(
   return `Quote ${reference}`;
 }
 
-export function getQuoteEmailDefaults(uiLocale?: string | null): {
+export function getQuoteEmailDefaults(
+  uiLocale?: string | null,
+  acceptUrl?: string | null
+): {
   subjectPrefix: string;
   body: string;
 } {
@@ -51,7 +54,11 @@ export function getQuoteEmailDefaults(uiLocale?: string | null): {
       body: [
         "Hola,",
         "",
-        "Adjunto su cotización en PDF.",
+        acceptUrl
+          ? `Revise y acepte su cotización en línea:\n${acceptUrl}`
+          : "Revise su cotización en línea.",
+        "",
+        "El PDF adjunto es solo para sus registros.",
         "",
         "Si tiene alguna pregunta, responda a este correo.",
         "",
@@ -64,7 +71,11 @@ export function getQuoteEmailDefaults(uiLocale?: string | null): {
     body: [
       "Hello,",
       "",
-      "Please find your quote attached as a PDF.",
+      acceptUrl
+        ? `Please review and accept your quote online:\n${acceptUrl}`
+        : "Please review your quote online.",
+      "",
+      "The attached PDF is for your records only.",
       "",
       "If you have any questions, reply to this email.",
       "",
