@@ -16,14 +16,13 @@ export async function userCanAccessCrm(
   const envOwner = process.env.WEBSITE_LEADS_USER_ID?.trim();
   if (envOwner && userId === envOwner) return true;
 
-  const { data: membership } = await supabase
+  const { data: memberships } = await supabase
     .from("team_members")
     .select("id")
     .eq("member_user_id", userId)
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
 
-  if (membership?.id) return true;
+  if (memberships?.length) return true;
 
   const { count: teamCount } = await supabase
     .from("team_members")

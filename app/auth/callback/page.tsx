@@ -11,10 +11,41 @@ function parseHashParams(): URLSearchParams {
   return new URLSearchParams(raw);
 }
 
-function mapRecoveryError(error: { message?: string; code?: string }): string {
-  const msg = (error.message ?? "").toLowerCase();
-  if (msg.includes("expired") || error.code === "otp_expired") return "otp_expired";
+function mapRecoveryError(errorCode: string): string {
+  if (errorCode === "otp_expired") return "otp_expired";
   return "reset_link_invalid";
+}
+
+async function verifyRecoveryTokenHash(
+  tokenHash: string
+): Promise<{ ok: true } | { ok: false; errorCode: string }> {
+  const res = await fetch("/api/auth/verify-recovery", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token_hash: tokenHash }),
+  });
+
+  const body = (await res.json()) as {
+    access_token?: string;
+    refresh_token?: string;
+    error?: string;
+  };
+
+  if (!res.ok || !body.access_token || !body.refresh_token) {
+    return { ok: false, errorCode: mapRecoveryError(body.error ?? "reset_link_invalid") };
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase.auth.setSession({
+    access_token: body.access_token,
+    refresh_token: body.refresh_token,
+  });
+
+  if (error) {
+    return { ok: false, errorCode: mapRecoveryError(error.message) };
+  }
+
+  return { ok: true };
 }
 
 async function establishRecoverySession(
@@ -32,12 +63,7 @@ async function establishRecoverySession(
   const tokenHash = searchParams.get("token_hash");
   const queryType = searchParams.get("type");
   if (tokenHash && queryType === "recovery") {
-    const { error } = await supabase.auth.verifyOtp({
-      token_hash: tokenHash,
-      type: "recovery",
-    });
-    if (!error) return { ok: true };
-    return { ok: false, errorCode: mapRecoveryError(error) };
+    return verifyRecoveryTokenHash(tokenHash);
   }
 
   const accessToken = hashParams.get("access_token");
@@ -49,14 +75,13 @@ async function establishRecoverySession(
       refresh_token: refreshToken,
     });
     if (!error) return { ok: true };
-    return { ok: false, errorCode: mapRecoveryError(error) };
+    return { ok: false, errorCode: mapRecoveryError(error.message) };
   }
 
   const code = searchParams.get("code");
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) return { ok: true };
-    // PKCE exchange often fails when reset was requested server-side or on another device.
     console.warn("auth/callback exchangeCodeForSession:", error.message);
   }
 
@@ -78,7 +103,7 @@ async function establishRecoverySession(
       }
     });
 
-    setTimeout(finish, 4000);
+    setTimeout(finish, 3000);
   });
 
   const { data: afterWait } = await supabase.auth.getSession();
@@ -91,6 +116,7 @@ function AuthCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState("Verifying your link…");
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -100,19 +126,32 @@ function AuthCallbackInner() {
       const destination = nextPath.startsWith("/") ? nextPath : "/reset-password";
 
       setStatus("Verifying your link…");
-      const supabase = createClient();
-      const result = await establishRecoverySession(supabase, searchParams);
+      setFailed(false);
 
-      if (cancelled) return;
+      try {
+        const supabase = createClient();
+        const result = await establishRecoverySession(supabase, searchParams);
 
-      if (result.ok) {
-        router.replace(destination);
-        return;
+        if (cancelled) return;
+
+        if (result.ok) {
+          router.replace(destination);
+          return;
+        }
+
+        router.replace(
+          `/forgot-password?error=${encodeURIComponent(result.errorCode)}`
+        );
+      } catch (err) {
+        if (cancelled) return;
+        console.error("auth/callback:", err);
+        setFailed(true);
+        setStatus(
+          err instanceof Error
+            ? err.message
+            : "Could not verify your link. Request a new reset email."
+        );
       }
-
-      router.replace(
-        `/forgot-password?error=${encodeURIComponent(result.errorCode)}`
-      );
     }
 
     void complete();
@@ -124,7 +163,9 @@ function AuthCallbackInner() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 bg-[var(--background)]">
-      <p className="text-sm text-body-muted">{status}</p>
+      <p className={`text-sm ${failed ? "text-[var(--error)]" : "text-body-muted"}`}>
+        {status}
+      </p>
       <Link href="/forgot-password" className="text-sm text-[var(--primary)] hover:underline">
         Request a new reset link
       </Link>

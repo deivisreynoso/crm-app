@@ -131,8 +131,20 @@ export async function completeTeamInvite(input: {
     .upsert(memberPayload, { onConflict: "owner_user_id,email" });
 
   if (memberError) {
-    console.error("completeTeamInvite team_members:", memberError.message);
-    return { ok: false as const, reason: "db_error" };
+    console.error("completeTeamInvite team_members upsert:", memberError.message);
+    const { error: updateError } = await supabase
+      .from("team_members")
+      .update({
+        member_user_id: input.userId,
+        display_name: invite.display_name ?? normalizedEmail,
+      })
+      .eq("owner_user_id", invite.owner_user_id)
+      .eq("email", normalizedEmail);
+
+    if (updateError) {
+      console.error("completeTeamInvite team_members update:", updateError.message);
+      return { ok: false as const, reason: "db_error" };
+    }
   }
 
   const { error: acceptError } = await supabase

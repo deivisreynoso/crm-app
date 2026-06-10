@@ -1340,6 +1340,7 @@ sequenceDiagram
 | Integrations "Setup required" | Set `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (or `GOOGLE_OAUTH_*`); restart app |
 | OAuth redirect mismatch | Authorized redirect URIs in Google Cloud must match `{APP_URL}/api/auth/google-gmail/callback` and `…/google-calendar/callback` |
 | Reset link “invalid or already used” right away | Reset was likely sent from the **server** (PKCE) and opened on another device. Redeploy latest code, request a **new** link from `/forgot-password`, and open it on the same device if using Supabase’s default email. With **Mailgun** configured, the API sends a `token_hash` link that works on any device. Ensure Supabase Redirect URLs include `https://www.clickin360.com/auth/callback` |
+| Supabase “Database error deleting user” | Run migration **049** (`migrations/049_auth_user_delete_fks.sql`), or in SQL Editor null references then delete: `UPDATE audit_logs SET user_id = NULL WHERE user_id = '<uuid>';` (also `contacts.assigned_to`, `tasks.assigned_to`, `tickets.assigned_to`, `user_settings.default_sales_assignee`). CRM **Remove teammate** clears these automatically. |
 
 ---
 

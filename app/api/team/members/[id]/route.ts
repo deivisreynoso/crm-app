@@ -5,6 +5,7 @@ import { SupabaseConfigError } from "@/lib/supabase/config";
 import { z } from "zod";
 import { humanizeDbError } from "@/lib/validation-errors";
 import { recordAuditLog } from "@/lib/audit/record";
+import { deleteAuthUser } from "@/lib/users/delete-auth-user";
 
 const patchMemberSchema = z.object({
   role: z.enum(["sales", "viewer", "admin"]),
@@ -133,15 +134,20 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
       .eq("owner_user_id", workspaceOwnerId!)
       .eq("email", (row.email as string).toLowerCase());
 
-    await supabase.from("user_profiles").delete().eq("id", memberUserId);
-
-    const { error: authDeleteError } = await supabase.auth.admin.deleteUser(
-      memberUserId
+    const authDelete = await deleteAuthUser(
+      supabase,
+      memberUserId,
+      row.email as string
     );
-    if (authDeleteError) {
-      console.error(
-        "DELETE /api/team/members/[id] auth delete:",
-        authDeleteError.message
+    if (!authDelete.ok) {
+      console.error("DELETE /api/team/members/[id] auth delete:", authDelete.message);
+      return NextResponse.json(
+        {
+          error:
+            "Teammate was removed from the team but their login account could not be deleted. Run migration 049 in Supabase, or clear audit/assignee references manually.",
+          detail: authDelete.message,
+        },
+        { status: 500 }
       );
     }
 

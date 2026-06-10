@@ -1,8 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Link auth user to pending team_members rows (invited email, no member_user_id yet).
- * Repairs partial invite completion and enables login after registration.
+ * Link auth user to team_members rows for this email (case-insensitive).
+ * Always re-links to the signing-in user to repair stale member_user_id values.
  */
 export async function linkPendingTeamMemberByEmail(
   supabase: SupabaseClient,
@@ -12,21 +12,24 @@ export async function linkPendingTeamMemberByEmail(
   const normalized = email.toLowerCase().trim();
   if (!normalized) return false;
 
-  const { data: pending } = await supabase
+  const { data: rows } = await supabase
     .from("team_members")
-    .select("id, owner_user_id, display_name, role")
-    .eq("email", normalized)
-    .is("member_user_id", null);
+    .select("id, display_name, member_user_id")
+    .ilike("email", normalized);
 
-  if (!pending?.length) return false;
+  if (!rows?.length) return false;
 
   let linked = false;
-  for (const row of pending) {
+  for (const row of rows) {
+    if (row.member_user_id === userId) {
+      linked = true;
+      continue;
+    }
+
     const { error } = await supabase
       .from("team_members")
       .update({ member_user_id: userId })
-      .eq("id", row.id)
-      .is("member_user_id", null);
+      .eq("id", row.id);
 
     if (!error) linked = true;
   }
@@ -36,7 +39,7 @@ export async function linkPendingTeamMemberByEmail(
       {
         id: userId,
         email: normalized,
-        display_name: pending[0]?.display_name ?? normalized,
+        display_name: rows[0]?.display_name ?? normalized,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "id" }

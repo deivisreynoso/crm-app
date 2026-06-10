@@ -18,8 +18,15 @@ export function createClient() {
   });
 }
 
-// For server-side (API routes, server actions)
+// For server-side (API routes, server actions). Never reuse after signInWithPassword —
+// the client switches to the user JWT and RLS applies (team_members is owner-only).
 export function createServerSideClient() {
   const { url, serviceKey } = getSupabaseServerConfig("createServerSideClient");
-  return createSupabaseClient(url, serviceKey);
+  return createSupabaseClient(url, serviceKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
 }

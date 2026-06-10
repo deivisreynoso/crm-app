@@ -15,11 +15,14 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials: any) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const supabase = createServerSideClient();
+        const email = (credentials.email as string).trim().toLowerCase();
+        const password = credentials.password as string;
 
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: credentials.email as string,
-          password: credentials.password as string,
+        const authClient = createServerSideClient();
+
+        const { data, error } = await authClient.auth.signInWithPassword({
+          email,
+          password,
         });
 
         if (error) {
@@ -39,8 +42,12 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid email or password.");
         }
 
+        // Fresh service-role client: signIn pollutes authClient with member JWT and
+        // team_members RLS only allows owner_user_id = auth.uid().
+        const admin = createServerSideClient();
+
         const allowed = await userCanAccessCrm(
-          supabase,
+          admin,
           data.user.id,
           data.user.email
         );
@@ -54,7 +61,7 @@ export const authOptions: NextAuthOptions = {
           | string
           | undefined;
 
-        const { data: membership } = await supabase
+        const { data: membership } = await admin
           .from("team_members")
           .select("display_name, email")
           .eq("member_user_id", data.user.id)
@@ -70,7 +77,7 @@ export const authOptions: NextAuthOptions = {
           name: displayName,
         };
 
-        await ensureUserProfile(supabase, {
+        await ensureUserProfile(admin, {
           userId: data.user.id,
           email: data.user.email ?? membership?.email,
           displayName,
