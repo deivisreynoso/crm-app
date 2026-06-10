@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildAppRedirectUrl } from "@/lib/auth/app-url";
 import { requireAuth } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { revokeGoogleToken } from "@/lib/google/revoke-google-token";
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest) {
 
   if (!clientId) {
     return NextResponse.redirect(
-      new URL("/settings?google_gmail=error", req.url)
+      buildAppRedirectUrl("/settings?google_gmail=error", req.url)
     );
   }
 

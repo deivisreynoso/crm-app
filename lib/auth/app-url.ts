@@ -44,3 +44,9 @@ export function getAppOrigin(): string {
 export function passwordResetCallbackUrl(requestUrl?: string): string {
   return `${resolvePublicAppOrigin(requestUrl)}/auth/callback?next=/reset-password`;
 }
+
+/** Redirect after OAuth or other server flows — avoids Docker internal 0.0.0.0:3000 from req.url. */
+export function buildAppRedirectUrl(path: string, requestUrl?: string): URL {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return new URL(normalized, resolvePublicAppOrigin(requestUrl));
+}

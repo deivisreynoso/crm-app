@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { buildAppRedirectUrl } from "@/lib/auth/app-url";
 import { createServerSideClient } from "@/lib/supabase";
 import {
   getGoogleGmailRedirectUri,
@@ -12,13 +13,13 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
   if (!userId) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    return NextResponse.redirect(buildAppRedirectUrl("/login", req.url));
   }
 
   const code = new URL(req.url).searchParams.get("code");
   if (!code) {
     return NextResponse.redirect(
-      new URL("/settings?google_gmail=error", req.url)
+      buildAppRedirectUrl("/settings?google_gmail=error", req.url)
     );
   }
 
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
 
   if (!clientId || !clientSecret) {
     return NextResponse.redirect(
-      new URL("/settings?google_gmail=error", req.url)
+      buildAppRedirectUrl("/settings?google_gmail=error", req.url)
     );
   }
 
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
 
   if (!tokenRes.ok) {
     return NextResponse.redirect(
-      new URL("/settings?google_gmail=error", req.url)
+      buildAppRedirectUrl("/settings?google_gmail=error", req.url)
     );
   }
 
@@ -91,7 +92,7 @@ export async function GET(req: NextRequest) {
     const reason =
       /does not exist|relation/i.test(dbError.message) ? "migration" : "storage";
     return NextResponse.redirect(
-      new URL(`/settings?google_gmail=error&reason=${reason}`, req.url)
+      buildAppRedirectUrl(`/settings?google_gmail=error&reason=${reason}`, req.url)
     );
   }
 
@@ -101,7 +102,7 @@ export async function GET(req: NextRequest) {
   });
 
   return NextResponse.redirect(
-    new URL(
+    buildAppRedirectUrl(
       hasRead
         ? "/settings?google_gmail=connected"
         : "/settings?google_gmail=connected_no_read",
