@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, requireWorkspaceManage, requireWorkspaceOwner } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
+import { SupabaseConfigError } from "@/lib/supabase/config";
 import { z } from "zod";
 import { humanizeDbError } from "@/lib/validation-errors";
 import { recordAuditLog } from "@/lib/audit/record";
@@ -130,7 +131,19 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
       .from("team_invites")
       .delete()
       .eq("owner_user_id", workspaceOwnerId!)
-      .eq("email", row.email.toLowerCase());
+      .eq("email", (row.email as string).toLowerCase());
+
+    await supabase.from("user_profiles").delete().eq("id", memberUserId);
+
+    const { error: authDeleteError } = await supabase.auth.admin.deleteUser(
+      memberUserId
+    );
+    if (authDeleteError) {
+      console.error(
+        "DELETE /api/team/members/[id] auth delete:",
+        authDeleteError.message
+      );
+    }
 
     await recordAuditLog({
       workspaceOwnerId: workspaceOwnerId!,
@@ -146,6 +159,9 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("DELETE /api/team/members/[id]:", err);
+    if (err instanceof SupabaseConfigError) {
+      return NextResponse.json({ error: err.message }, { status: 503 });
+    }
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

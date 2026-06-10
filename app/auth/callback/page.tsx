@@ -11,6 +11,82 @@ function parseHashParams(): URLSearchParams {
   return new URLSearchParams(raw);
 }
 
+function mapRecoveryError(error: { message?: string; code?: string }): string {
+  const msg = (error.message ?? "").toLowerCase();
+  if (msg.includes("expired") || error.code === "otp_expired") return "otp_expired";
+  return "reset_link_invalid";
+}
+
+async function establishRecoverySession(
+  supabase: ReturnType<typeof createClient>,
+  searchParams: URLSearchParams
+): Promise<{ ok: true } | { ok: false; errorCode: string }> {
+  const hashParams = parseHashParams();
+
+  const hashError = hashParams.get("error");
+  const hashErrorCode = hashParams.get("error_code");
+  if (hashError || hashErrorCode) {
+    return { ok: false, errorCode: hashErrorCode ?? hashError ?? "otp_expired" };
+  }
+
+  const tokenHash = searchParams.get("token_hash");
+  const queryType = searchParams.get("type");
+  if (tokenHash && queryType === "recovery") {
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash: tokenHash,
+      type: "recovery",
+    });
+    if (!error) return { ok: true };
+    return { ok: false, errorCode: mapRecoveryError(error) };
+  }
+
+  const accessToken = hashParams.get("access_token");
+  const hashType = hashParams.get("type");
+  if (accessToken && hashType === "recovery") {
+    const refreshToken = hashParams.get("refresh_token") ?? "";
+    const { error } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+    if (!error) return { ok: true };
+    return { ok: false, errorCode: mapRecoveryError(error) };
+  }
+
+  const code = searchParams.get("code");
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) return { ok: true };
+    // PKCE exchange often fails when reset was requested server-side or on another device.
+    console.warn("auth/callback exchangeCodeForSession:", error.message);
+  }
+
+  const { data: initial } = await supabase.auth.getSession();
+  if (initial.session) return { ok: true };
+
+  await new Promise<void>((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      subscription.subscription.unsubscribe();
+      resolve();
+    };
+
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session && (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN")) {
+        finish();
+      }
+    });
+
+    setTimeout(finish, 4000);
+  });
+
+  const { data: afterWait } = await supabase.auth.getSession();
+  if (afterWait.session) return { ok: true };
+
+  return { ok: false, errorCode: "reset_link_invalid" };
+}
+
 function AuthCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -18,68 +94,31 @@ function AuthCallbackInner() {
 
   useEffect(() => {
     let cancelled = false;
-    let unsubscribe: (() => void) | undefined;
 
     async function complete() {
-      const hashParams = parseHashParams();
-      const hashError = hashParams.get("error");
-      const hashErrorCode = hashParams.get("error_code");
-
-      if (hashError || hashErrorCode) {
-        const code = hashErrorCode ?? hashError ?? "expired";
-        router.replace(`/forgot-password?error=${encodeURIComponent(code)}`);
-        return;
-      }
-
       const nextPath = searchParams.get("next") ?? "/reset-password";
       const destination = nextPath.startsWith("/") ? nextPath : "/reset-password";
-      const code = searchParams.get("code");
+
+      setStatus("Verifying your link…");
       const supabase = createClient();
+      const result = await establishRecoverySession(supabase, searchParams);
 
-      if (code) {
-        setStatus("Signing you in…");
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (cancelled) return;
-        if (error) {
-          router.replace("/forgot-password?error=reset_link_invalid");
-          return;
-        }
-        router.replace(destination);
-        return;
-      }
-
-      const { data: initial } = await supabase.auth.getSession();
-      if (cancelled) return;
-      if (initial.session) {
-        router.replace(destination);
-        return;
-      }
-
-      setStatus("Almost there…");
-      const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-        if (session && (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN")) {
-          router.replace(destination);
-        }
-      });
-      unsubscribe = () => listener.subscription.unsubscribe();
-
-      await new Promise((resolve) => setTimeout(resolve, 2500));
       if (cancelled) return;
 
-      const { data: afterWait } = await supabase.auth.getSession();
-      if (afterWait.session) {
+      if (result.ok) {
         router.replace(destination);
         return;
       }
 
-      router.replace("/forgot-password?error=reset_link_invalid");
+      router.replace(
+        `/forgot-password?error=${encodeURIComponent(result.errorCode)}`
+      );
     }
 
     void complete();
 
     return () => {
       cancelled = true;
-      unsubscribe?.();
     };
   }, [router, searchParams]);
 

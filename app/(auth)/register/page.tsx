@@ -4,7 +4,6 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase";
 import { AuthBrandHeader } from "@/components/auth/auth-brand-header";
 
 function RegisterForm() {
@@ -88,46 +87,30 @@ function RegisterForm() {
     }
 
     try {
-      const supabase = createClient();
-
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: {
-            full_name: fullName.trim() || undefined,
-          },
-        },
+      const res = await fetch("/api/team/invites/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: inviteToken,
+          email: email.trim(),
+          password,
+          full_name: fullName.trim() || undefined,
+        }),
       });
 
-      if (signUpError) {
-        setError(signUpError.message);
+      const body = (await res.json()) as { error?: string; reason?: string };
+
+      if (!res.ok) {
+        setError(
+          body.reason === "email_mismatch"
+            ? "Email must match the invitation."
+            : body.error ??
+                "Could not complete your invitation. Contact your team admin."
+        );
         return;
       }
 
-      if (data.user) {
-        const completeRes = await fetch("/api/team/invites/complete", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            token: inviteToken,
-            user_id: data.user.id,
-            email: email.trim(),
-          }),
-        });
-
-        if (!completeRes.ok) {
-          const body = (await completeRes.json()) as { reason?: string };
-          setError(
-            body.reason === "email_mismatch"
-              ? "Email must match the invitation."
-              : "Could not complete your invitation. Contact your team admin."
-          );
-          return;
-        }
-
-        router.push("/login?registered=true");
-      }
+      router.push("/login?registered=true");
     } catch {
       setError("An error occurred. Please try again.");
     } finally {

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { linkPendingTeamMemberByEmail } from "@/lib/team/link-member";
 
 /**
  * Whether this Supabase user may access the CRM (invite-based workspace model).
@@ -6,8 +7,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  */
 export async function userCanAccessCrm(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
+  email?: string | null
 ): Promise<boolean> {
+  if (email) {
+    await linkPendingTeamMemberByEmail(supabase, userId, email);
+  }
   const envOwner = process.env.WEBSITE_LEADS_USER_ID?.trim();
   if (envOwner && userId === envOwner) return true;
 

@@ -79,44 +79,72 @@ export async function completeTeamInvite(input: {
   const check = await validateInviteToken(input.token);
   if (!check.valid) return { ok: false as const, reason: check.reason };
 
-  if (check.email.toLowerCase() !== input.email.toLowerCase().trim()) {
+  const normalizedEmail = input.email.toLowerCase().trim();
+  if (check.email.toLowerCase() !== normalizedEmail) {
     return { ok: false as const, reason: "email_mismatch" };
   }
 
   const supabase = createServerSideClient();
 
-  const { data: invite } = await supabase
+  const { data: invite, error: inviteError } = await supabase
     .from("team_invites")
     .select("owner_user_id, display_name")
     .eq("token", input.token)
     .single();
 
-  if (!invite) return { ok: false as const, reason: "invalid" };
+  if (inviteError || !invite) {
+    return { ok: false as const, reason: "invalid" };
+  }
 
-  await supabase
-    .from("team_invites")
-    .update({ accepted_at: new Date().toISOString() })
-    .eq("token", input.token);
+  const { data: existingMember } = await supabase
+    .from("team_members")
+    .select("id, role")
+    .eq("owner_user_id", invite.owner_user_id)
+    .eq("email", normalizedEmail)
+    .maybeSingle();
 
-  await supabase.from("user_profiles").upsert(
+  const { error: profileError } = await supabase.from("user_profiles").upsert(
     {
       id: input.userId,
-      email: input.email.toLowerCase().trim(),
-      display_name: invite.display_name ?? input.email,
+      email: normalizedEmail,
+      display_name: invite.display_name ?? normalizedEmail,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "id" }
   );
 
-  await supabase.from("team_members").upsert(
-    {
-      owner_user_id: invite.owner_user_id,
-      member_user_id: input.userId,
-      email: input.email.toLowerCase().trim(),
-      display_name: invite.display_name ?? input.email,
-    },
-    { onConflict: "owner_user_id,email" }
-  );
+  if (profileError) {
+    console.error("completeTeamInvite user_profiles:", profileError.message);
+    return { ok: false as const, reason: "db_error" };
+  }
+
+  const memberPayload = {
+    owner_user_id: invite.owner_user_id,
+    member_user_id: input.userId,
+    email: normalizedEmail,
+    display_name: invite.display_name ?? normalizedEmail,
+    ...(existingMember?.role ? { role: existingMember.role } : {}),
+  };
+
+  const { error: memberError } = await supabase
+    .from("team_members")
+    .upsert(memberPayload, { onConflict: "owner_user_id,email" });
+
+  if (memberError) {
+    console.error("completeTeamInvite team_members:", memberError.message);
+    return { ok: false as const, reason: "db_error" };
+  }
+
+  const { error: acceptError } = await supabase
+    .from("team_invites")
+    .update({ accepted_at: new Date().toISOString() })
+    .eq("token", input.token)
+    .is("accepted_at", null);
+
+  if (acceptError) {
+    console.error("completeTeamInvite team_invites:", acceptError.message);
+    return { ok: false as const, reason: "db_error" };
+  }
 
   return { ok: true as const };
 }

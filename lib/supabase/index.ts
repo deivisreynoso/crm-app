@@ -1,18 +1,25 @@
-import { createBrowserClient } from '@supabase/auth-helpers-nextjs';
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { createBrowserClient } from "@supabase/auth-helpers-nextjs";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import {
+  getSupabaseBrowserConfig,
+  getSupabaseServerConfig,
+} from "@/lib/supabase/config";
 
-// For browser/client-side
+// For browser/client-side (auth pages: register, reset password, callback)
 export function createClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  return createBrowserClient(supabaseUrl, supabaseAnonKey);
+  const { url, anonKey } = getSupabaseBrowserConfig("createClient");
+  return createBrowserClient(url, anonKey, {
+    auth: {
+      // Implicit + hash tokens work when the reset email is opened on another device;
+      // PKCE requires the same browser that requested the reset.
+      flowType: "implicit",
+      detectSessionInUrl: true,
+    },
+  });
 }
 
 // For server-side (API routes, server actions)
 export function createServerSideClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-  return createSupabaseClient(supabaseUrl, supabaseServiceKey);
+  const { url, serviceKey } = getSupabaseServerConfig("createServerSideClient");
+  return createSupabaseClient(url, serviceKey);
 }

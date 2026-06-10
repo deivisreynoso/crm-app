@@ -22,10 +22,33 @@ export const authOptions: NextAuthOptions = {
           password: credentials.password as string,
         });
 
-        if (error || !data.user) return null;
+        if (error) {
+          const msg = error.message.toLowerCase();
+          if (msg.includes("invalid login credentials") || msg.includes("invalid email or password")) {
+            throw new Error("Invalid email or password.");
+          }
+          if (msg.includes("email not confirmed") || msg.includes("not confirmed")) {
+            throw new Error(
+              "Your email is not verified yet. Use forgot password to receive a new link, or ask your admin to confirm the account."
+            );
+          }
+          throw new Error(error.message);
+        }
 
-        const allowed = await userCanAccessCrm(supabase, data.user.id);
-        if (!allowed) return null;
+        if (!data.user) {
+          throw new Error("Invalid email or password.");
+        }
+
+        const allowed = await userCanAccessCrm(
+          supabase,
+          data.user.id,
+          data.user.email
+        );
+        if (!allowed) {
+          throw new Error(
+            "Your account is not linked to a workspace. Ask your admin for a new team invitation."
+          );
+        }
 
         const fullName = data.user.user_metadata?.full_name as
           | string

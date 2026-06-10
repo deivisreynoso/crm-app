@@ -4,6 +4,8 @@ import { createServerSideClient } from "@/lib/supabase";
 import { z } from "zod";
 import { humanizeDbError } from "@/lib/validation-errors";
 import { createTeamInvite } from "@/lib/team/invites";
+import { requireTransactionalEmailForAuth } from "@/lib/email/auth-email-policy";
+import { teamInviteEmailHtml } from "@/lib/email/transactional-templates";
 import { sendEmail } from "@/lib/email/send";
 
 const addMemberSchema = z.object({
@@ -156,10 +158,11 @@ export async function POST(req: NextRequest) {
         invite_url = invite.invite_url;
 
         try {
+          requireTransactionalEmailForAuth();
           await sendEmail({
             to: email,
             subject: "You're invited to ClickIn 360 CRM",
-            html: `<p>You have been invited to ClickIn 360 CRM.</p><p><a href="${invite.invite_url}">Create your account</a></p><p>This link expires in 7 days.</p>`,
+            html: teamInviteEmailHtml(invite.invite_url),
           });
         } catch (mailErr) {
           console.error("Invite email failed:", mailErr);

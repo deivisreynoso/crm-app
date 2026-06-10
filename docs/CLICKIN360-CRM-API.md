@@ -1339,7 +1339,7 @@ sequenceDiagram
 | Replies not syncing | Sender must connect Gmail with read scope (`/api/auth/google-gmail/reconnect`); migration 046 applied |
 | Integrations "Setup required" | Set `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (or `GOOGLE_OAUTH_*`); restart app |
 | OAuth redirect mismatch | Authorized redirect URIs in Google Cloud must match `{APP_URL}/api/auth/google-gmail/callback` and `…/google-calendar/callback` |
-| Reset email links to `localhost` | Set Supabase Site URL + add `{APP_URL}/auth/callback` to Redirect URLs; set `NEXT_PUBLIC_APP_URL` on VPS; redeploy; request a **new** reset email |
+| Reset link “invalid or already used” right away | Reset was likely sent from the **server** (PKCE) and opened on another device. Redeploy latest code, request a **new** link from `/forgot-password`, and open it on the same device if using Supabase’s default email. With **Mailgun** configured, the API sends a `token_hash` link that works on any device. Ensure Supabase Redirect URLs include `https://www.clickin360.com/auth/callback` |
 
 ---
 
