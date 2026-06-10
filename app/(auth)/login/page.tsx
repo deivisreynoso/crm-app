@@ -15,6 +15,7 @@ function LoginForm() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
     if (searchParams.get("registered") === "true") {
@@ -27,8 +28,24 @@ function LoginForm() {
       );
     } else if (searchParams.get("error") === "reset_link_invalid") {
       setError("Your password reset link is invalid or has expired. Request a new one below.");
+    } else if (searchParams.get("error") === "OAuthSignin" || searchParams.get("error") === "OAuthCallback") {
+      setError("Google sign-in failed. Use your @clickin360.com workspace account.");
+    } else if (searchParams.get("error")) {
+      setError(decodeURIComponent(searchParams.get("error")!));
     }
   }, [searchParams]);
+
+  async function handleGoogleSignIn() {
+    setError("");
+    setNotice(null);
+    setGoogleLoading(true);
+    try {
+      await signIn("google", { callbackUrl: "/dashboard" });
+    } catch {
+      setError("Google sign-in failed. Please try again.");
+      setGoogleLoading(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -89,6 +106,30 @@ function LoginForm() {
         </div>
       )}
 
+      <div className="space-y-4">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={googleLoading || isLoading}
+          className="w-full"
+          onClick={() => void handleGoogleSignIn()}
+        >
+          {googleLoading ? "Redirecting…" : "Continue with Google Workspace"}
+        </Button>
+        <p className="text-xs text-center text-body-muted">
+          For @clickin360.com accounts (e.g. deivis@clickin360.com).
+        </p>
+      </div>
+
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-[var(--card-border)]" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-[var(--card)] px-2 text-body-muted">Or sign in with email</span>
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-heading mb-1">
@@ -128,9 +169,13 @@ function LoginForm() {
           />
         </div>
 
-        <Button type="submit" disabled={isLoading} className="w-full">
+        <Button type="submit" disabled={isLoading || googleLoading} className="w-full">
           {isLoading ? "Signing in..." : "Sign in"}
         </Button>
+        <p className="text-xs text-body-muted">
+          Owners and teammates can use any email on file (e.g. deivis.reynoso@gmail.com). View
+          Only accounts use email and password only.
+        </p>
       </form>
 
       <div className="mt-6 pt-6 border-t border-[var(--card-border)] space-y-2">

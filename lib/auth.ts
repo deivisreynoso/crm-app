@@ -1,11 +1,41 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 import { createServerSideClient } from "@/lib/supabase";
 import { ensureUserProfile } from "@/lib/users/ensure-user-profile";
 import { userCanAccessCrm } from "@/lib/team/access";
+import { resolveGoogleLoginUser } from "@/lib/auth/google-user-link";
+import {
+  credentialsLoginAllowed,
+  googleLoginAllowed,
+  googleLoginAllowedForRole,
+  loginMethodError,
+  resolveUserRole,
+} from "@/lib/auth/login-policy";
+import {
+  getGoogleOAuthClientId,
+  getGoogleOAuthClientSecret,
+} from "@/lib/google/oauth-config";
+
+const googleClientId = getGoogleOAuthClientId();
+const googleClientSecret = getGoogleOAuthClientSecret();
 
 export const authOptions: NextAuthOptions = {
   providers: [
+    ...(googleClientId && googleClientSecret
+      ? [
+          GoogleProvider({
+            clientId: googleClientId,
+            clientSecret: googleClientSecret,
+            authorization: {
+              params: {
+                hd: "clickin360.com",
+                prompt: "select_account",
+              },
+            },
+          }),
+        ]
+      : []),
     CredentialsProvider({
       name: "Credentials",
       credentials: {
@@ -42,8 +72,6 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid email or password.");
         }
 
-        // Fresh service-role client: signIn pollutes authClient with member JWT and
-        // team_members RLS only allows owner_user_id = auth.uid().
         const admin = createServerSideClient();
 
         const allowed = await userCanAccessCrm(
@@ -55,6 +83,11 @@ export const authOptions: NextAuthOptions = {
           throw new Error(
             "Your account is not linked to a workspace. Ask your admin for a new team invitation."
           );
+        }
+
+        const role = await resolveUserRole(admin, data.user.id);
+        if (!credentialsLoginAllowed(role)) {
+          throw new Error(loginMethodError("credentials", role));
         }
 
         const fullName = data.user.user_metadata?.full_name as
@@ -91,18 +124,48 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ user, account }) {
+      if (account?.provider !== "google") return true;
+
+      const email = user.email?.trim().toLowerCase();
+      if (!googleLoginAllowed(email)) {
+        return loginMethodError("google");
+      }
+
+      const admin = createServerSideClient();
+      const linked = await resolveGoogleLoginUser(admin, {
+        email: email!,
+        name: user.name,
+        image: user.image,
+      });
+
+      if (!linked) {
+        return "Your account is not linked to a workspace. Ask your admin for a new team invitation.";
+      }
+
+      const role = await resolveUserRole(admin, linked.userId);
+      if (!googleLoginAllowedForRole(role)) {
+        return loginMethodError("google", role);
+      }
+
+      user.id = linked.userId;
+      user.email = linked.email;
+      user.name = linked.name;
+      return true;
+    },
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
         token.email = user.email;
         if (user.name) token.name = user.name;
+        if (account?.provider) token.authProvider = account.provider;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user && token.id) {
-        session.user.id = token.id;
-        if (token.email) session.user.email = token.email;
+        session.user.id = token.id as string;
+        if (token.email) session.user.email = token.email as string;
         if (token.name) session.user.name = token.name as string;
       }
       return session;
