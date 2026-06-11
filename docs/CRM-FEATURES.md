@@ -5,6 +5,7 @@ Living documentation for what the CRM does today, what shipped recently, and wha
 Related docs:
 
 - [CLICKIN360-CRM-API.md](./CLICKIN360-CRM-API.md) — HTTP API reference
+- [AUTH-ROADMAP.md](./AUTH-ROADMAP.md) — login methods, Google SSO, dual-email owner mapping
 - [AUDIT-FIX-TRACKER.md](./AUDIT-FIX-TRACKER.md) — security/performance fix backlog
 
 ---
@@ -27,6 +28,11 @@ git log -1 --format='%h %s (%cs)'
 
 | Date | Commit | Type | Summary |
 |------|--------|------|---------|
+| 2026-06-10 | `c12c4d9` | feature | **CRM enhancement sprint:** settings redesign (member vs admin sections), quote branding + product catalog tabs on Quotes, email signatures, MFA preference flag, calendar location types (physical / Google Meet / other) + assignee, public quote acceptance disclaimer (EN/ES), N8N/WhatsApp/Stripe inbound scaffolding, admin integrations status panel |
+| 2026-06-10 | `bd31186` | feature + fix | **Dual-email owner login:** canonical session maps personal + workspace emails to same CRM profile (`OWNER_LOGIN_ALIASES`, `team_members` lookup); `authUserId` for password/profile updates |
+| 2026-06-10 | `ecbd72d` | feature | **Login policy:** owner/admin/sales/viewer email/password; Google SSO `@clickin360.com` only; viewers blocked from Google |
+| 2026-06-10 | `4fdf298` | fix | Google OAuth post-callback redirects use public app URL (`buildAppRedirectUrl`) instead of `0.0.0.0:3000` in Docker |
+| 2026-06-10 | `153aadc` | fix | Teammate login after invite: fresh service-role client for `team_members` check; password reset `token_hash` flow |
 | 2026-06-09 | `72067cd` | infra | Faster VPS deploys: Dockerfile + dockerignore in repo, Docker layer cache by default, Next.js standalone image |
 | 2026-06-09 | `415cba2` | fix | **Forgot password:** server API builds production `redirectTo` from `NEXTAUTH_URL` / `NEXT_PUBLIC_APP_URL` (fixes localhost reset links) |
 | 2026-06-09 | `09cd574` | infra | Migration 048 orphan schema cleanup + `scripts/db-preflight-audit.sql` |
@@ -63,7 +69,7 @@ git log -1 --format='%h %s (%cs)'
 | Layer | Technology |
 |-------|------------|
 | App | Next.js (App Router), React, TanStack Query |
-| Auth | NextAuth (credentials → Supabase Auth) |
+| Auth | NextAuth (credentials + Google Workspace SSO → Supabase Auth); canonical owner session mapping |
 | Database | Supabase Postgres + RLS on tenant tables |
 | Server data access | Service role in API routes (not browser Supabase for CRM entities) |
 | Files | Supabase Storage (documents, quote logos) |
@@ -97,9 +103,10 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 
 ### Authentication & account
 
-- Login (NextAuth + Supabase password)
+- **Login:** email/password (all roles) or **Google Workspace** (`@clickin360.com`; owner/admin/sales only — viewers use password)
+- **Dual-email owner:** personal Gmail + workspace email resolve to same CRM profile via `OWNER_LOGIN_ALIASES` / `team_members` (see [AUTH-ROADMAP.md](./AUTH-ROADMAP.md))
 - Forgot password / reset password (`/forgot-password`, `/reset-password`, `/auth/callback`) — reset email via `POST /api/auth/forgot-password`; production requires Supabase redirect URL `https://www.clickin360.com/auth/callback` and `NEXT_PUBLIC_APP_URL` on the server
-- Account profile and password change
+- **My Account** (`/account`): profile, password, **HTML email signature** (appended on Gmail compose), **MFA preference** toggle (flag only; TOTP enrollment not built), notification prefs, currency
 - Workspace owner can delete own account (guarded)
 
 ### Home (dashboard)
@@ -145,26 +152,32 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 
 ### Quotes & documents
 
-- **Quotes** module: list, create, edit, line items from **Product Catalog**
-- Quote templates, branding (logo, company name), EN/ES locale for PDF/UI
+- **Quotes** module (`/quotes`) with tabs:
+  - **All quotes** — list, create, edit, PDF, Gmail send
+  - **Templates** — quote document templates
+  - **Branding** (owner/admin) — logo, company name, **primary color**, **font family**, EN/ES locale
+  - **Products** (owner/admin) — product catalog for line items
+- Line items from **Product Catalog** (`quote_services` + `quote_line_items`)
 - Sequential reference numbers (`Q-YYYY-#####`)
-- PDF generation and **send via Gmail** (connected user)
-- **Public quote page** (`/quote/[token]`) — accept / decline
+- PDF generation and **send via Gmail** (connected user; signature appended when set)
+- **Public quote page** (`/quote/[token]`) — accept / decline with **binding disclaimer** checkbox (EN/ES); records `acceptance_disclaimer_acknowledged_at`
 - Quote analytics API
 - Legacy **Documents** routes still present (`/documents`) alongside quotes
 - Attachments list with optional signed URLs
 
 ### Product catalog
 
-- **Tools → Product Catalog** (`/services`) — day-to-day catalog browse/use on quotes
-- **Settings** — owner/admin price edits and deletes
+- **Quotes → Products** tab (owner/admin manage; all roles use on quote line items)
+- `/services` redirects to `/quotes?tab=products`
 - `quote_services` + `quote_line_items` tables
 
 ### Calendar
 
 - Month view, upcoming list, contact-related events
 - **Requires linked contact** on create (website bookings always set `contact_id`)
-- Google Calendar sync (per user who connected; event assignee preferred)
+- **Location types:** in person, **Google Meet** (auto-generated link when Calendar connected), other
+- **Assignee** field on events (`calendar_events.assigned_to`; migration 050)
+- Google Calendar sync (per user who connected; Meet link created on sync when type is `google_meet`)
 - **Appointments** (website bookings) vs **meetings** — rose vs location-based colors, legend
 - `event_kind` column (migration 032)
 - Booking availability in Settings (Lead API uses this)
@@ -190,21 +203,19 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 ### Settings (owner / admin)
 
 - Platform language (EN/ES)
-- **Integrations** — unified Google Workspace panel (OAuth checklist, Gmail + Calendar connect/disconnect per user)
-- Quote branding and services catalog entry point
-- Booking availability
+- **Admin integrations** — status panel for N8N, WhatsApp, Stripe, Mailgun, Google Analytics, Google OAuth (`GET /api/settings/integrations`)
 - Website leads (default assignee)
-- Google review invitation URL + review email template (category `review_request`)
-- Email templates manager (create, edit, delete) — excludes automation and review templates from the general list
 - Duplicate contacts panel
 - Team invites and roles (`sales`, `admin`, `viewer`)
 - **Audit log** (read-only; owner/admin)
 - Custom fields (contacts, opportunities, tickets)
 
-### Settings (all members)
+### Settings (all members with write access)
 
-- Language card
-- **Integrations** — connect own Gmail and Google Calendar for send/sync and calendar events
+- **Email templates** — create, edit, delete (excludes automation and review templates from general list)
+- **Google review invitations** — URL + review email template (category `review_request`)
+- **Booking availability** — days, hours, duration (`PATCH /api/settings/member`)
+- **Integrations** — connect own Gmail and Google Calendar for send/sync and calendar events (Google Drive placeholder)
 
 ### Integrations (external)
 
@@ -214,6 +225,9 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 | Website chat | Public + optional secret | Marketing chat widget |
 | PATCH integrations | Integration secret | Server-to-server updates |
 | N8N webhooks | Outbound from CRM | `contact.*`, `website.lead`, etc. |
+| N8N inbound | `x-n8n-secret` | `POST /api/integrations/n8n/inbound` — workflow callbacks (scaffolding) |
+| WhatsApp inbound | Meta verify token | `GET/POST /api/integrations/whatsapp/inbound` (scaffolding) |
+| Stripe webhooks | `STRIPE_WEBHOOK_SECRET` | `POST /api/webhooks/stripe` — quote payment events (scaffolding) |
 
 See [CLICKIN360-CRM-API.md](./CLICKIN360-CRM-API.md) for endpoints.
 
@@ -234,7 +248,7 @@ See [CLICKIN360-CRM-API.md](./CLICKIN360-CRM-API.md) for endpoints.
 
 ## Database migrations
 
-Production should run migrations **001–048** in order. Notable groups:
+Production should run migrations **001–050** in order. Notable groups:
 
 | Range | Theme |
 |-------|--------|
@@ -252,6 +266,8 @@ Production should run migrations **001–048** in order. Notable groups:
 | 046 | `mailbox_user_id` on `contact_emails` (correct Gmail thread ownership) |
 | 047 | `email_notifications` on `notification_preferences` |
 | 048 | Orphan schema cleanup (legacy OAuth tables, automations, WhatsApp tables) |
+| 049 | Auth user delete FKs — `ON DELETE SET NULL` for teammate removal |
+| 050 | Email signatures, MFA flag, quote branding colors/fonts, calendar `assigned_to`, quote disclaimer timestamp |
 
 ---
 
@@ -267,7 +283,7 @@ Historical phases map to git eras (not separate products):
 | **4 — Operations** | Contact merge, in-app notifications, payments, ticket improvements | ✅ Shipped |
 | **5 — Production platform** | Website↔CRM, team/roles, quotes, contact UX, security, audit log | ✅ **Shipped** on `main` (`8fc9cee`) — migrations **035–037** applied in Supabase |
 
-**Phase 5 is complete.** **Phase 6 is in progress** — Gmail compose/sync, integrations UI, and pipeline UX shipped on `main` @ `37c8ae2`; product roadmap items below remain backlog.
+**Phase 5 is complete.** **Phase 6 enhancement sprint shipped** on `main` @ `c12c4d9` (auth, settings, quotes UX, signatures, calendar/Meet, integration scaffolding). Remaining Phase 6 backlog items below.
 
 ---
 
@@ -277,7 +293,10 @@ Historical phases map to git eras (not separate products):
 
 | Item | Commit / notes |
 |------|----------------|
-| **Services catalog tool** | `/services` — quote line-item catalog (rename to **Product Catalog** in UI) |
+| **CRM enhancement sprint** | Settings redesign, Quotes tabs (branding/products), signatures, MFA flag, calendar Meet, quote disclaimer, N8N/WhatsApp/Stripe scaffolding (`c12c4d9`) |
+| **Google SSO login** | `@clickin360.com` Workspace sign-in; role-based method policy (`ecbd72d`) |
+| **Dual-email owner login** | Canonical session + `authUserId` (`bd31186`) |
+| **Services catalog tool** | Quotes → Products tab; `/services` redirects |
 | **API workspace hardening** | Parent validation, trusted headers, pagination, pipeline seed route (`ad323c0`, `662422a`) |
 | **Audit log (initial)** | Admin-only UI + RLS (`738e03a`) |
 | **Marketing GA4 + SEO** | Cookie consent, custom events, robots/sitemap (`ab07aca`–`cb348eb`) |
@@ -293,7 +312,7 @@ Historical phases map to git eras (not separate products):
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | **VPS deploy** | Pull `main`; run migrations **044–048** if not applied; `./scripts/deploy-vps.sh` (cached build). Use `--no-cache` only when `package.json` or `Dockerfile` changes |
+| 1 | **VPS deploy** | Pull `main`; run migrations **044–050** if not applied; set `OWNER_LOGIN_ALIASES` if owner uses dual emails; `./scripts/deploy-vps.sh` (cached build). Use `--no-cache` only when `package.json` or `Dockerfile` changes |
 | 2 | **GA4 conversions** | Mark `generate_lead`, `booking_completed` in GA4 Admin |
 | 3 | **GSC follow-up** | Fix remaining 404s / canonical issues after sitemap deploy |
 | 4 | **AUDIT-FIX-TRACKER F1–F2, F5–F6** | Async contact combobox; batch signed URLs; storage cleanup; remove unused dashboard stats API |
@@ -303,7 +322,7 @@ Historical phases map to git eras (not separate products):
 
 | # | Area | Idea |
 |---|------|------|
-| 6 | **Quote UX** | Align quote line-item copy with Product Catalog; consolidate `/documents` vs `/quotes` flows |
+| 6 | **Quote UX** | Consolidate `/documents` vs `/quotes` flows; Stripe quote payments (scaffolding exists) |
 | 7 | **Reporting** | Deeper dashboards, CSV exports, scheduled reports |
 | 8 | **Automation** | In-app workflows beyond N8N webhooks |
 | 9 | **Quality** | E2E or integration test suite in CI |
@@ -330,16 +349,16 @@ Historical phases map to git eras (not separate products):
 | `/contacts`, `/contacts/[id]` | People |
 | `/opportunities` | Pipeline board |
 | `/tickets`, `/tickets/[id]` | Support |
-| `/quotes`, `/quotes/new`, `/quotes/[id]` | Quotes |
-| `/services` | Product catalog tool (quote line items) |
+| `/quotes`, `/quotes/new`, `/quotes/[id]` | Quotes (tabs: all, templates, branding, products) |
+| `/services` | Redirects to `/quotes?tab=products` |
+| `/account` | My Account (profile, signature, MFA, password) |
 | `/attachments` | Files |
 | `/calendar` | Events |
 | `/payments` | Payments |
 | `/analytics` | Charts |
 | `/settings` | Workspace config |
-| `/account` | User profile |
-| `/quote/[token]` | Public quote accept/decline |
+| `/quote/[token]` | Public quote accept/decline (disclaimer EN/ES) |
 
 ---
 
-*Last updated: 2026-06-09 (`main` @ `72067cd`).*
+*Last updated: 2026-06-10 (`main` @ `c12c4d9`).*

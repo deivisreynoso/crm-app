@@ -161,18 +161,35 @@ x-website-secret: a1b2c3...your-secret...f9e8
 | Item | Detail |
 |------|--------|
 | **How** | Log in at `{BASE_URL}/login` |
-| **Mechanism** | HTTP-only session cookie |
+| **Methods** | Email/password (all roles) or Google Workspace (`@clickin360.com`; viewers blocked) |
+| **Mechanism** | HTTP-only session cookie (JWT strategy) |
 | **Use** | CRM UI and `/api/*` from the same browser |
 | **Not for** | N8N, mobile apps, long-lived integrations |
+
+**Session fields:**
+
+| Field | Meaning |
+|-------|---------|
+| `session.user.id` | Canonical CRM user id (workspace owner UUID for tenant data) |
+| `session.user.authUserId` | Supabase `auth.users` id used to sign in (password/profile auth-admin calls) |
 
 **Required env:**
 
 ```bash
 NEXTAUTH_SECRET=<openssl rand -base64 32>
 NEXTAUTH_URL=<same as NEXT_PUBLIC_APP_URL>
+GOOGLE_OAUTH_CLIENT_ID=<Google Cloud OAuth client>
+GOOGLE_OAUTH_CLIENT_SECRET=<secret>
+WEBSITE_LEADS_USER_ID=<workspace owner Supabase UUID>
+# Optional — owner dual-email login (comma-separated)
+OWNER_LOGIN_ALIASES=owner@clickin360.com,personal@gmail.com
 ```
 
+**Google OAuth redirect (login):** `{APP_URL}/api/auth/callback/google` must be in Google Cloud authorized redirect URIs.
+
 **Programmatic CRM access:** Not officially supported without session cookies. Use Lead API for automation.
+
+See [AUTH-ROADMAP.md](./AUTH-ROADMAP.md) for login policy and dual-email owner mapping.
 
 #### Password reset (public)
 
@@ -777,13 +794,46 @@ Current user’s workspace and role. See [§6](#6-workspace--roles).
 
 Account summary for logged-in user.
 
+#### `GET /api/account/profile`
+
+Profile fields including `email_signature_html`.
+
 #### `PATCH /api/account/profile`
 
-Update display name, etc.
+Update display name, email, and HTML email signature.
 
-#### `PATCH /api/account/password`
+```json
+{
+  "full_name": "Jane Doe",
+  "email": "jane@clickin360.com",
+  "email_signature_html": "<p>Best,<br>Jane</p>"
+}
+```
 
-Change password (authenticated).
+Auth email updates use `session.user.authUserId` (not canonical id when aliased).
+
+#### `POST /api/account/password`
+
+Change password (authenticated). Verifies current password against session email; updates `authUserId` Supabase account.
+
+```json
+{
+  "current_password": "old",
+  "new_password": "newpassword8"
+}
+```
+
+#### `GET /api/account/mfa`
+
+MFA preference flag: `{ "enabled": true }`.
+
+#### `PATCH /api/account/mfa`
+
+Set MFA preference (scaffolding; TOTP enrollment not enforced yet).
+
+```json
+{ "enabled": true }
+```
 
 ---
 
@@ -1066,15 +1116,18 @@ Use **`/api/calendar/events`** (the removed `GET /api/calendar` overview route i
 {
   "contact_id": "uuid",
   "title": "Discovery call",
-  "description": "Zoom link in invite",
+  "description": "Notes",
   "start_time": "2026-05-26T15:00:00.000Z",
   "end_time": "2026-05-26T15:30:00.000Z",
-  "location": "Zoom",
-  "location_type": "zoom"
+  "location": "123 Main St",
+  "location_type": "physical",
+  "assigned_to": "uuid-or-null"
 }
 ```
 
-Requires **`contact_id`**. May sync to **Google Calendar** if owner connected integration. DB constraint `calendar_events_contact_required_check` (migration 037).
+**`location_type`:** `physical` | `google_meet` | `other`. When `google_meet` and Calendar is connected, a Meet link is generated on sync.
+
+Requires **`contact_id`**. May sync to **Google Calendar** if user connected integration. DB constraint `calendar_events_contact_required_check` (migration 037). `assigned_to` column (migration 050).
 
 #### `GET|PATCH|DELETE /api/calendar/events/[id]`
 
@@ -1084,14 +1137,16 @@ Requires **`contact_id`**. May sync to **Google Calendar** if owner connected in
 
 #### `GET /api/settings`
 
-Returns `default_currency`, `default_sales_assignee`, `booking_availability`, `updated_at`.
+Returns `default_currency`, `default_sales_assignee`, `booking_availability`, quote branding fields (`quote_primary_color`, `quote_font_family`), `updated_at`.
 
-#### `PATCH /api/settings` (owner only)
+#### `PATCH /api/settings` (owner/admin)
 
 ```json
 {
   "default_currency": "USD",
   "default_sales_assignee": "uuid-or-null",
+  "quote_primary_color": "#1e3a5f",
+  "quote_font_family": "Inter",
   "booking_availability": {
     "timezone": "America/Mexico_City",
     "days": [1, 2, 3, 4, 5],
@@ -1104,6 +1159,14 @@ Returns `default_currency`, `default_sales_assignee`, `booking_availability`, `u
   }
 }
 ```
+
+#### `PATCH /api/settings/member`
+
+Member-accessible workspace settings (sales+). Booking availability, Google review URL, review template id.
+
+##### `GET /api/settings/integrations`
+
+Admin integration status (owner/admin): N8N, WhatsApp, Stripe, Mailgun, GA, Google OAuth configured flags.
 
 ---
 
@@ -1121,6 +1184,9 @@ Google OAuth uses `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (or legacy `GOOGLE
 | `DELETE` | `/api/integrations/gmail/disconnect` | Disconnect signed-in user's Gmail |
 | `GET` | `/api/auth/google-gmail` | Start Gmail OAuth |
 | `GET` | `/api/auth/google-gmail/reconnect` | Re-consent (send + read scopes) |
+| `POST` | `/api/integrations/n8n/inbound` | Inbound N8N callbacks (`x-n8n-secret`) |
+| `GET`, `POST` | `/api/integrations/whatsapp/inbound` | WhatsApp webhook verify + inbound (Meta) |
+| `POST` | `/api/webhooks/stripe` | Stripe payment webhooks (`STRIPE_WEBHOOK_SECRET`) |
 
 Calendar events created in CRM sync using the connected account of the event assignee, then actor, then workspace owner (`resolveCalendarUserId`).
 
@@ -1301,12 +1367,19 @@ sequenceDiagram
 |----------|----------|-------------|
 | `NEXT_PUBLIC_APP_URL` | Yes | Public CRM URL |
 | `WEBSITE_LEADS_API_SECRET` | Lead API | Shared secret; **you generate** |
-| `WEBSITE_LEADS_USER_ID` | Lead API | Supabase owner UUID |
+| `WEBSITE_LEADS_USER_ID` | Lead API + owner tenant | Supabase owner UUID |
+| `OWNER_LOGIN_ALIASES` | Optional | Comma-separated emails mapped to `WEBSITE_LEADS_USER_ID` at login |
 | `NEXTAUTH_SECRET` | CRM login | Session signing |
 | `NEXTAUTH_URL` | CRM login | Usually = app URL |
 | `N8N_WEBHOOK_URL` | Optional | Outbound webhook base |
+| `N8N_WEBHOOK_SECRET` | Optional | Inbound N8N callback auth (`x-n8n-secret`) |
 | `N8N_API_KEY` | Optional | Outbound auth header |
 | `N8N_BASE_URL` | Optional | Workflow API (advanced) |
+| `WHATSAPP_ACCESS_TOKEN` | Optional | WhatsApp Cloud API |
+| `WHATSAPP_PHONE_NUMBER_ID` | Optional | WhatsApp sender |
+| `WHATSAPP_VERIFY_TOKEN` | Optional | Meta webhook verification |
+| `STRIPE_SECRET_KEY` | Optional | Stripe payments (scaffolding) |
+| `STRIPE_WEBHOOK_SECRET` | Optional | Stripe webhook signature |
 | `NEXT_PUBLIC_N8N_WEBCHAT_EMBED_URL` | Optional | Chat iframe |
 | `NEXT_PUBLIC_N8N_WEBCHAT_SCRIPT_URL` | Optional | Chat script |
 | Supabase keys | Yes | `NEXT_PUBLIC_SUPABASE_URL`, service role, etc. |
@@ -1338,7 +1411,10 @@ sequenceDiagram
 | Gmail send `403` | Connect Gmail in Settings → Integrations; check `needs_gmail_connect` in response |
 | Replies not syncing | Sender must connect Gmail with read scope (`/api/auth/google-gmail/reconnect`); migration 046 applied |
 | Integrations "Setup required" | Set `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (or `GOOGLE_OAUTH_*`); restart app |
-| OAuth redirect mismatch | Authorized redirect URIs in Google Cloud must match `{APP_URL}/api/auth/google-gmail/callback` and `…/google-calendar/callback` |
+| OAuth redirect mismatch | Authorized redirect URIs in Google Cloud must match `{APP_URL}/api/auth/callback/google` (login), `…/google-gmail/callback`, and `…/google-calendar/callback` |
+| Google login blocked | Use `@clickin360.com` account; viewers must use email/password |
+| Owner sees wrong profile | Set `OWNER_LOGIN_ALIASES` and/or `team_members` row for workspace email; `WEBSITE_LEADS_USER_ID` must be canonical owner UUID |
+| Password change updates wrong account | Fixed: uses `session.user.authUserId`; redeploy latest `main` |
 | Reset link “invalid or already used” right away | Reset was likely sent from the **server** (PKCE) and opened on another device. Redeploy latest code, request a **new** link from `/forgot-password`, and open it on the same device if using Supabase’s default email. With **Mailgun** configured, the API sends a `token_hash` link that works on any device. Ensure Supabase Redirect URLs include `https://www.clickin360.com/auth/callback` |
 | Supabase “Database error deleting user” | Run migration **049** (`migrations/049_auth_user_delete_fks.sql`), or in SQL Editor null references then delete: `UPDATE audit_logs SET user_id = NULL WHERE user_id = '<uuid>';` (also `contacts.assigned_to`, `tasks.assigned_to`, `tickets.assigned_to`, `user_settings.default_sales_assignee`). CRM **Remove teammate** clears these automatically. |
 
@@ -1385,10 +1461,13 @@ See [§9](#9-crm-api-session). Full route list matches files under `app/api/**/r
 | N8N outbound | `lib/n8n.ts` |
 | Validators | `lib/validators/index.ts` |
 | Contact company sync | `lib/contacts/enrich-company-from-contact.ts` |
-| Migrations | `migrations/035_*` … `048_*` (contact-centric parents, Gmail sync, notifications, DB cleanup) |
+| Migrations | `migrations/035_*` … `050_*` |
 | Gmail sync | `lib/google/gmail-sync.ts`, `lib/emails/save-contact-email.ts` |
 | Google OAuth | `lib/google/oauth-config.ts` |
+| Auth / login policy | `lib/auth.ts`, `lib/auth/login-policy.ts`, `lib/auth/canonical-user.ts` |
+| Email signature | `lib/email/signature.ts` |
+| N8N / WhatsApp / Stripe | `lib/integrations/n8n/`, `lib/integrations/whatsapp/`, `lib/integrations/stripe/` |
 
 ---
 
-*Last updated: 2026-05-27 (`main` @ `37c8ae2`). Update this file when adding or changing API routes.*
+*Last updated: 2026-06-10 (`main` @ `c12c4d9`). Update this file when adding or changing API routes.*

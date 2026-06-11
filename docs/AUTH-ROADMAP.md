@@ -1,21 +1,46 @@
 # Authentication roadmap — ClickIn 360 CRM
 
-Living plan for login, password reset, and Google Workspace sign-in.
+Living plan for login, password reset, Google Workspace sign-in, and owner dual-email mapping.
 
-Related: [CLICKIN360-CRM-API.md](./CLICKIN360-CRM-API.md) (env vars, auth endpoints)
+Related: [CLICKIN360-CRM-API.md](./CLICKIN360-CRM-API.md) (env vars, auth endpoints), [CRM-FEATURES.md](./CRM-FEATURES.md) (feature list)
 
 ---
 
-## Current state (2026)
+## Current state (June 2026)
 
 | Flow | How it works |
 |------|----------------|
-| **Login** | Email + password via NextAuth → Supabase `signInWithPassword` |
+| **Login (email/password)** | NextAuth Credentials → Supabase `signInWithPassword` |
+| **Login (Google)** | NextAuth Google provider (`hd=clickin360.com`) → `resolveGoogleLoginUser` |
 | **Access control** | Invite-only: `team_members` row + `userCanAccessCrm` |
 | **Registration** | Invite link → `POST /api/team/invites/register` (confirmed email, workspace link) |
 | **Password reset** | `POST /api/auth/forgot-password` → Mailgun email with `token_hash` link |
 | **Team invite email** | Mailgun when configured; copy link in UI as fallback |
-| **Google** | Gmail + Calendar only (post-login Integrations), not login |
+| **Gmail + Calendar** | Post-login Integrations (per-user OAuth), separate from login OAuth |
+| **MFA** | Preference flag on `user_profiles.mfa_enabled` (Settings → My Account); TOTP enrollment UI not built yet |
+| **Dual-email owner** | Canonical session maps alias emails to `WEBSITE_LEADS_USER_ID` via `OWNER_LOGIN_ALIASES` and/or `team_members` |
+
+### Login methods by role
+
+| Role | Email/password | Google Workspace (`@clickin360.com`) |
+|------|----------------|--------------------------------------|
+| **Owner** | Yes | Yes |
+| **Admin** | Yes | Yes |
+| **Sales** | Yes | Yes |
+| **Viewer** | Yes (only method) | No |
+
+Implementation: `lib/auth/login-policy.ts`, enforced in `lib/auth.ts` (`authorize` + `signIn` callbacks).
+
+### Session identity (canonical vs auth user)
+
+| Field | Meaning |
+|-------|---------|
+| `session.user.id` | **Canonical CRM user id** — workspace owner UUID for tenant data, integrations, `user_profiles` |
+| `session.user.authUserId` | **Supabase auth.users id** used to sign in — used for password change and auth email updates |
+
+When an owner signs in with a personal Gmail (`deivis.reynoso@gmail.com`) mapped to the workspace owner via `OWNER_LOGIN_ALIASES`, the session CRM id is the owner UUID while `authUserId` remains the personal auth account.
+
+Code: `lib/auth/canonical-user.ts`, `lib/auth/supabase-auth-user.ts`.
 
 ---
 
@@ -40,100 +65,95 @@ After our register API (`email_confirm: true`), new invite signups should show *
 1. **`.env.local` on VPS**
    - `NEXT_PUBLIC_APP_URL`, `NEXTAUTH_URL` = `https://www.clickin360.com`
    - Supabase keys (build args + runtime)
+   - `WEBSITE_LEADS_USER_ID` = workspace owner Supabase UUID
+   - Optional dual-email owner mapping:
+     ```
+     OWNER_LOGIN_ALIASES=deivis@clickin360.com,deivis.reynoso@gmail.com
+     ```
+   - **Google OAuth** (login + Integrations):
+     ```
+     GOOGLE_OAUTH_CLIENT_ID=
+     GOOGLE_OAUTH_CLIENT_SECRET=
+     ```
    - **Mailgun** (required for reset + invite email):
      ```
      MAILGUN_API_KEY=
      MAILGUN_DOMAIN=mail.clickin360.com
-     MAILGUN_FROM=ClickIn 360 <no-reply@mail.clickin360.com
+     MAILGUN_FROM=ClickIn 360 <no-reply@mail.clickin360.com>
      ```
 
 2. **Supabase → Authentication → URL Configuration**
    - Site URL: `https://www.clickin360.com`
    - Redirect URLs: `https://www.clickin360.com/auth/callback`
 
-3. **Verify env:** `./scripts/check-env-local.sh .env.local --container`
+3. **Google Cloud Console → OAuth client**
+   - Authorized redirect URI: `https://www.clickin360.com/api/auth/callback/google`
 
-4. **Remove duplicate users** manually in Supabase Auth when re-inviting with a new email.
+4. **Owner dual-email (recommended SQL)**
 
----
+   Link workspace Google email to the canonical owner in `team_members`:
 
-## Phase plan: Google login + email for low-access roles
+   ```sql
+   INSERT INTO team_members (owner_user_id, member_user_id, email, display_name, role)
+   VALUES (
+     'OWNER_UUID',
+     'OWNER_UUID',
+     'deivis@clickin360.com',
+     'Deivis Reynoso',
+     'admin'
+   )
+   ON CONFLICT (owner_user_id, email) DO UPDATE
+   SET member_user_id = EXCLUDED.member_user_id;
+   ```
 
-### Goals
+5. **Verify env:** `./scripts/check-env-local.sh .env.local --container`
 
-- **Owner / admin / sales** (`@clickin360.com`): Sign in with Google Workspace; Gmail + Calendar connected in one step (Phase 3 from prior discussion).
-- **Viewer / external / low-trust roles**: Keep **email + password** only (no Google), or Google blocked by domain/role policy.
-- **Dual login** always available for owner as break-glass (email password retained).
-
-### Phase 1 — Google sign-in only (no auto Gmail/Calendar)
-
-| Item | Work |
-|------|------|
-| NextAuth | Add `GoogleProvider` with `hd=clickin360.com` (Workspace domain hint) |
-| Login UI | “Continue with Google” on `/login` |
-| Account linking | Match Supabase user by verified Google email → existing `auth.users` row |
-| Access | Reuse `userCanAccessCrm` + invite checks — Google does not bypass team |
-| Roles | All roles can use Google initially; measure adoption |
-
-**Risks:** Google OAuth redirect URIs on production; users with personal Gmail blocked unless on team invite list.
-
-### Phase 2 — Role-based login methods
-
-| Role | Login allowed |
-|------|----------------|
-| `owner`, `admin` | Google **or** email/password |
-| `sales` | Google **or** email/password (Workspace email required for Google) |
-| `viewer` | **Email/password only** (demo accounts, external reviewers) |
-
-Implementation:
-
-- Add `auth_method` or derive from `team_members.role` at login.
-- Login page: hide Google button when `viewer`; optional server check on OAuth callback.
-- Store preference in `user_profiles` (`primary_auth_provider`).
-
-### Phase 3 — Google login + auto Gmail/Calendar
-
-| Item | Work |
-|------|------|
-| OAuth scopes | Combined: `openid email profile`, Gmail send/read, Calendar |
-| Callback | Save tokens to `google_gmail_tokens` / `google_calendar_tokens` |
-| Integrations UI | Show “Connected” after first Google login |
-| Fallback | If user denies Gmail scope → CRM access OK, Integrations prompt later |
-
-**Risks:** Google app verification for Gmail scopes; 1–2 weeks if external testers needed.
-
-### Phase 4 — Decommission personal emails (optional)
-
-- Migrate team to `@clickin360.com` only.
-- Remove old `@gmail.com` auth users after data migration.
-- Enforce domain in `userCanAccessCrm` or invite flow.
+6. **Remove duplicate auth users** manually in Supabase Auth when re-inviting with a new email.
 
 ---
 
-## Architecture sketch (target)
+## Phase plan (remaining)
+
+### Shipped
+
+| Phase | Item | Status |
+|-------|------|--------|
+| 1 | Google sign-in (`GoogleProvider`, `hd=clickin360.com`) | ✅ |
+| 1 | Account linking via email (`resolveGoogleLoginUser`) | ✅ |
+| 2 | Role-based login methods (viewer = credentials only) | ✅ |
+| — | Canonical owner dual-email session mapping | ✅ |
+| — | `authUserId` for password/profile auth-admin calls | ✅ |
+| — | MFA preference flag (`GET/PATCH /api/account/mfa`) | ✅ (scaffolding) |
+
+### Not yet shipped
+
+| Phase | Item | Notes |
+|-------|------|--------|
+| 3 | Google login + auto Gmail/Calendar on first sign-in | Integrations still separate OAuth |
+| 3 | Combined OAuth scopes at login | Gmail app verification may be required |
+| 4 | Decommission personal emails | Optional; `OWNER_LOGIN_ALIASES` supports break-glass |
+| — | Supabase TOTP enrollment UI when `mfa_enabled` | Flag only today |
+| — | SSO/SAML | Not planned |
+
+---
+
+## Architecture
 
 ```text
 /login
   ├─ Email + password → NextAuth Credentials → Supabase
-  └─ Continue with Google → NextAuth Google → link/create Supabase user
-        → (Phase 3) store Gmail/Calendar tokens
+  │     → resolveCanonicalCrmUserId → session.user.id (canonical)
+  │     → session.user.authUserId = Supabase auth id
+  └─ Continue with Google → NextAuth Google → resolveGoogleLoginUser
+        → canonical session id + authUserId
 
 Access gate (unchanged):
-  team_members.member_user_id OR workspace owner
+  team_members.member_user_id OR workspace owner (WEBSITE_LEADS_USER_ID / owns team)
 
 Transactional email (Mailgun):
   - Team invites
   - Password reset (token_hash links)
-  - Future: security notifications
 ```
-
----
-
-## Not in scope yet
-
-- SSO/SAML (Enterprise Google beyond OAuth)
-- Magic-link login (Supabase OTP) as primary
-- Per-user “force password reset on first login”
 
 ---
 
@@ -141,4 +161,6 @@ Transactional email (Mailgun):
 
 | Date | Change |
 |------|--------|
+| 2026-06 | CRM enhancement sprint: Google SSO login, role-based methods, MFA flag, canonical dual-email owner mapping, `authUserId` session field |
+| 2026-06 | Fix teammate login (fresh service-role client after sign-in); password reset via `token_hash`; OAuth redirects use `buildAppRedirectUrl` |
 | 2026-06 | Invite register via admin API (`email_confirm: true`); Mailgun-only reset in prod; clearer login errors; remove teammate deletes auth user |

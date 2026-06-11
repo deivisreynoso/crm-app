@@ -34,7 +34,7 @@ Status: **done** | **todo**
 | ID | Issue | Notes |
 |----|--------|--------|
 | L1 | Settings page i18n | `settings.*` keys in en/es + `settings-page-content.tsx` |
-| L2 | NextAuth session typing | `types/next-auth.d.ts` |
+| L2 | NextAuth session typing | `types/next-auth.d.ts` (`authUserId` for alias logins) |
 | L3 | Deprecated SMTP send route | Removed `documents/[id]/send` |
 | L4 | `verifyContactOwnership` duplication | `lib/contacts/verify-contact-ownership.ts` |
 | L5 | Contact page i18n | `contacts.*`, `activity.*`, `quickActions.*`, `tasks.*` in en/es (Phase 5) |

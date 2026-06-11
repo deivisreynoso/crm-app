@@ -4,11 +4,18 @@ ClickIn 360 — marketing site + CRM (Next.js, Supabase, Docker on VPS).
 
 - [CRM features & roadmap](./docs/CRM-FEATURES.md) — living feature list and phase status
 - [CRM API guide](./docs/CLICKIN360-CRM-API.md) — Lead API, integrations, session CRM routes
+- [Auth roadmap](./docs/AUTH-ROADMAP.md) — login methods, Google SSO, dual-email owner mapping
 - [Audit / hardening tracker](./docs/AUDIT-FIX-TRACKER.md)
 
 **Deploy (VPS):** pull `main`, then run `./scripts/deploy-vps.sh` (uses Docker layer cache; ~2–8 min for code-only changes). Use `./scripts/deploy-vps.sh --no-cache` only when dependencies or Dockerfile change (~15–25 min on a small VPS).
 
-**Production checklist:** `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` must match your live host (e.g. `https://www.clickin360.com`). Supabase Auth → URL Configuration must allow `{APP_URL}/auth/callback` for forgot-password.
+**Production checklist:**
+
+- `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` must match your live host (e.g. `https://www.clickin360.com`)
+- Supabase Auth → URL Configuration must allow `{APP_URL}/auth/callback` for forgot-password
+- Run migrations **049** and **050** in Supabase if not applied
+- Set `WEBSITE_LEADS_USER_ID` to the workspace owner UUID; optional `OWNER_LOGIN_ALIASES` for owner dual-email login
+- Google Cloud OAuth: add `{APP_URL}/api/auth/callback/google` for Workspace sign-in
 
 ## Getting Started
 
