@@ -14,6 +14,7 @@ export type MergeFieldOption = {
 
 export const MERGE_FIELD_LABELS: Record<string, string> = {
   contact_name: "Contact name",
+  "contact.name": "Contact name",
   first_name: "First name",
   last_name: "Last name",
   email: "Email",
@@ -25,6 +26,11 @@ export const MERGE_FIELD_LABELS: Record<string, string> = {
   duration: "Duration",
   valid_until: "Valid until",
   google_review_url: "Google review URL",
+  quote_accept_url: "Quote accept URL",
+  "quote.accept_url": "Quote accept URL",
+  "user.signature": "Your email signature",
+  "user.firstname": "Your first name",
+  "user.lastname": "Your last name",
 };
 
 export function listMergeFields(): MergeFieldOption[] {
@@ -34,7 +40,7 @@ export function listMergeFields(): MergeFieldOption[] {
   }));
 }
 
-const MERGE_TOKEN = /\{\{\s*(\w+)\s*\}\}/g;
+const MERGE_TOKEN = /\{\{\s*([\w.]+)\s*\}\}/g;
 
 /** Highlight unresolved tokens for preview (returns HTML string). */
 export function highlightUnresolvedMergeFields(html: string): string {
@@ -46,7 +52,7 @@ export function highlightUnresolvedMergeFields(html: string): string {
 /** Resolve merge fields; optionally strip any still-unresolved tokens before send. */
 export function prepareBodyForSend(
   content: string,
-  context: TemplateContext,
+  context: Record<string, string | undefined>,
   options?: { stripUnresolved?: boolean }
 ): string {
   const strip = options?.stripUnresolved ?? true;
@@ -59,7 +65,7 @@ export function prepareBodyForSend(
 
 export function prepareSubjectForSend(
   subject: string,
-  context: TemplateContext,
+  context: Record<string, string | undefined>,
   options?: { stripUnresolved?: boolean }
 ): string {
   return prepareBodyForSend(subject, context, options);

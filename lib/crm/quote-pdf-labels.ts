@@ -40,46 +40,60 @@ export function getDefaultQuoteTitle(
   return `Quote ${reference}`;
 }
 
-export function getQuoteEmailDefaults(
-  uiLocale?: string | null,
-  acceptUrl?: string | null
-): {
+export function getQuoteEmailDefaults(uiLocale?: string | null): {
   subjectPrefix: string;
   body: string;
+  bodyHtml: string;
 } {
   const locale = resolveCrmLocale(uiLocale);
+
   if (locale === "es") {
     return {
       subjectPrefix: "Cotización",
       body: [
-        "Hola,",
+        "Hola {{contact.name}},",
         "",
-        acceptUrl
-          ? `Revise y acepte su cotización en línea:\n${acceptUrl}`
-          : "Revise su cotización en línea.",
+        "Revise y acepte su cotización en línea:",
+        "{{quote.accept_url}}",
         "",
         "El PDF adjunto es solo para sus registros.",
         "",
-        "Si tiene alguna pregunta, responda a este correo.",
-        "",
-        "Gracias,",
+        "{{user.signature}}",
+        "{{user.firstname}} {{user.lastname}}",
+        "ClickIn 360 LLC",
       ].join("\n"),
+      bodyHtml: [
+        "<p>Hola {{contact.name}},</p>",
+        "<p>Revise y acepte su cotización en línea:</p>",
+        '<p><a href="{{quote.accept_url}}">{{quote.accept_url}}</a></p>',
+        "<p>El PDF adjunto es solo para sus registros.</p>",
+        "<p>{{user.signature}}</p>",
+        "<p>{{user.firstname}} {{user.lastname}}<br/>ClickIn 360 LLC</p>",
+      ].join(""),
     };
   }
+
   return {
     subjectPrefix: "Quote",
     body: [
-      "Hello,",
+      "Hello {{contact.name}},",
       "",
-      acceptUrl
-        ? `Please review and accept your quote online:\n${acceptUrl}`
-        : "Please review your quote online.",
+      "Please review and accept your quote online:",
+      "{{quote.accept_url}}",
       "",
       "The attached PDF is for your records only.",
       "",
-      "If you have any questions, reply to this email.",
-      "",
-      "Thank you,",
+      "{{user.signature}}",
+      "{{user.firstname}} {{user.lastname}}",
+      "ClickIn 360 LLC",
     ].join("\n"),
+    bodyHtml: [
+      "<p>Hello {{contact.name}},</p>",
+      "<p>Please review and accept your quote online:</p>",
+      '<p><a href="{{quote.accept_url}}">{{quote.accept_url}}</a></p>',
+      "<p>The attached PDF is for your records only.</p>",
+      "<p>{{user.signature}}</p>",
+      "<p>{{user.firstname}} {{user.lastname}}<br/>ClickIn 360 LLC</p>",
+    ].join(""),
   };
 }

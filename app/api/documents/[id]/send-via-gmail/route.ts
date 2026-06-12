@@ -17,6 +17,7 @@ import { uploadToDocumentsBucket } from "@/lib/storage/documents";
 import { syncContactEmailsFromGmail } from "@/lib/google/gmail-sync";
 import { triggerN8NWebhook } from "@/lib/n8n";
 import { getQuoteEmailDefaults } from "@/lib/crm/quote-pdf-labels";
+import { ensureAcceptLinkInEmailBody } from "@/lib/quotes/quote-email-body";
 import { ensureAcceptToken, quoteAcceptPublicUrl } from "@/lib/quotes/accept-token";
 import { ensureQuoteReference } from "@/lib/quotes/reference";
 import { resolveGmailSendOptions } from "@/lib/emails/build-gmail-send-options";
@@ -25,6 +26,11 @@ import {
   interpolateTemplate,
 } from "@/lib/documents/template-variables";
 import { appendEmailSignature } from "@/lib/email/signature";
+import {
+  buildQuoteEmailMergeContext,
+  mergeQuoteEmailContext,
+  quoteEmailHasSignatureBlock,
+} from "@/lib/email/quote-email-merge";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -153,12 +159,56 @@ export async function POST(req: NextRequest, context: RouteContext) {
       accept_token: doc.accept_token as string | null,
     });
     const acceptUrl = acceptToken ? quoteAcceptPublicUrl(acceptToken) : null;
-    const emailDefaults = getQuoteEmailDefaults(uiLocale, acceptUrl);
+    const emailDefaults = getQuoteEmailDefaults(uiLocale);
+
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("email_signature_html, display_name")
+      .eq("id", userId!)
+      .maybeSingle();
+
+    let companyName: string | undefined;
+    if (contactRow?.company_id) {
+      const { data: company } = await supabase
+        .from("companies")
+        .select("name")
+        .eq("id", contactRow.company_id)
+        .eq("user_id", workspaceOwnerId!)
+        .maybeSingle();
+      companyName = company?.name;
+    }
+
+    const mergeCtx = mergeQuoteEmailContext(
+      contactRow
+        ? (buildTemplateContext({
+            contact: {
+              first_name: contactRow.first_name ?? undefined,
+              last_name: contactRow.last_name ?? undefined,
+              email: contactRow.email ?? undefined,
+              phone: contactRow.phone ?? undefined,
+              company: contactRow.company ?? undefined,
+            },
+            company: companyName ? { name: companyName } : null,
+            document: {
+              title: doc.title as string,
+              valid_until: (doc.valid_until as string | null) ?? undefined,
+              quote_accept_url: acceptUrl ?? undefined,
+            },
+          }) as Record<string, string | undefined>)
+        : {},
+      buildQuoteEmailMergeContext({
+        contact: contactRow,
+        companyName,
+        acceptUrl,
+        userDisplayName: profile?.display_name as string | null | undefined,
+        userSignatureHtml: profile?.email_signature_html as string | null | undefined,
+      })
+    );
 
     let subject =
       parsed.data.subject?.trim() ||
       `${emailDefaults.subjectPrefix} ${quoteRef ?? (doc.title as string)}`;
-    let emailBody = parsed.data.body?.trim() || emailDefaults.body;
+    let emailBody = parsed.data.body?.trim() || emailDefaults.bodyHtml;
 
     if (parsed.data.template_id && doc.contact_id && contactRow) {
       const { data: template } = await supabase
@@ -172,48 +222,31 @@ export async function POST(req: NextRequest, context: RouteContext) {
         return NextResponse.json({ error: "Email template not found" }, { status: 404 });
       }
 
-      let companyName: string | undefined;
-      if (contactRow.company_id) {
-        const { data: company } = await supabase
-          .from("companies")
-          .select("name")
-          .eq("id", contactRow.company_id)
-          .eq("user_id", workspaceOwnerId!)
-          .maybeSingle();
-        companyName = company?.name;
-      }
-
-      const ctx = buildTemplateContext({
-        contact: {
-          first_name: contactRow.first_name ?? undefined,
-          last_name: contactRow.last_name ?? undefined,
-          email: contactRow.email ?? undefined,
-          phone: contactRow.phone ?? undefined,
-          company: contactRow.company ?? undefined,
-        },
-        company: companyName ? { name: companyName } : null,
-      });
-
       if (!parsed.data.subject?.trim()) {
-        subject = interpolateTemplate(template.subject, ctx);
+        subject = interpolateTemplate(template.subject, mergeCtx);
       }
       if (!parsed.data.body?.trim()) {
-        emailBody = interpolateTemplate(template.body, ctx);
+        emailBody = interpolateTemplate(template.body, mergeCtx);
       }
     }
 
-    const { data: profile } = await supabase
-      .from("user_profiles")
-      .select("email_signature_html, display_name")
-      .eq("id", userId!)
-      .maybeSingle();
-
-    if (!parsed.data.skip_signature_append) {
-      emailBody = appendEmailSignature(
-        emailBody,
-        profile?.email_signature_html as string | null | undefined
-      );
+    if (subject.includes("{{")) {
+      subject = interpolateTemplate(subject, mergeCtx);
     }
+    if (emailBody.includes("{{")) {
+      emailBody = interpolateTemplate(emailBody, mergeCtx);
+    }
+
+    const signatureHtml = profile?.email_signature_html as string | null | undefined;
+    const skipSignatureAppend =
+      parsed.data.skip_signature_append ||
+      quoteEmailHasSignatureBlock(emailBody, signatureHtml);
+
+    if (!skipSignatureAppend) {
+      emailBody = appendEmailSignature(emailBody, signatureHtml);
+    }
+
+    emailBody = ensureAcceptLinkInEmailBody(emailBody, acceptUrl, uiLocale);
 
     const { buffer, fileName } = await generateDocumentPdfBuffer(
       supabase,

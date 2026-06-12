@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import axios from "axios";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { EmailComposer, type EmailComposerSendPayload } from "@/components/email/email-composer";
 import { useGmailStatus } from "@/hooks/useGmail";
-import {
-  useSendDocumentViaGmail,
-} from "@/hooks/useDocument";
+import { useSendDocumentViaGmail } from "@/hooks/useDocument";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { getQuoteEmailDefaults } from "@/lib/crm/quote-pdf-labels";
+import { buildQuoteEmailMergeContext } from "@/lib/email/quote-email-merge";
 import { formatApiError } from "@/lib/validation-errors";
 import type { Contact } from "@/types";
 
@@ -40,31 +40,92 @@ export function SendQuoteEmailModal({
   onSent,
 }: Props) {
   const { locale } = useCrmLocale();
-  const emailDefaults = getQuoteEmailDefaults(locale);
   const refLabel = quoteReference?.trim() || documentTitle;
-  const defaultSubject = `${emailDefaults.subjectPrefix} ${refLabel}`;
 
   const { data: gmailStatus, isLoading: statusLoading } = useGmailStatus();
   const sendQuote = useSendDocumentViaGmail(documentId);
 
   const [defaultToValue, setDefaultToValue] = useState(defaultTo ?? "");
-  const [defaultSubjectValue, setDefaultSubjectValue] = useState(defaultSubject);
-  const [defaultBodyValue, setDefaultBodyValue] = useState(emailDefaults.body);
+  const [defaultSubjectValue, setDefaultSubjectValue] = useState("");
+  const [defaultBodyValue, setDefaultBodyValue] = useState("");
   const [templateId, setTemplateId] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingDefaults, setLoadingDefaults] = useState(false);
+  const [mergeContextExtras, setMergeContextExtras] = useState<
+    Record<string, string | undefined>
+  >({});
 
   useEffect(() => {
     if (!open) return;
-    const defaults = getQuoteEmailDefaults(locale);
-    const ref = quoteReference?.trim() || documentTitle;
-    setDefaultToValue(defaultTo ?? contact?.email ?? "");
-    setDefaultSubjectValue(`${defaults.subjectPrefix} ${ref}`);
-    setDefaultBodyValue(defaults.body);
+
     setTemplateId("");
     setError(null);
     setFullscreen(false);
-  }, [open, defaultTo, contact?.email, documentTitle, quoteReference, locale]);
+    setDefaultToValue(defaultTo ?? contact?.email ?? "");
+
+    let cancelled = false;
+    setLoadingDefaults(true);
+
+    void (async () => {
+      try {
+        const [acceptRes, profileRes] = await Promise.all([
+          axios.post<{ accept_url?: string }>(`/api/documents/${documentId}/accept-link`),
+          axios.get<{ full_name?: string; email_signature_html?: string }>(
+            "/api/account/profile"
+          ),
+        ]);
+        if (cancelled) return;
+
+        const acceptUrl = acceptRes.data.accept_url ?? null;
+        const contactLocale =
+          (contact as { preferred_language?: string } | null)?.preferred_language ??
+          locale;
+        const defaults = getQuoteEmailDefaults(contactLocale);
+        const ref = quoteReference?.trim() || documentTitle;
+
+        setMergeContextExtras(
+          buildQuoteEmailMergeContext({
+            contact,
+            companyName,
+            acceptUrl,
+            userDisplayName: profileRes.data.full_name,
+            userSignatureHtml: profileRes.data.email_signature_html,
+          })
+        );
+        setDefaultSubjectValue(`${defaults.subjectPrefix} ${ref}`);
+        setDefaultBodyValue(defaults.bodyHtml);
+      } catch {
+        if (cancelled) return;
+        const defaults = getQuoteEmailDefaults(locale);
+        setMergeContextExtras(
+          buildQuoteEmailMergeContext({
+            contact,
+            companyName,
+          })
+        );
+        setDefaultSubjectValue(`${defaults.subjectPrefix} ${refLabel}`);
+        setDefaultBodyValue(defaults.bodyHtml);
+      } finally {
+        if (!cancelled) setLoadingDefaults(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    open,
+    documentId,
+    defaultTo,
+    contact?.email,
+    contact,
+    documentTitle,
+    quoteReference,
+    locale,
+    refLabel,
+    companyName,
+  ]);
 
   const connected = gmailStatus?.connected ?? false;
   const configured = gmailStatus?.configured ?? true;
@@ -106,10 +167,11 @@ export function SendQuoteEmailModal({
       fullscreen={fullscreen}
       onToggleFullscreen={() => setFullscreen((v) => !v)}
       onCancel={onClose}
+      mergeContextExtras={mergeContextExtras}
     />
   );
 
-  if (fullscreen && open && connected) {
+  if (fullscreen && open && connected && !loadingDefaults) {
     return (
       <div className="fixed inset-0 z-[70] bg-[var(--background)] flex flex-col">
         <div className="border-b border-[var(--card-border)] px-4 py-3 flex items-center justify-between">
@@ -134,8 +196,8 @@ export function SendQuoteEmailModal({
 
   return (
     <Modal open={open} onClose={onClose} title="Send quote via email" size="xl">
-      {statusLoading ? (
-        <p className="text-sm text-body-muted">Checking mailbox connection…</p>
+      {statusLoading || loadingDefaults ? (
+        <p className="text-sm text-body-muted">Preparing email…</p>
       ) : !configured ? (
         <div className="space-y-3 text-sm">
           <p className="text-body-muted">
@@ -163,7 +225,7 @@ export function SendQuoteEmailModal({
           {gmailStatus?.email && (
             <p className="text-xs text-body-muted mb-3">
               Sending as <span className="font-medium">{gmailStatus.email}</span>
-              {" · PDF attached automatically"}
+              {" · PDF attached automatically · acceptance link included"}
             </p>
           )}
           {error && (

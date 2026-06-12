@@ -24,8 +24,11 @@ import {
   listMergeFields,
   prepareBodyForSend,
   prepareSubjectForSend,
-  type TemplateContext,
 } from "@/lib/email/merge-fields";
+import {
+  mergeQuoteEmailContext,
+  quoteEmailHasSignatureBlock,
+} from "@/lib/email/quote-email-merge";
 import { useGmailStatus } from "@/hooks/useGmail";
 import type { Contact } from "@/types";
 import { cn } from "@/lib/utils";
@@ -67,6 +70,7 @@ type EmailComposerProps = {
   onToggleFullscreen?: () => void;
   onCancel?: () => void;
   className?: string;
+  mergeContextExtras?: Record<string, string | undefined>;
 };
 
 function buildSignatureBlock(signatureHtml: string): string {
@@ -89,6 +93,7 @@ export function EmailComposer({
   onToggleFullscreen,
   onCancel,
   className,
+  mergeContextExtras,
 }: EmailComposerProps) {
   const { data: session } = useSession();
   const { data: gmailStatus } = useGmailStatus();
@@ -108,13 +113,24 @@ export function EmailComposer({
   const [mergeOpen, setMergeOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const templateContext: TemplateContext | null = useMemo(() => {
-    if (!contact) return null;
-    return buildTemplateContext({
-      contact,
-      company: companyName ? { name: companyName } : null,
-    });
-  }, [contact, companyName]);
+  const templateContext = useMemo(() => {
+    const base = contact
+      ? buildTemplateContext({
+          contact,
+          company: companyName ? { name: companyName } : null,
+        })
+      : {};
+    const merged = mergeQuoteEmailContext(
+      base as Record<string, string | undefined>,
+      mergeContextExtras ?? {}
+    );
+    return Object.keys(merged).length > 0 ? merged : null;
+  }, [contact, companyName, mergeContextExtras]);
+
+  const templateUsesSignatureBlock = useMemo(
+    () => quoteEmailHasSignatureBlock(defaultBody),
+    [defaultBody]
+  );
 
   const fromLabel = useMemo(() => {
     const name = session?.user?.name?.trim();
@@ -144,7 +160,7 @@ export function EmailComposer({
   }, [defaultTo, defaultSubject, defaultBody, contact?.id]);
 
   useEffect(() => {
-    if (isReply) return;
+    if (isReply || templateUsesSignatureBlock) return;
     void axios
       .get<{ email_signature_html?: string }>("/api/account/profile")
       .then((res) => {
@@ -158,7 +174,7 @@ export function EmailComposer({
         }
       })
       .catch(() => undefined);
-  }, [isReply, defaultBody]);
+  }, [isReply, defaultBody, templateUsesSignatureBlock]);
 
   const insertSignature = useCallback(() => {
     if (!signatureHtml) return;
@@ -220,7 +236,11 @@ export function EmailComposer({
         subject: finalSubject.trim(),
         body: finalBody,
         template_id: templateId || undefined,
-        skip_signature_append: signatureAppended || bodyHtml.includes('data-email-signature="true"'),
+        skip_signature_append:
+          signatureAppended ||
+          bodyHtml.includes('data-email-signature="true"') ||
+          quoteEmailHasSignatureBlock(bodyHtml) ||
+          templateUsesSignatureBlock,
         attachments: attachmentPayload.length ? attachmentPayload : undefined,
       });
     } catch (err) {
