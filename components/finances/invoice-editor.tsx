@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { Copy, FileDown, Mail } from "lucide-react";
+import { Copy, FileDown, Mail, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ContactSelect } from "@/components/forms/contact-select";
@@ -15,12 +15,14 @@ import { InvoicePaymentsPanel } from "@/components/finances/invoice-payments-pan
 import { useFinanceTransactions } from "@/hooks/useFinanceTransactions";
 import { SendInvoiceEmailModal } from "@/components/finances/send-invoice-email-modal";
 import {
+  useDeleteInvoice,
   useDuplicateInvoice,
   useInvoice,
   usePaymentLinks,
   useUpdateInvoice,
 } from "@/hooks/useFinances";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
+import { useWorkspace } from "@/components/crm/workspace-provider";
 import { formatApiError } from "@/lib/validation-errors";
 import { formatCurrency } from "@/lib/utils";
 import type { InvoiceLineItem } from "@/types";
@@ -47,6 +49,8 @@ type Props = {
 export function InvoiceEditor({ invoiceId }: Props) {
   const router = useRouter();
   const { canManage } = useWorkspaceCapabilities();
+  const { ctx } = useWorkspace();
+  const isOwner = ctx?.isWorkspaceOwner ?? false;
   const { data: invoice, isLoading, error, refetch } = useInvoice(invoiceId);
   const { data: paymentLinks = [] } = usePaymentLinks();
   const { data: invoiceTxs = [] } = useFinanceTransactions({
@@ -55,6 +59,7 @@ export function InvoiceEditor({ invoiceId }: Props) {
   });
   const updateInvoice = useUpdateInvoice(invoiceId);
   const duplicateInvoice = useDuplicateInvoice();
+  const deleteInvoice = useDeleteInvoice();
 
   const [contactId, setContactId] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -129,6 +134,16 @@ export function InvoiceEditor({ invoiceId }: Props) {
     if (!ok) return;
     await axios.post(`/api/finances/invoices/${invoiceId}/void`);
     void refetch();
+  }
+
+  async function deletePermanently() {
+    if (!invoice) return;
+    const ok = window.confirm(
+      `Permanently delete invoice ${invoice.invoice_number}? Related payment records will also be removed. This cannot be undone.`
+    );
+    if (!ok) return;
+    await deleteInvoice.mutateAsync(invoiceId);
+    router.push("/finances/invoices");
   }
 
   async function duplicate() {
@@ -229,6 +244,18 @@ export function InvoiceEditor({ invoiceId }: Props) {
           {canManage && !["voided", "paid"].includes(invoice.status) && (
             <Button variant="outline" size="sm" onClick={() => void voidInvoice()}>
               Void
+            </Button>
+          )}
+          {isOwner && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-[var(--error)] border-red-200 hover:bg-red-500/10"
+              disabled={deleteInvoice.isPending}
+              onClick={() => void deletePermanently()}
+            >
+              <Trash2 className="h-4 w-4 mr-1.5" />
+              Delete
             </Button>
           )}
         </div>

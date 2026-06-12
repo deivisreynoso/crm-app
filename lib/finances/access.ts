@@ -8,3 +8,7 @@ export function canManageFinances(role: TeamRole, isWorkspaceOwner: boolean): bo
 export function canViewExpenseData(role: TeamRole, isWorkspaceOwner: boolean): boolean {
   return canManageWorkspace(role, isWorkspaceOwner);
 }
+
+export function canDeleteInvoices(isWorkspaceOwner: boolean): boolean {
+  return isWorkspaceOwner;
+}

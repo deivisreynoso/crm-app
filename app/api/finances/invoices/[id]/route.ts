@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAuth, requireWorkspaceManage } from "@/lib/api/auth";
+import { requireAuth, requireWorkspaceManage, requireWorkspaceOwner } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
+import { ownerDeleteInvoice } from "@/lib/finances/delete-invoice";
 import { markOverdueInvoices } from "@/lib/finances/invoices";
 import { humanizeDbError } from "@/lib/validation-errors";
 
@@ -105,6 +106,32 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     return NextResponse.json({ data });
   } catch (err) {
     console.error("PATCH invoice:", err);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(_req: NextRequest, context: RouteContext) {
+  try {
+    const { workspaceOwnerId, isWorkspaceOwner, error } = await requireAuth();
+    if (error) return error;
+
+    const ownerError = requireWorkspaceOwner(isWorkspaceOwner);
+    if (ownerError) return ownerError;
+
+    const { id } = await context.params;
+    const supabase = createServerSideClient();
+
+    try {
+      await ownerDeleteInvoice(supabase, workspaceOwnerId!, id);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Delete failed";
+      const status = message === "Invoice not found" ? 404 : 400;
+      return NextResponse.json({ error: message }, { status });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("DELETE invoice:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

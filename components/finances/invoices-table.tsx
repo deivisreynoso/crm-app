@@ -5,7 +5,7 @@ import { CreateInvoiceWizard } from "@/components/finances/create-invoice-wizard
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { Ban, Copy, FileDown, Mail } from "lucide-react";
+import { Ban, Copy, FileDown, Mail, Trash2 } from "lucide-react";
 import {
   DataTable,
   DataTableBody,
@@ -16,8 +16,9 @@ import {
   DataTableShell,
 } from "@/components/ui/page-shell";
 import { Badge } from "@/components/ui/badge";
-import { useDuplicateInvoice, useInvoices } from "@/hooks/useFinances";
+import { useDuplicateInvoice, useDeleteInvoice, useInvoices } from "@/hooks/useFinances";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
+import { useWorkspace } from "@/components/crm/workspace-provider";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 const STATUS_VARIANT: Record<string, "default" | "info" | "success" | "warning"> = {
@@ -68,8 +69,11 @@ export function InvoicesTable() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const { canManage } = useWorkspaceCapabilities();
+  const { ctx } = useWorkspace();
+  const isOwner = ctx?.isWorkspaceOwner ?? false;
   const { data: rows = [], isLoading, refetch } = useInvoices(filter || undefined);
   const duplicateInvoice = useDuplicateInvoice();
+  const deleteInvoice = useDeleteInvoice();
 
   async function downloadPdf(id: string) {
     const { data } = await axios.get<{ file_url: string }>(`/api/finances/invoices/${id}/pdf`);
@@ -92,6 +96,20 @@ export function InvoicesTable() {
     setBusyId(id);
     try {
       await axios.post(`/api/finances/invoices/${id}/void`);
+      void refetch();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function deleteInvoiceRow(id: string, invoiceNumber: string) {
+    const ok = window.confirm(
+      `Permanently delete invoice ${invoiceNumber}? Related payment records will also be removed. This cannot be undone.`
+    );
+    if (!ok) return;
+    setBusyId(id);
+    try {
+      await deleteInvoice.mutateAsync(id);
       void refetch();
     } finally {
       setBusyId(null);
@@ -213,6 +231,15 @@ export function InvoicesTable() {
                             tone="danger"
                             disabled={isBusy}
                             onClick={() => void voidInvoice(inv.id)}
+                          />
+                        )}
+                        {isOwner && (
+                          <IconAction
+                            label="Delete invoice permanently"
+                            icon={Trash2}
+                            tone="danger"
+                            disabled={isBusy || deleteInvoice.isPending}
+                            onClick={() => void deleteInvoiceRow(inv.id, inv.invoice_number)}
                           />
                         )}
                       </div>

@@ -212,3 +212,18 @@ export function useDuplicateInvoice() {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["finance-invoices"] }),
   });
 }
+
+export function useDeleteInvoice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (invoiceId: string) => {
+      await axios.delete(`/api/finances/invoices/${invoiceId}`);
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["finance-invoices"] });
+      void qc.invalidateQueries({ queryKey: ["finance-overview"] });
+      void qc.invalidateQueries({ queryKey: ["finance-payment-links"] });
+      void qc.invalidateQueries({ queryKey: ["finance-transactions"] });
+    },
+  });
+}
