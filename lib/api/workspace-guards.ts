@@ -12,7 +12,6 @@ const PUBLIC_API_PREFIXES = [
   "/api/quotes/public/",
   "/api/integrations/n8n/",
   "/api/public/support/",
-  "/api/webhooks/stripe",
 ];
 
 /** Integration APIs authenticated by shared secret, not session role */

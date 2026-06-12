@@ -1,18 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
-import { PayNowSection } from "@/components/quotes/pay-now-section";
 import type { PublicQuoteView } from "@/lib/quotes/load-public-quote";
 import { getQuoteAcceptCopy } from "@/lib/quotes/public-accept-copy";
 
 export function QuoteAcceptCustomerPage({ token }: { token: string }) {
-  const searchParams = useSearchParams();
-  const paymentParam = searchParams.get("payment");
-
   const [quote, setQuote] = useState<PublicQuoteView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,21 +22,18 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
     [quote?.locale]
   );
 
-  async function loadQuote() {
-    const { data } = await axios.get<{ data: PublicQuoteView }>(
-      `/api/quotes/public/${encodeURIComponent(token)}`
-    );
-    setQuote(data.data);
-    if (data.data.response_email) {
-      setEmail(data.data.response_email);
-    }
-  }
-
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        await loadQuote();
+        const { data } = await axios.get<{ data: PublicQuoteView }>(
+          `/api/quotes/public/${encodeURIComponent(token)}`
+        );
+        if (cancelled) return;
+        setQuote(data.data);
+        if (data.data.response_email) {
+          setEmail(data.data.response_email);
+        }
       } catch {
         if (!cancelled) setError(copy.invalid);
       } finally {
@@ -52,11 +44,6 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
       cancelled = true;
     };
   }, [token, copy.invalid]);
-
-  useEffect(() => {
-    if (paymentParam !== "success") return;
-    void loadQuote().catch(() => undefined);
-  }, [paymentParam, token]);
 
   async function respond(action: "accept" | "reject") {
     if (action === "accept") {
@@ -124,16 +111,18 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
 
   if (!quote) return null;
 
-  const alreadyResponded =
-    done ||
+  const isAccepted =
+    done === "accept" ||
     quote.status === "accepted" ||
-    quote.status === "rejected" ||
-    quote.accepted_at ||
-    quote.rejected_at;
+    quote.status === "signed" ||
+    Boolean(quote.accepted_at);
 
-  const payerEmail = email.trim() || quote.response_email || "";
-  const showPaymentBanner =
-    paymentParam === "success" || paymentParam === "cancelled" || quote.payment_received;
+  const isRejected =
+    done === "reject" ||
+    quote.status === "rejected" ||
+    Boolean(quote.rejected_at);
+
+  const alreadyResponded = isAccepted || isRejected;
 
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4">
@@ -180,38 +169,13 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
           </p>
         )}
 
-        {showPaymentBanner && (
-          <div
-            className={`mt-6 rounded-lg px-4 py-3 text-sm text-center ${
-              paymentParam === "cancelled"
-                ? "bg-amber-50 border border-amber-200 text-amber-900"
-                : "bg-green-50 border border-green-200 text-green-800"
-            }`}
-          >
-            {paymentParam === "cancelled"
-              ? copy.paymentCancelled
-              : copy.paymentSuccess}
-          </div>
-        )}
-
         {alreadyResponded ? (
           <div className="mt-8 space-y-4">
             <div className="p-4 rounded-lg bg-slate-50 text-center">
               <p className="font-semibold text-slate-900">
-                {quote.status === "accepted" || done === "accept"
-                  ? copy.accepted
-                  : copy.rejected}
+                {isAccepted ? copy.accepted : copy.rejected}
               </p>
             </div>
-            {(quote.status === "accepted" || done === "accept") && (
-              <PayNowSection
-                token={token}
-                defaultEmail={payerEmail}
-                locale={quote.locale}
-                paymentsEnabled={quote.payments_enabled}
-                paymentReceived={quote.payment_received || paymentParam === "success"}
-              />
-            )}
           </div>
         ) : (
           <div className="mt-8 space-y-4">

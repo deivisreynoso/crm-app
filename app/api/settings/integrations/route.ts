@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { requireAuth, requireWorkspaceManage } from "@/lib/api/auth";
-import { isStripeConfigured } from "@/lib/integrations/stripe";
 import { isGoogleOAuthConfigured } from "@/lib/google/oauth-config";
 import { isGa4DataConfigured } from "@/lib/google/analytics-data";
 
@@ -11,7 +10,7 @@ function maskPropertyId(propertyId: string | undefined): string | null {
   return `${id.slice(0, 4)}…${id.slice(-3)}`;
 }
 
-/** Admin integration status (N8N, GA, Mailgun, Stripe). */
+/** Admin integration status (N8N, GA, Mailgun). */
 export async function GET() {
   const { role, isWorkspaceOwner, error } = await requireAuth();
   if (error) return error;
@@ -26,11 +25,6 @@ export async function GET() {
       n8n: {
         configured: Boolean(process.env.N8N_WEBHOOK_URL?.trim()),
         inbound_path: "/api/integrations/n8n/inbound",
-      },
-      stripe: {
-        configured: isStripeConfigured(),
-        webhook_path: "/api/webhooks/stripe",
-        webhook_secret_set: Boolean(process.env.STRIPE_WEBHOOK_SECRET?.trim()),
       },
       mailgun: {
         configured: Boolean(

@@ -5,11 +5,6 @@ import axios from "axios";
 
 type IntegrationStatus = {
   n8n: { configured: boolean; inbound_path: string };
-  stripe: {
-    configured: boolean;
-    webhook_path?: string;
-    webhook_secret_set?: boolean;
-  };
   mailgun: { configured: boolean };
   google_analytics: {
     configured: boolean;
@@ -34,15 +29,6 @@ export function AdminIntegrationsPanel() {
 
   const rows = [
     { label: "N8N", ok: data.n8n.configured, detail: data.n8n.inbound_path },
-    {
-      label: "Stripe",
-      ok: data.stripe.configured,
-      detail: data.stripe.configured
-        ? `${data.stripe.webhook_path ?? "/api/webhooks/stripe"} · webhook secret ${
-            data.stripe.webhook_secret_set ? "set" : "missing"
-          }`
-        : "Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET in server env",
-    },
     { label: "Mailgun", ok: data.mailgun.configured, detail: "Transactional email" },
     {
       label: "Google Analytics (GA4 Data API)",
@@ -76,17 +62,7 @@ export function AdminIntegrationsPanel() {
       </ul>
 
       <div className="rounded-xl border border-[var(--card-border)] p-4 text-xs text-body-muted space-y-3">
-        <p className="font-medium text-heading text-sm">Stripe setup</p>
-        <p>
-          Add <code className="text-[11px]">STRIPE_SECRET_KEY</code> and{" "}
-          <code className="text-[11px]">STRIPE_WEBHOOK_SECRET</code> to server environment
-          variables. Point your Stripe webhook to{" "}
-          <code className="text-[11px]">{data.stripe.webhook_path ?? "/api/webhooks/stripe"}</code>{" "}
-          and subscribe to <code className="text-[11px]">checkout.session.completed</code>,{" "}
-          <code className="text-[11px]">payment_intent.succeeded</code>, and{" "}
-          <code className="text-[11px]">invoice.paid</code>.
-        </p>
-        <p className="font-medium text-heading text-sm pt-1">Google Analytics setup</p>
+        <p className="font-medium text-heading text-sm">Google Analytics setup</p>
         <p>
           Create a Google Cloud service account with Analytics Data API access, grant it Viewer on
           your GA4 property, then set <code className="text-[11px]">GA4_PROPERTY_ID</code> (e.g.{" "}
