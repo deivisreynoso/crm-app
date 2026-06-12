@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatTimelineDateTime } from "@/lib/utils/datetime";
+import { emailBodyPlainText } from "@/lib/email/html-body";
+import { EmailHtmlBody, emailCopyText } from "@/components/email/email-html-body";
 import type { ActivityFeedItem } from "@/types";
 
 type TimelineLabels = {
@@ -189,9 +191,7 @@ function ActivityBody({
               : labels.types.email}
         </p>
         {item.email_body ? (
-          <p className="whitespace-pre-wrap leading-relaxed text-body">
-            {linkifyText(item.email_body)}
-          </p>
+          <EmailHtmlBody body={item.email_body} />
         ) : (
           <p className="text-body-muted italic">{summaryLine(item, labels)}</p>
         )}
@@ -252,8 +252,10 @@ function TimelineRow({
   async function handleCopy() {
     const text =
       item.type === "email" && item.email_body
-        ? [item.email_subject, item.email_body].filter(Boolean).join("\n\n")
-        : item.content;
+        ? emailCopyText(item.email_subject, item.email_body)
+        : item.type === "email" && item.content
+          ? emailCopyText(item.email_subject, emailBodyPlainText(item.content))
+          : item.content;
     try {
       await navigator.clipboard.writeText(text);
       setCopyState("copied");

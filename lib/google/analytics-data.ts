@@ -85,6 +85,7 @@ export type Ga4DashboardData = {
   conversionEvents: Ga4EventRow[];
   topPages: { path: string; pageviews: number }[];
   trafficSources: { source: string; sessions: number }[];
+  countries: { country: string; sessions: number; users: number }[];
   catalogEventNames: string[];
 };
 
@@ -93,7 +94,7 @@ export async function fetchGa4Dashboard(days: Ga4ReportRange = "30"): Promise<Ga
   const client = getAnalyticsClient();
   const { startDate, endDate } = rangeToDates(days);
 
-  const [summary, daily, eventsReport, pages, sources] = await Promise.all([
+  const [summary, daily, eventsReport, pages, sources, countriesReport] = await Promise.all([
     client.runReport({
       property: propertyId,
       dateRanges: [{ startDate, endDate }],
@@ -141,6 +142,14 @@ export async function fetchGa4Dashboard(days: Ga4ReportRange = "30"): Promise<Ga
       metrics: [{ name: "sessions" }],
       orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
       limit: 10,
+    }),
+    client.runReport({
+      property: propertyId,
+      dateRanges: [{ startDate, endDate }],
+      dimensions: [{ name: "country" }],
+      metrics: [{ name: "sessions" }, { name: "totalUsers" }],
+      orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
+      limit: 15,
     }),
   ]);
 
@@ -203,6 +212,13 @@ export async function fetchGa4Dashboard(days: Ga4ReportRange = "30"): Promise<Ga
       sessions: Number(row.metricValues?.[0]?.value ?? 0),
     })) ?? [];
 
+  const countries =
+    countriesReport[0]?.rows?.map((row) => ({
+      country: row.dimensionValues?.[0]?.value ?? "Unknown",
+      sessions: Number(row.metricValues?.[0]?.value ?? 0),
+      users: Number(row.metricValues?.[1]?.value ?? 0),
+    })) ?? [];
+
   return {
     startDate,
     endDate,
@@ -212,6 +228,7 @@ export async function fetchGa4Dashboard(days: Ga4ReportRange = "30"): Promise<Ga
     conversionEvents,
     topPages,
     trafficSources,
+    countries,
     catalogEventNames: Object.keys(GA4_WEBSITE_EVENT_CATALOG),
   };
 }

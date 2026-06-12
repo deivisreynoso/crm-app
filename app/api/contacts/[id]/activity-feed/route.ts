@@ -5,6 +5,7 @@ import { verifyContactInWorkspace } from "@/lib/contacts/verify-contact-ownershi
 import { resolveAuthorNames } from "@/lib/activities/resolve-author-names";
 import { selectWithColumnFallback } from "@/lib/api/select-column-fallback";
 import { parseStoredTimestamp } from "@/lib/utils/datetime";
+import { emailBodyPlainText } from "@/lib/email/html-body";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -63,8 +64,9 @@ function mapActivityContent(
   if (body || subject) {
     const label = direction === "inbound" ? "Email received" : "Email sent";
     const subj = subject.trim() || "(No subject)";
+    const plainBody = body ? emailBodyPlainText(body) : "";
     return {
-      content: body ? `${label}: ${subj}\n\n${body}` : `${label}: ${subj}`,
+      content: plainBody ? `${label}: ${subj}\n\n${plainBody}` : `${label}: ${subj}`,
       email_subject: subj,
       email_body: body,
       email_direction: direction,

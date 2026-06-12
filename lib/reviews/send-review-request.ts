@@ -7,6 +7,7 @@ import { GOOGLE_REVIEWS_URL } from "@/lib/website/google-reviews-url";
 import { defaultReviewTemplateContent } from "@/lib/reviews/default-review-template";
 import { renderReviewEmail } from "@/lib/reviews/review-template-context";
 import { resolveGmailSendOptions } from "@/lib/emails/build-gmail-send-options";
+import { getSenderDisplayName } from "@/lib/email/sender-profile";
 import { syncContactEmailsFromGmail } from "@/lib/google/gmail-sync";
 import { triggerN8NWebhook } from "@/lib/n8n";
 import type { CrmLocale } from "@/lib/crm/i18n";
@@ -155,10 +156,13 @@ export async function sendReviewRequest(
     cc: input.cc,
   });
 
+  const fromName = await getSenderDisplayName(supabase, input.actorUserId);
+
   const sent = await sendGmailMessage(input.actorUserId, {
     to,
     subject: rendered.subject,
     body: rendered.body,
+    fromName,
     ...sendOptions,
   });
 

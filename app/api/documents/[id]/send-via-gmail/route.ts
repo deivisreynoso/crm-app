@@ -202,12 +202,13 @@ export async function POST(req: NextRequest, context: RouteContext) {
       }
     }
 
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("email_signature_html, display_name")
+      .eq("id", userId!)
+      .maybeSingle();
+
     if (!parsed.data.skip_signature_append) {
-      const { data: profile } = await supabase
-        .from("user_profiles")
-        .select("email_signature_html")
-        .eq("id", userId!)
-        .maybeSingle();
       emailBody = appendEmailSignature(
         emailBody,
         profile?.email_signature_html as string | null | undefined
@@ -262,6 +263,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
       to,
       subject,
       body: emailBody,
+      fromName: profile?.display_name as string | null | undefined,
       attachments: [
         {
           filename: fileName,

@@ -162,6 +162,7 @@ export type GmailSendInput = {
   to: string;
   subject: string;
   body: string;
+  fromName?: string | null;
   cc?: string;
   bcc?: string;
   threadId?: string;
@@ -184,7 +185,11 @@ export async function sendGmailMessage(
   if (!accessToken) return null;
 
   const fromEmail = await getGoogleGmailConnectedEmail(actorUserId);
-  const raw = buildGmailRawMessage({ ...input, from: fromEmail });
+  const raw = buildGmailRawMessage({
+    ...input,
+    from: fromEmail,
+    fromName: input.fromName,
+  });
 
   const payload: { raw: string; threadId?: string } = { raw };
   if (input.threadId) payload.threadId = input.threadId;

@@ -1,8 +1,24 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
+import {
+  Calendar,
+  Contact,
+  Headphones,
+  Target,
+  Ticket,
+  TrendingUp,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import { useOperationsAnalytics } from "@/hooks/useOperationsAnalytics";
 import type { AnalyticsDateRange } from "@/components/analytics/analytics-date-filters";
+import {
+  AnalyticsErrorCard,
+  AnalyticsHorizontalBarChart,
+  AnalyticsKpiCard,
+  AnalyticsLoadingGrid,
+  AnalyticsSectionHeader,
+} from "@/components/analytics/analytics-ui";
 
 interface OperationsDashboardProps {
   dateRange: AnalyticsDateRange;
@@ -12,71 +28,119 @@ export function OperationsDashboard({ dateRange }: OperationsDashboardProps) {
   const { data, isLoading, error } = useOperationsAnalytics(dateRange);
 
   if (isLoading) {
-    return <p className="text-body-muted text-sm">Loading operations metrics…</p>;
+    return <AnalyticsLoadingGrid count={9} />;
   }
 
   if (error || !data) {
     return (
-      <p className="text-[var(--error)] text-sm">Could not load operations metrics.</p>
+      <AnalyticsErrorCard message="Could not load operations metrics. Try adjusting the date range." />
     );
   }
 
-  const cards = [
-    { label: "Leads", value: data.leads },
-    { label: "Prospects", value: data.prospects },
-    { label: "Active contacts", value: data.activeContacts },
-    { label: "Open tickets", value: data.openTickets },
-    { label: "In progress", value: data.ticketsInProgress },
-    { label: "Urgent tickets", value: data.urgentTickets },
-    { label: "Closed (range)", value: data.ticketsClosedInRange },
-    { label: "Upcoming meetings", value: data.upcomingAppointments },
-    { label: "Appointments (range)", value: data.appointmentsInRange },
-  ];
+  const rangeLabel = `${dateRange.start_date} — ${dateRange.end_date}`;
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
-        {cards.map((c) => (
-          <Card key={c.label} padding="md">
-            <p className="text-xs font-semibold uppercase tracking-wide text-body-muted">
-              {c.label}
-            </p>
-            <p className="text-2xl font-bold text-heading mt-2">{c.value}</p>
-          </Card>
-        ))}
+      <AnalyticsSectionHeader
+        eyebrow="Operations overview"
+        subtitle={rangeLabel}
+        meta="CRM activity in the selected date range"
+      />
+
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-body-muted mb-3">
+          Contacts & pipeline intake
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <AnalyticsKpiCard label="Leads" value={data.leads} icon={UserPlus} accent="sky" />
+          <AnalyticsKpiCard label="Prospects" value={data.prospects} icon={Target} accent="navy" />
+          <AnalyticsKpiCard
+            label="Active contacts"
+            value={data.activeContacts}
+            icon={Users}
+            accent="magenta"
+          />
+          <AnalyticsKpiCard
+            label="Total contacts"
+            value={data.totalContacts}
+            icon={Contact}
+            accent="navy"
+            hint="All statuses in workspace"
+          />
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card padding="md">
-          <h3 className="text-sm font-semibold text-heading mb-3">Tickets by status</h3>
-          <ul className="space-y-2 text-sm">
-            {data.ticketsByStatus.length === 0 ? (
-              <li className="text-body-muted">No tickets in range</li>
-            ) : (
-              data.ticketsByStatus.map((row) => (
-                <li key={row.status} className="flex justify-between">
-                  <span className="capitalize text-body-muted">{row.status.replace("_", " ")}</span>
-                  <span className="font-medium text-heading">{row.count}</span>
-                </li>
-              ))
-            )}
-          </ul>
-        </Card>
-        <Card padding="md">
-          <h3 className="text-sm font-semibold text-heading mb-3">Tickets by priority</h3>
-          <ul className="space-y-2 text-sm">
-            {data.ticketsByPriority.length === 0 ? (
-              <li className="text-body-muted">No tickets in range</li>
-            ) : (
-              data.ticketsByPriority.map((row) => (
-                <li key={row.priority} className="flex justify-between">
-                  <span className="capitalize text-body-muted">{row.priority}</span>
-                  <span className="font-medium text-heading">{row.count}</span>
-                </li>
-              ))
-            )}
-          </ul>
-        </Card>
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-body-muted mb-3">
+          Service tickets
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <AnalyticsKpiCard
+            label="Open tickets"
+            value={data.openTickets}
+            icon={Ticket}
+            accent="warning"
+          />
+          <AnalyticsKpiCard
+            label="In progress"
+            value={data.ticketsInProgress}
+            icon={TrendingUp}
+            accent="sky"
+          />
+          <AnalyticsKpiCard
+            label="Urgent"
+            value={data.urgentTickets}
+            icon={Headphones}
+            accent="warning"
+            hint="High priority open tickets"
+          />
+          <AnalyticsKpiCard
+            label="Closed in range"
+            value={data.ticketsClosedInRange}
+            icon={Ticket}
+            accent="success"
+          />
+        </div>
+      </div>
+
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-body-muted mb-3">
+          Appointments
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <AnalyticsKpiCard
+            label="Upcoming meetings"
+            value={data.upcomingAppointments}
+            icon={Calendar}
+            accent="magenta"
+            hint="Scheduled from today forward"
+          />
+          <AnalyticsKpiCard
+            label="Appointments in range"
+            value={data.appointmentsInRange}
+            icon={Calendar}
+            accent="sky"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <AnalyticsHorizontalBarChart
+          title="Tickets by status"
+          subtitle="Distribution in selected period"
+          data={data.ticketsByStatus}
+          labelKey="status"
+          valueKey="count"
+          emptyMessage="No tickets in this date range"
+        />
+        <AnalyticsHorizontalBarChart
+          title="Tickets by priority"
+          subtitle="Open and closed tickets combined"
+          data={data.ticketsByPriority}
+          labelKey="priority"
+          valueKey="count"
+          emptyMessage="No tickets in this date range"
+        />
       </div>
     </div>
   );

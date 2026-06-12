@@ -23,14 +23,20 @@ import {
   Users,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import {
   GA4_EVENT_CATEGORY_COLORS,
   GA4_EVENT_CATEGORY_LABELS,
   type Ga4EventCategory,
 } from "@/lib/analytics/ga4-website-events";
-
-const CHART_COLORS = ["#1b318b", "#38b6ff", "#c96dd8", "#10b981", "#6366f1", "#f59e0b"];
+import {
+  ANALYTICS_CHART_COLORS,
+  AnalyticsErrorCard,
+  AnalyticsKpiCard,
+  AnalyticsLoadingGrid,
+  AnalyticsRankedBarList,
+  AnalyticsSectionHeader,
+  analyticsChartTooltipStyle,
+} from "@/components/analytics/analytics-ui";
 
 type Ga4Data = {
   startDate: string;
@@ -64,6 +70,7 @@ type Ga4Data = {
   }[];
   topPages: { path: string; pageviews: number }[];
   trafficSources: { source: string; sessions: number }[];
+  countries: { country: string; sessions: number; users: number }[];
   catalogEventNames: string[];
 };
 
@@ -87,103 +94,6 @@ function CategoryBadge({ category }: { category: Ga4EventCategory }) {
     >
       {GA4_EVENT_CATEGORY_LABELS[category]}
     </span>
-  );
-}
-
-function KpiCard({
-  label,
-  value,
-  hint,
-  accent,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  accent?: "navy" | "sky" | "magenta" | "success";
-  icon?: React.ComponentType<{ className?: string }>;
-}) {
-  const accentClass = {
-    navy: "from-[#1b318b]/12 to-transparent border-[#1b318b]/20",
-    sky: "from-[#38b6ff]/12 to-transparent border-[#38b6ff]/25",
-    magenta: "from-[#c96dd8]/12 to-transparent border-[#c96dd8]/25",
-    success: "from-[#10b981]/12 to-transparent border-[#10b981]/25",
-  }[accent ?? "navy"];
-
-  return (
-    <Card
-      padding="md"
-      className={cn(
-        "relative overflow-hidden border bg-gradient-to-br",
-        accentClass
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-body-muted">
-            {label}
-          </p>
-          <p className="text-2xl font-bold text-heading mt-2">{value}</p>
-          {hint && <p className="text-xs text-body-muted mt-1">{hint}</p>}
-        </div>
-        {Icon && (
-          <div className="rounded-lg bg-[var(--surface-subtle)] p-2 text-[var(--primary)]">
-            <Icon className="h-4 w-4" />
-          </div>
-        )}
-      </div>
-    </Card>
-  );
-}
-
-function RankedBarList({
-  title,
-  rows,
-  valueKey,
-  labelKey,
-  color = CHART_COLORS[1],
-}: {
-  title: string;
-  rows: Record<string, string | number>[];
-  valueKey: string;
-  labelKey: string;
-  color?: string;
-}) {
-  const max = Math.max(...rows.map((r) => Number(r[valueKey]) || 0), 1);
-
-  return (
-    <Card padding="md" className="h-full">
-      <h3 className="text-sm font-semibold text-heading mb-4">{title}</h3>
-      {rows.length === 0 ? (
-        <p className="text-sm text-body-muted">No data for this period.</p>
-      ) : (
-        <ul className="space-y-3">
-          {rows.map((row, i) => {
-            const label = String(row[labelKey] || "—");
-            const value = Number(row[valueKey]) || 0;
-            const width = Math.max(4, (value / max) * 100);
-            return (
-              <li key={`${label}-${i}`}>
-                <div className="flex items-center justify-between gap-2 text-sm mb-1">
-                  <span className="truncate text-body-muted" title={label}>
-                    {label}
-                  </span>
-                  <span className="font-semibold text-heading shrink-0">
-                    {value.toLocaleString()}
-                  </span>
-                </div>
-                <div className="h-1.5 rounded-full bg-[var(--surface-subtle)] overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{ width: `${width}%`, background: color }}
-                  />
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </Card>
   );
 }
 
@@ -239,24 +149,22 @@ export function WebsiteAnalyticsDashboard({ days }: Props) {
   }, [data]);
 
   if (loading) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 animate-pulse">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-28 rounded-xl bg-[var(--surface-subtle)]" />
-        ))}
-      </div>
-    );
+    return <AnalyticsLoadingGrid count={6} />;
   }
 
   if (error) {
     return (
-      <Card padding="md" className="border-amber-500/30 bg-amber-500/10">
-        <p className="text-sm text-amber-900 dark:text-amber-200">{error}</p>
-        <p className="text-xs mt-2 text-body-muted">
-          An admin must configure GA4_PROPERTY_ID and service account credentials under Settings →
-          Integrations.
-        </p>
-      </Card>
+      <AnalyticsErrorCard
+        message={
+          <>
+            {error}
+            <span className="block text-xs mt-2 text-body-muted font-normal">
+              An admin must configure GA4_PROPERTY_ID and service account credentials under
+              Settings → Integrations.
+            </span>
+          </>
+        }
+      />
     );
   }
 
@@ -269,53 +177,45 @@ export function WebsiteAnalyticsDashboard({ days }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--secondary)]">
-            Website traffic & conversions
-          </p>
-          <p className="text-sm text-body-muted mt-1">
-            {data.startDate} — {data.endDate}
-          </p>
-        </div>
-        <p className="text-xs text-body-muted">
-          Custom events from clickin360.com · mark key events in GA4 Admin for conversion totals
-        </p>
-      </div>
+      <AnalyticsSectionHeader
+        eyebrow="Website traffic & conversions"
+        subtitle={`${data.startDate} — ${data.endDate}`}
+        meta="Custom events from clickin360.com · mark key events in GA4 Admin for conversion totals"
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        <KpiCard
+        <AnalyticsKpiCard
           label="Sessions"
-          value={data.metrics.sessions.toLocaleString()}
+          value={data.metrics.sessions}
           icon={TrendingUp}
           accent="sky"
         />
-        <KpiCard
+        <AnalyticsKpiCard
           label="Users"
-          value={data.metrics.users.toLocaleString()}
+          value={data.metrics.users}
           icon={Users}
           accent="navy"
         />
-        <KpiCard
+        <AnalyticsKpiCard
           label="Pageviews"
-          value={data.metrics.pageviews.toLocaleString()}
+          value={data.metrics.pageviews}
           icon={MousePointerClick}
           accent="magenta"
         />
-        <KpiCard
+        <AnalyticsKpiCard
           label="Conversions"
-          value={data.metrics.conversions.toLocaleString()}
+          value={data.metrics.conversions}
           hint={`${pct(data.metrics.sessionConversionRate)} session conversion rate`}
           icon={Sparkles}
           accent="success"
         />
-        <KpiCard
+        <AnalyticsKpiCard
           label="Engagement rate"
           value={pct(data.metrics.engagementRate)}
           hint="Engaged sessions / sessions"
           accent="sky"
         />
-        <KpiCard
+        <AnalyticsKpiCard
           label="Avg. session"
           value={data.metrics.averageSessionDurationLabel}
           hint="Time on site per session"
@@ -350,14 +250,7 @@ export function WebsiteAnalyticsDashboard({ days }: Props) {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" />
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--card)",
-                    border: "1px solid var(--card-border)",
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
-                />
+                <Tooltip contentStyle={analyticsChartTooltipStyle} />
                 <Area
                   type="monotone"
                   dataKey="sessions"
@@ -525,15 +418,15 @@ export function WebsiteAnalyticsDashboard({ days }: Props) {
         )}
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <RankedBarList
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <AnalyticsRankedBarList
           title="Top pages"
           rows={data.topPages}
           labelKey="path"
           valueKey="pageviews"
-          color={CHART_COLORS[0]}
+          color={ANALYTICS_CHART_COLORS[0]}
         />
-        <RankedBarList
+        <AnalyticsRankedBarList
           title="Traffic sources"
           rows={data.trafficSources.map((s) => ({
             ...s,
@@ -541,7 +434,15 @@ export function WebsiteAnalyticsDashboard({ days }: Props) {
           }))}
           labelKey="source"
           valueKey="sessions"
-          color={CHART_COLORS[1]}
+          color={ANALYTICS_CHART_COLORS[1]}
+        />
+        <AnalyticsRankedBarList
+          title="Countries"
+          subtitle="Sessions by visitor country"
+          rows={data.countries ?? []}
+          labelKey="country"
+          valueKey="sessions"
+          color={ANALYTICS_CHART_COLORS[2]}
         />
       </div>
     </div>

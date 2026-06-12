@@ -13,6 +13,7 @@ import {
   useTicketEmails,
   type ContactEmailMessage,
 } from "@/hooks/useGmail";
+import { EmailHtmlBody } from "@/components/email/email-html-body";
 import { formatApiError } from "@/lib/validation-errors";
 import type { Contact } from "@/types";
 
@@ -277,7 +278,7 @@ export function ContactEmailPanel({
                         </Button>
                       )}
                     </div>
-                    <p className="text-heading whitespace-pre-wrap">{msg.body}</p>
+                    <EmailHtmlBody body={msg.body} />
                   </li>
                 ))}
               </ul>
