@@ -28,7 +28,7 @@ git log -1 --format='%h %s (%cs)'
 
 | Date | Commit | Type | Summary |
 |------|--------|------|---------|
-| 2026-06-10 | `feat/crm-iteration-2` | feature | **CRM enhancement sprint — iteration 2:** unified email composer (TipTap rich text, merge fields, templates, attachments, preview) on contacts/tickets/quotes; product catalog edit/delete with quote-reference guard; Stripe quote Pay Now + webhooks; GA4 Website analytics tab; MFA scaffolding removed (migration 051); WhatsApp/Webchat + CID tickets remain proposal-only |
+| 2026-06-10 | `90c7522` | feature | **CRM enhancement sprint — iteration 2:** unified email composer (TipTap rich text, merge fields, templates, attachments, preview) on contacts/tickets/quotes; product catalog edit/delete with quote-reference guard; Stripe quote Pay Now + webhooks; GA4 Website analytics tab; MFA scaffolding removed (migration 051); WhatsApp/Webchat + CID tickets remain proposal-only |
 | 2026-06-10 | `c12c4d9` | feature | **CRM enhancement sprint (iteration 1):** settings redesign (member vs admin sections), quote branding + product catalog tabs on Quotes, email signatures, calendar location types (physical / Google Meet / other) + assignee, public quote acceptance disclaimer (EN/ES), N8N/WhatsApp/Stripe inbound scaffolding, admin integrations status panel |
 | 2026-06-10 | `bd31186` | feature + fix | **Dual-email owner login:** canonical session maps personal + workspace emails to same CRM profile (`OWNER_LOGIN_ALIASES`, `team_members` lookup); `authUserId` for password/profile updates |
 | 2026-06-10 | `ecbd72d` | feature | **Login policy:** owner/admin/sales/viewer email/password; Google SSO `@clickin360.com` only; viewers blocked from Google |
@@ -372,4 +372,4 @@ Historical phases map to git eras (not separate products):
 
 ---
 
-*Last updated: 2026-06-10 (`feat/crm-iteration-2`).*
+*Last updated: 2026-06-10 (`main` @ `90c7522`).*
