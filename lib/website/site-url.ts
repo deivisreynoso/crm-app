@@ -14,6 +14,7 @@ export const MARKETING_PAGE_SLUGS = [
   "offers",
   "privacy",
   "services",
+  "support",
 ] as const;
 
 /** Paths that must not be indexed (CRM, auth, APIs). */

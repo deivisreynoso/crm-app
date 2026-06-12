@@ -10,6 +10,7 @@ export interface User {
   
   // Contact related types
   export interface Contact {
+    customer_id?: string | null;
     id: string;
     user_id: string;
     first_name: string;
@@ -215,6 +216,7 @@ export interface User {
     user_id: string;
     contact_id?: string | null;
     company_id?: string | null;
+    source?: "internal" | "website_widget";
     title: string;
     subject?: string;
     description?: string;
@@ -401,15 +403,19 @@ export interface User {
     contact_id?: string | null;
     company_id?: string | null;
     opportunity_id?: string | null;
+    assigned_to?: string | null;
     title: string;
     description?: string;
     start_time: string;
     end_time: string;
     location?: string;
-    location_type?: "physical" | "zoom" | "google_meet" | "teams" | "other" | null;
+    location_type?: "physical" | "google_meet" | "other" | null;
     event_kind?: "meeting" | "appointment";
     google_event_id?: string;
+    google_sync_user_id?: string | null;
     is_synced?: boolean;
+    owner_name?: string | null;
+    owner_color?: string | null;
     created_at: string;
     updated_at: string;
   }
@@ -418,12 +424,13 @@ export interface User {
     contact_id?: string;
     company_id?: string;
     opportunity_id?: string;
+    assigned_to?: string;
     title: string;
     description?: string;
     start_time: string;
     end_time: string;
     location?: string;
-    location_type?: "physical" | "zoom" | "google_meet" | "teams" | "other";
+    location_type?: "physical" | "google_meet" | "other";
   }
 
   export interface OperationsMetrics {

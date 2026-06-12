@@ -9,6 +9,7 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
+import { resolveCalendarOwnerColor } from "@/lib/users/calendar-colors";
 
 export type LocationType = "physical" | "google_meet" | "other";
 
@@ -67,9 +68,11 @@ export function calendarEventColor(event: {
   location_type?: string | null;
   description?: string | null;
   title?: string;
+  owner_color?: string | null;
+  assigned_to?: string | null;
 }): string {
   if (isAppointmentEvent(event)) return APPOINTMENT_EVENT_COLOR;
-  return locationColor(event.location_type);
+  return resolveCalendarOwnerColor(event.owner_color);
 }
 
 export function getMonthGrid(anchor: Date) {

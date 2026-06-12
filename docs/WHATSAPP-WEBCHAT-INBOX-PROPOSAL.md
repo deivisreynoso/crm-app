@@ -1,8 +1,8 @@
 # WhatsApp + Webchat — Unified Conversation Inbox (Architecture Proposal)
 
-**Status:** Awaiting approval — do not implement until reviewed.  
-**Iteration:** CRM Enhancement Sprint 2, Task 3  
-**Constraint:** No changes to existing authentication logic.
+**Status:** On hold — code removed in Sprint 3. Proposal preserved for future reference. No implementation until explicitly re-approved.  
+**Iteration:** CRM Enhancement Sprint 2, Task 3 (proposal); Sprint 3 removed WhatsApp integration code  
+**Constraint:** No changes to existing authentication logic. `/api/integrations/n8n/inbound` remains live for webchat.
 
 ---
 

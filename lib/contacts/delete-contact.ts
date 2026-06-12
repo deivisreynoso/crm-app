@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { deleteDocumentStorage } from "@/lib/storage/cleanup-document";
 
 /**
  * Remove dependent records tied to a contact, then delete the contact.
@@ -36,6 +37,16 @@ export async function deleteContactWithDependents(
   }
 
   const opportunityIds = (opportunities ?? []).map((o) => o.id as string);
+
+  const { data: contactDocs } = await supabase
+    .from("documents")
+    .select("storage_path")
+    .eq("contact_id", contactId)
+    .eq("user_id", workspaceOwnerId);
+
+  for (const doc of contactDocs ?? []) {
+    await deleteDocumentStorage(supabase, doc.storage_path as string | null);
+  }
 
   const deleteByContact = async (table: "calendar_events" | "documents" | "payments") => {
     const { error } = await supabase

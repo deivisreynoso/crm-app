@@ -13,6 +13,7 @@ import {
 import { contactWriteErrorMessage } from "@/lib/identity/duplicate-errors";
 import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
 import { recordAuditLog } from "@/lib/audit/record";
+import { allocateCustomerId } from "@/lib/contacts/customer-id";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -128,6 +129,24 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     if (!data) {
       return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+    }
+
+    if (
+      parsed.data.status === "active" &&
+      !data.customer_id
+    ) {
+      try {
+        const customerId = await allocateCustomerId(supabase, workspaceOwnerId!);
+        const { data: withCid } = await patchContact(supabase, id, workspaceOwnerId!, {
+          customer_id: customerId,
+          updated_at: new Date().toISOString(),
+        });
+        if (withCid) {
+          Object.assign(data, withCid);
+        }
+      } catch (cidErr) {
+        console.error("auto-assign customer_id on active:", cidErr);
+      }
     }
 
     await triggerN8NWebhook("contact.updated", data);

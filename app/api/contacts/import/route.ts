@@ -17,12 +17,13 @@ import {
   formatValidationDetails,
   humanizeDbError,
 } from "@/lib/validation-errors";
+import { recordAuditLog } from "@/lib/audit/record";
 
 const MAX_IMPORT_ROWS = 500;
 
 export async function POST(req: NextRequest) {
   try {
-    const { workspaceOwnerId, role, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, error } = await requireAuth();
     if (error) return error;
 
     const writeError = requireWorkspaceWrite(role!);
@@ -138,6 +139,16 @@ export async function POST(req: NextRequest) {
       });
       await triggerN8NWebhook("contact.created", data);
     }
+
+    await recordAuditLog({
+      workspaceOwnerId: workspaceOwnerId!,
+      actorUserId: userId!,
+      action: "contact.import",
+      entityType: "contact",
+      changeSummary: `Imported ${created} contacts (${failed} failed, ${skipped} skipped)`,
+      newValues: { created, failed, skipped, total: rawRows.length },
+      req,
+    });
 
     return NextResponse.json({
       total: rawRows.length,

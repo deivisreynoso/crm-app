@@ -3,10 +3,8 @@ import { requireAuth } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { documentCreateSchema, documentSchema } from "@/lib/validators";
 import { buildDocumentRecord } from "@/lib/document-payload";
-import {
-  resolveDocumentFileUrl,
-  uploadToDocumentsBucket,
-} from "@/lib/storage/documents";
+import { uploadToDocumentsBucket } from "@/lib/storage/documents";
+import { batchResolveDocumentFileUrls } from "@/lib/storage/batch-signed-urls";
 import { formatValidationDetails } from "@/lib/validation-errors";
 import {
   assertParentsInWorkspace,
@@ -71,16 +69,11 @@ export async function GET(req: NextRequest) {
     const rows = data ?? [];
     let enriched = rows;
     if (resolveFileUrls) {
-      enriched = await Promise.all(
-        rows.map(async (row) => {
-          const file_url = await resolveDocumentFileUrl(
-            supabase,
-            row.storage_path as string | undefined,
-            row.file_url as string | undefined
-          );
-          return { ...row, file_url: file_url ?? row.file_url };
-        })
-      );
+      const urls = await batchResolveDocumentFileUrls(supabase, rows);
+      enriched = rows.map((row, i) => {
+        const file_url = urls[i];
+        return { ...row, file_url: file_url ?? row.file_url };
+      });
     }
 
     return NextResponse.json({

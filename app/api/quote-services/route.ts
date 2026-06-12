@@ -3,6 +3,7 @@ import { requireAuth, requireWorkspaceWrite } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { z } from "zod";
 import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
+import { recordAuditLog } from "@/lib/audit/record";
 
 const serviceSchema = z.object({
   name: z.string().min(1),
@@ -39,7 +40,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { workspaceOwnerId, role, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, error } = await requireAuth();
     if (error) return error;
     const writeError = requireWorkspaceWrite(role!);
     if (writeError) return writeError;
@@ -76,6 +77,17 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
+
+    await recordAuditLog({
+      workspaceOwnerId: workspaceOwnerId!,
+      actorUserId: userId!,
+      action: "quote_service.created",
+      entityType: "quote_service",
+      entityId: data.id as string,
+      entityName: data.name as string,
+      req,
+    });
+
     return NextResponse.json(data, { status: 201 });
   } catch (err) {
     console.error("POST /api/quote-services:", err);

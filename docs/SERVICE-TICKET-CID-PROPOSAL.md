@@ -1,7 +1,7 @@
 # Service Ticket Widget + CID System (Architecture Proposal)
 
-**Status:** Awaiting approval — do not implement until reviewed.  
-**Iteration:** CRM Enhancement Sprint 2, Task 6  
+**Status:** Implemented in Sprint 3 (2026-06-12).  
+**Iteration:** CRM Enhancement Sprint 3, Task 3  
 **Constraint:** No changes to existing authentication logic.
 
 ---

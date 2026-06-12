@@ -1,36 +1,68 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
+import axios from "axios";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-shell";
 import { CalendarMonthView } from "@/components/calendar/calendar-month-view";
 import { CreateEventModal } from "@/components/calendar/create-event-modal";
 import { EventDetailModal } from "@/components/calendar/event-detail-modal";
+import { resolveCalendarOwnerColor } from "@/lib/users/calendar-colors";
 import {
   useCalendarEvents,
   useCreateCalendarEvent,
   useDeleteCalendarEvent,
   useUpdateCalendarEvent,
 } from "@/hooks/useCalendarEvents";
-import {
-  APPOINTMENT_EVENT_COLOR,
-  LOCATION_TYPES,
-  shiftMonth,
-} from "@/lib/calendar/utils";
+import { APPOINTMENT_EVENT_COLOR, shiftMonth } from "@/lib/calendar/utils";
 import { GoogleCalendarBanner } from "@/components/calendar/google-calendar-banner";
-import { useContacts } from "@/hooks/useContacts";
 import type { CalendarEvent } from "@/types";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
+import { useWorkspace } from "@/components/crm/workspace-provider";
+
+type TeamMember = {
+  id: string;
+  label: string;
+  calendar_color?: string | null;
+};
+
+type CalendarView = "mine" | "all" | string;
 
 export function CalendarPage() {
   const { canWrite } = useWorkspaceCapabilities();
+  const { ctx } = useWorkspace();
+  const actorId = ctx?.actorUserId ?? "";
+
   const [month, setMonth] = useState(() => new Date());
   const [createOpen, setCreateOpen] = useState(false);
   const [createDate, setCreateDate] = useState<Date | undefined>();
   const [selected, setSelected] = useState<CalendarEvent | null>(null);
   const [editing, setEditing] = useState<CalendarEvent | null>(null);
+  const [calendarView, setCalendarView] = useState<CalendarView>("mine");
+  const [members, setMembers] = useState<TeamMember[]>([]);
+
+  useEffect(() => {
+    void axios
+      .get<{ data: TeamMember[] }>("/api/team/members")
+      .then(async (res) => {
+        const list = res.data.data ?? [];
+        const profileRes = await axios.get<{
+          data: Array<{ id: string; calendar_color: string | null }>;
+        }>("/api/team/calendar-colors").catch(() => ({ data: { data: [] } }));
+        const colorMap = new Map(
+          (profileRes.data.data ?? []).map((p) => [p.id, p.calendar_color])
+        );
+        setMembers(
+          list.map((m) => ({
+            ...m,
+            calendar_color: colorMap.get(m.id) ?? null,
+          }))
+        );
+      })
+      .catch(() => setMembers([]));
+  }, []);
 
   const range = useMemo(() => {
     const start = new Date(month.getFullYear(), month.getMonth(), 1);
@@ -41,34 +73,51 @@ export function CalendarPage() {
     };
   }, [month]);
 
-  const { data: events = [], isLoading } = useCalendarEvents(range);
+  const eventFilters = useMemo(() => {
+    if (calendarView === "mine" && actorId) {
+      return { ...range, assigned_to: actorId };
+    }
+    if (calendarView !== "all" && calendarView !== "mine") {
+      return { ...range, assigned_to: calendarView };
+    }
+    return range;
+  }, [range, calendarView, actorId]);
+
+  const { data: events = [], isLoading } = useCalendarEvents(eventFilters);
   const createEvent = useCreateCalendarEvent();
   const updateEvent = useUpdateCalendarEvent();
   const deleteEvent = useDeleteCalendarEvent();
-  const { data: contactsData } = useContacts(1, 300);
-  const contacts = contactsData?.data ?? [];
 
-  const contactName = selected?.contact_id
-    ? contacts.find((c) => c.id === selected.contact_id)
-    : null;
+  const legendMembers = useMemo(() => {
+    if (calendarView === "all") {
+      const ids = new Set(
+        events.map((e) => e.assigned_to).filter((id): id is string => !!id)
+      );
+      return members.filter((m) => ids.has(m.id));
+    }
+    if (calendarView !== "mine") {
+      return members.filter((m) => m.id === calendarView);
+    }
+    return members.filter((m) => m.id === actorId);
+  }, [calendarView, events, members, actorId]);
 
   return (
     <div className="space-y-6 w-full">
       <PageHeader
         title="Calendar"
-        description="Schedule meetings with contacts — Zoom, Meet, in person, and more"
+        description="Schedule meetings with contacts — color-coded by owner"
         actions={
           canWrite ? (
-          <Button
-            size="sm"
-            onClick={() => {
-              setEditing(null);
-              setCreateDate(new Date());
-              setCreateOpen(true);
-            }}
-          >
-            New meeting
-          </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditing(null);
+                setCreateDate(new Date());
+                setCreateOpen(true);
+              }}
+            >
+              New meeting
+            </Button>
           ) : undefined
         }
       />
@@ -97,9 +146,27 @@ export function CalendarPage() {
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setMonth(new Date())}>
-          Today
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            className="input-field text-sm py-1.5"
+            value={calendarView}
+            onChange={(e) => setCalendarView(e.target.value as CalendarView)}
+            aria-label="Calendar view"
+          >
+            <option value="mine">My Calendar</option>
+            {members
+              .filter((m) => m.id !== actorId)
+              .map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label}
+                </option>
+              ))}
+            <option value="all">All Calendars</option>
+          </select>
+          <Button variant="outline" size="sm" onClick={() => setMonth(new Date())}>
+            Today
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-body-muted">
@@ -110,13 +177,13 @@ export function CalendarPage() {
           />
           Website appointment
         </span>
-        {LOCATION_TYPES.map((t) => (
-          <span key={t.value} className="inline-flex items-center gap-1.5">
+        {legendMembers.map((m) => (
+          <span key={m.id} className="inline-flex items-center gap-1.5">
             <span
               className="h-2.5 w-2.5 rounded-full shrink-0"
-              style={{ background: t.color }}
+              style={{ background: resolveCalendarOwnerColor(m.calendar_color) }}
             />
-            {t.label}
+            {m.label.replace(/\s*\(you.*\)/i, "").replace(/\s*\(owner\)/i, "")}
           </span>
         ))}
       </div>
@@ -160,11 +227,6 @@ export function CalendarPage() {
 
       <EventDetailModal
         event={selected}
-        contactName={
-          contactName
-            ? `${contactName.first_name} ${contactName.last_name}`
-            : undefined
-        }
         onClose={() => setSelected(null)}
         onEdit={
           canWrite

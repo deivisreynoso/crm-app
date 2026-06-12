@@ -13,7 +13,9 @@
     "faq": "FAQ",
     "book": "Agendar llamada",
     "bookCta": "Agendar",
-    "login": "CRM"
+    "login": "CRM",
+    "support": "Soporte",
+    "supportCta": "Soporte"
   },
   "hero": {
     "badge": "Asistentes de IA para eCommerce",
@@ -306,6 +308,36 @@
     "book": "Agendar llamada gratis",
     "chat": "Chatear con IA"
   },
+  "support": {
+    "metaTitle": "Soporte al cliente — ClickIn 360",
+    "metaDescription": "Envía un ticket de soporte con tu ID de cliente (CID).",
+    "title": "Soporte al cliente",
+    "subtitle": "Clientes actuales: ingresa tu ID de cliente (CID) para abrir un ticket.",
+    "disabled": "El envío de tickets en línea no está disponible por ahora. Usa el chat en Contacto o escribe a tu ejecutivo de cuenta.",
+    "contactLink": "¿Ya eres cliente?",
+    "contactCta": "Enviar ticket de soporte",
+    "form": {
+      "title": "Soporte al cliente",
+      "subtitle": "Ingresa tu ID de cliente (CID) para abrir una solicitud de soporte.",
+      "cidLabel": "ID de cliente",
+      "continue": "Continuar",
+      "verifying": "Verificando…",
+      "subject": "Asunto",
+      "description": "Descripción",
+      "priority": "Prioridad",
+      "priorityLow": "Baja",
+      "priorityMedium": "Media",
+      "priorityHigh": "Alta",
+      "priorityUrgent": "Urgente",
+      "back": "Atrás",
+      "submit": "Enviar ticket",
+      "submitting": "Enviando…",
+      "doneTitle": "Solicitud recibida",
+      "doneBody": "Tu número de referencia es {reference}. Te enviaremos un correo de confirmación si tenemos tu email registrado.",
+      "genericError": "No pudimos verificar el ID de cliente.",
+      "submitError": "No pudimos enviar tu solicitud. Intenta de nuevo."
+    }
+  },
   "footer": {
     "tagline": "IA y automatización conectadas a tu eCommerce.",
     "rights": "Todos los derechos reservados.",
@@ -313,7 +345,8 @@
     "login": "Acceso CRM",
     "howItWorks": "Cómo funciona",
     "services": "Servicios",
-    "contact": "Contacto"
+    "contact": "Contacto",
+    "support": "Soporte al cliente"
   },
   "cookies": {
     "title": "Cookies y analítica",

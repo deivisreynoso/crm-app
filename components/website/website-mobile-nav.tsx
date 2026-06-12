@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { TrackedLink } from "@/components/website/tracked-link";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LifeBuoy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/website/language-toggle";
 import type { Locale, WebsiteDictionary } from "@/lib/website/i18n";
@@ -65,6 +65,14 @@ export function WebsiteMobileNav({ lang, dict }: Props) {
                 {dict.nav[item.key]}
               </a>
             ))}
+            <Link
+              href={`/${lang}/support`}
+              className="mx-1 flex items-center justify-center gap-2 rounded-xl border border-[var(--primary)]/30 bg-[var(--primary)]/5 px-4 py-3 text-base font-semibold text-[var(--primary)]"
+              onClick={() => setOpen(false)}
+            >
+              <LifeBuoy className="h-4 w-4" strokeWidth={2} />
+              {dict.nav.supportCta}
+            </Link>
             <TrackedLink
               href={`/${lang}/book-call`}
               className="px-4 py-3 rounded-xl text-base font-medium text-[var(--secondary)]"

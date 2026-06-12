@@ -7,6 +7,7 @@ import { createTeamInvite } from "@/lib/team/invites";
 import { requireTransactionalEmailForAuth } from "@/lib/email/auth-email-policy";
 import { teamInviteEmailHtml } from "@/lib/email/transactional-templates";
 import { sendEmail } from "@/lib/email/send";
+import { ensureUserCalendarColor } from "@/lib/users/assign-calendar-color";
 
 const addMemberSchema = z.object({
   email: z.string().email(),
@@ -41,9 +42,10 @@ export async function GET() {
     const email = session!.user?.email ?? "";
     const name = session!.user?.name ?? email;
 
-    await upsertProfile(userId!, email, name);
-
     const supabase = createServerSideClient();
+
+    await upsertProfile(userId!, email, name);
+    await ensureUserCalendarColor(supabase, userId!);
 
     const { data: ownerProfile } = await supabase
       .from("user_profiles")

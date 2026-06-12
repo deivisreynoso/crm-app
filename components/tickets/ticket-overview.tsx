@@ -2,14 +2,15 @@
 
 import { InlineEditableField } from "@/components/ui/inline-editable-field";
 import { InlineSelectField } from "@/components/ui/inline-select-field";
-import { AssociationSelect } from "@/components/ui/association-select";
+import Link from "next/link";
+import { ContactSearchCombobox } from "@/components/forms/contact-search-combobox";
 import { RecordDates } from "@/components/ui/record-dates";
 import {
   TICKET_CATEGORIES,
   TICKET_PRIORITIES,
   TICKET_STATUSES,
 } from "@/lib/constants/ticket-fields";
-import { useContacts } from "@/hooks/useContacts";
+import { useContact } from "@/hooks/useContacts";
 import { formatDateTime } from "@/lib/utils";
 import { EntityCustomFieldsOverview } from "@/components/custom-fields/entity-custom-fields-overview";
 import { TagsChips } from "@/components/forms/tags-chips";
@@ -22,16 +23,9 @@ interface TicketOverviewProps {
 }
 
 export function TicketOverview({ ticket, onSaveField, readOnly }: TicketOverviewProps) {
-  const { data: contactsData } = useContacts(1, 200);
-  const contacts = contactsData?.data ?? [];
+  const { data: linkedContact } = useContact(ticket.contact_id ?? "");
 
   const displaySubject = ticket.subject?.trim() || ticket.title;
-
-  const contactOptions = contacts.map((c) => ({
-    id: c.id,
-    label: `${c.first_name} ${c.last_name}`,
-    href: `/contacts/${c.id}`,
-  }));
 
   return (
     <div className="space-y-5">
@@ -43,17 +37,35 @@ export function TicketOverview({ ticket, onSaveField, readOnly }: TicketOverview
         <dd className="text-sm font-mono text-heading">{ticket.ticket_number ?? "—"}</dd>
       </div>
 
-      <AssociationSelect
-        label="Contact"
-        value={ticket.contact_id ?? ""}
-        options={contactOptions}
-        placeholder="Link contact"
-        onChange={async (id) => {
-          if (!id) return;
-          await onSaveField({ contact_id: id });
-        }}
-        disabled={readOnly}
-      />
+      <div>
+        <dt className="text-[11px] font-semibold uppercase tracking-wide text-body-muted mb-1">
+          Contact
+        </dt>
+        <dd className="text-sm">
+          {linkedContact ? (
+            <Link
+              href={`/contacts/${linkedContact.id}`}
+              className="text-[var(--primary)] hover:underline font-medium"
+            >
+              {linkedContact.first_name} {linkedContact.last_name}
+            </Link>
+          ) : (
+            <span className="text-body-muted">—</span>
+          )}
+          {!readOnly && (
+            <div className="mt-2">
+              <ContactSearchCombobox
+                value={ticket.contact_id ?? ""}
+                onChange={(id) => {
+                  if (!id) return;
+                  void onSaveField({ contact_id: id });
+                }}
+                label="Change contact"
+              />
+            </div>
+          )}
+        </dd>
+      </div>
 
       <InlineSelectField
         label="Status"

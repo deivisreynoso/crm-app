@@ -55,12 +55,12 @@ Status: **done** | **todo**
 
 | ID | Idea | Status |
 |----|------|--------|
-| F1 | Async contact combobox instead of `useContacts(1, 200)` | todo |
-| F2 | Batch Supabase signed URLs for document lists | todo |
+| F1 | Async contact combobox instead of `useContacts(1, 200)` | **done** — `ContactSearchCombobox` (debounced search, min 2 chars) |
+| F2 | Batch Supabase signed URLs for document lists | **done** — `lib/storage/batch-signed-urls.ts` |
 | F3 | Remove dead dashboard/components | **done** — see list below |
 | F4 | Sync API docs with route changes | **done** — `CLICKIN360-CRM-API.md` updated 2026-05-27 |
-| F5 | Remove unused `GET /api/dashboard/stats` | todo — superseded by `lib/dashboard-stats.ts` |
-| F6 | Storage object cleanup on document/contact delete | todo |
+| F5 | Remove unused `GET /api/dashboard/stats` | **done** — route removed (no callers) |
+| F6 | Storage object cleanup on document/contact delete | **done** — `lib/storage/cleanup-document.ts` |
 | F7 | Migrations 036–037 in Supabase | **done** (035–037) |
 
 ## Dead code removed (2026-05-27)

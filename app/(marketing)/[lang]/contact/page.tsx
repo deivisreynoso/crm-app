@@ -48,6 +48,17 @@ export default async function ContactPage({ params }: Props) {
 
         <WebsiteWebchatEmbed lang={lang} dict={dict} />
 
+        <div className="rounded-2xl border border-[var(--card-border)] bg-[var(--card)] p-5 sm:p-6">
+          <p className="text-sm font-medium text-heading">{dict.support.contactLink}</p>
+          <p className="text-sm text-body-muted mt-1 mb-4">{dict.support.subtitle}</p>
+          <Link
+            href={`/${lang}/support`}
+            className="inline-flex items-center justify-center rounded-lg bg-[var(--primary)] text-white text-sm font-semibold px-4 py-2.5 hover:opacity-90 transition-opacity"
+          >
+            {dict.support.contactCta}
+          </Link>
+        </div>
+
         <ContactPageCtas lang={lang} bookLabel={dict.nav.book} />
       </div>
     </div>

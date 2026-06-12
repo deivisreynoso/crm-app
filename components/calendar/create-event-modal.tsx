@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import axios from "axios";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { LocationInput } from "@/components/calendar/location-input";
-import { useContacts } from "@/hooks/useContacts";
+import { ContactSearchCombobox } from "@/components/forms/contact-search-combobox";
 import { useOpportunityPicker } from "@/hooks/useOpportunities";
+import { useWorkspace } from "@/components/crm/workspace-provider";
 import type { CalendarEvent, CalendarEventFormInput } from "@/types";
-import type { LocationType } from "@/lib/calendar/utils";
 import { formatApiError } from "@/lib/validation-errors";
 
 function toLocalInput(iso: string) {
@@ -15,6 +16,8 @@ function toLocalInput(iso: string) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+
+type TeamMember = { id: string; label: string; role?: string };
 
 interface CreateEventModalProps {
   open: boolean;
@@ -35,16 +38,19 @@ export function CreateEventModal({
   onSubmit,
   isLoading,
 }: CreateEventModalProps) {
-  const { data: contactsData } = useContacts(1, 200);
-  const contacts = contactsData?.data ?? [];
+  const { ctx } = useWorkspace();
+  const canPickAssignee = ctx?.canManage ?? false;
+  const actorId = ctx?.actorUserId ?? "";
 
+  const [members, setMembers] = useState<TeamMember[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [contactId, setContactId] = useState("");
   const [opportunityId, setOpportunityId] = useState("");
+  const [assignedTo, setAssignedTo] = useState("");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
-  const [locationType, setLocationType] = useState<LocationType>("google_meet");
+  const [isVirtual, setIsVirtual] = useState(true);
   const [location, setLocation] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -55,6 +61,14 @@ export function CreateEventModal({
 
   useEffect(() => {
     if (!open) return;
+    void axios
+      .get<{ data: TeamMember[] }>("/api/team/members")
+      .then((res) => setMembers(res.data.data ?? []))
+      .catch(() => setMembers([]));
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
     setError(null);
     setFieldErrors({});
     if (initial) {
@@ -62,9 +76,10 @@ export function CreateEventModal({
       setDescription(initial.description ?? "");
       setContactId(initial.contact_id ?? "");
       setOpportunityId(initial.opportunity_id ?? "");
+      setAssignedTo(initial.assigned_to ?? actorId);
       setStart(toLocalInput(initial.start_time));
       setEnd(toLocalInput(initial.end_time));
-      setLocationType((initial.location_type as LocationType) ?? "other");
+      setIsVirtual(initial.location_type === "google_meet");
       setLocation(initial.location ?? "");
       return;
     }
@@ -77,11 +92,12 @@ export function CreateEventModal({
     setDescription("");
     setContactId(defaultContactId ?? "");
     setOpportunityId("");
+    setAssignedTo(actorId);
     setStart(toLocalInput(startDt.toISOString()));
     setEnd(toLocalInput(endDt.toISOString()));
-    setLocationType("google_meet");
+    setIsVirtual(true);
     setLocation("");
-  }, [open, initial, initialDate, defaultContactId]);
+  }, [open, initial, initialDate, defaultContactId, actorId]);
 
   function validate(): boolean {
     const next: Record<string, string> = {};
@@ -108,10 +124,11 @@ export function CreateEventModal({
         description: description || undefined,
         contact_id: contactId,
         opportunity_id: opportunityId || undefined,
+        assigned_to: assignedTo || actorId || undefined,
         start_time: new Date(start).toISOString(),
         end_time: new Date(end).toISOString(),
-        location: location || undefined,
-        location_type: locationType,
+        location: isVirtual ? undefined : location || undefined,
+        location_type: isVirtual ? "google_meet" : "physical",
       });
       onClose();
     } catch (err) {
@@ -176,27 +193,34 @@ export function CreateEventModal({
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-heading mb-1">
-            Contact <span className="text-[var(--error)]">*</span>
-          </label>
-          <select
-            className="input-field w-full"
-            value={contactId}
-            onChange={(e) => {
-              setContactId(e.target.value);
-              setOpportunityId("");
-            }}
-            required
-          >
-            <option value="">— Select contact —</option>
-            {contacts.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.first_name} {c.last_name}
-                {c.company?.trim() ? ` · ${c.company}` : ""}
-              </option>
-            ))}
-          </select>
+          <label className="block text-sm font-medium text-heading mb-1">Owner</label>
+          {canPickAssignee ? (
+            <select
+              className="input-field w-full"
+              value={assignedTo}
+              onChange={(e) => setAssignedTo(e.target.value)}
+            >
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <p className="text-sm text-body-muted">
+              {members.find((m) => m.id === assignedTo)?.label ?? "You"}
+            </p>
+          )}
         </div>
+        <ContactSearchCombobox
+          value={contactId}
+          onChange={(id) => {
+            setContactId(id);
+            setOpportunityId("");
+          }}
+          required
+          error={fieldErrors.link}
+        />
         <div>
           <label className="block text-sm font-medium text-heading mb-1">
             Opportunity <span className="text-body-muted font-normal">(optional)</span>
@@ -215,9 +239,9 @@ export function CreateEventModal({
           </select>
         </div>
         <LocationInput
-          locationType={locationType}
+          isVirtual={isVirtual}
           location={location}
-          onTypeChange={(v) => setLocationType(v as LocationType)}
+          onVirtualChange={setIsVirtual}
           onLocationChange={setLocation}
         />
         <div>

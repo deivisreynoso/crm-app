@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LifeBuoy } from "lucide-react";
 import { TrackedLink } from "@/components/website/tracked-link";
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/website/language-toggle";
@@ -83,7 +84,22 @@ export function WebsiteHeader({ lang, dict }: Props) {
 
           <div className="flex items-center gap-2 sm:gap-3 ml-auto">
             <LanguageToggle lang={lang} />
-            <Link href="/login" className="hidden sm:block">
+            <TrackedLink
+              href={`/${lang}/support`}
+              className="hidden sm:block"
+              ctaName={dict.nav.supportCta}
+              ctaLocation="header-support"
+            >
+              <Button
+                size="sm"
+                variant="outline"
+                className="font-semibold border-[var(--primary)]/40 text-[var(--primary)] hover:bg-[var(--primary)]/5 gap-1.5"
+              >
+                <LifeBuoy className="h-4 w-4 shrink-0" strokeWidth={2} />
+                {dict.nav.supportCta}
+              </Button>
+            </TrackedLink>
+            <Link href="/login" className="hidden md:block">
               <Button size="sm" variant="ghost" className="text-[var(--muted)] font-medium">
                 {dict.nav.login}
               </Button>

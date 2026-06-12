@@ -9,7 +9,7 @@ import {
   TICKET_PRIORITIES,
   TICKET_STATUSES,
 } from "@/lib/constants/ticket-fields";
-import { useContacts } from "@/hooks/useContacts";
+import { ContactSearchCombobox } from "@/components/forms/contact-search-combobox";
 import { useCustomFields } from "@/hooks/useCustomFields";
 import {
   EntityCustomFieldsForm,
@@ -40,9 +40,6 @@ export function TicketForm({
   isLoading,
 }: TicketFormProps) {
   const { data: session } = useSession();
-  const { data: contactsData } = useContacts(1, 200);
-  const contacts = contactsData?.data ?? [];
-
   const [contactId, setContactId] = useState(
     initial?.contact_id ?? defaultContactId ?? ""
   );
@@ -114,23 +111,7 @@ export function TicketForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <FormLabel required>Contact</FormLabel>
-        <select
-          value={contactId}
-          onChange={(e) => setContactId(e.target.value)}
-          required
-          className="input-field"
-        >
-          <option value="">— Select contact —</option>
-          {contacts.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.first_name} {c.last_name}
-              {c.company?.trim() ? ` · ${c.company}` : ""}
-            </option>
-          ))}
-        </select>
-      </div>
+      <ContactSearchCombobox value={contactId} onChange={setContactId} required />
       <RequiredHint>Every service ticket must be linked to a contact.</RequiredHint>
 
       <div>

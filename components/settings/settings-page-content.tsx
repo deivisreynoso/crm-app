@@ -11,6 +11,7 @@ import { BookingAvailabilitySettings } from "@/components/settings/booking-avail
 import { GoogleReviewRequestSettings } from "@/components/settings/google-review-request-settings";
 import { AuditLogsPanel } from "@/components/settings/audit-logs-panel";
 import { AdminIntegrationsPanel } from "@/components/settings/admin-integrations-panel";
+import { SupportWidgetSettings } from "@/components/settings/support-widget-settings";
 import { SettingsSection } from "@/components/settings/settings-section";
 import { CrmLanguageSwitcher } from "@/components/crm/crm-language-switcher";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
@@ -75,9 +76,16 @@ export function SettingsPageContent() {
 
           <SettingsSection
             title="Admin integrations"
-            description="N8N, WhatsApp, Stripe, Mailgun, and Google Analytics configuration status."
+            description="N8N, Stripe, Mailgun, and Google Analytics configuration status."
           >
             <AdminIntegrationsPanel />
+          </SettingsSection>
+
+          <SettingsSection
+            title="Support widget"
+            description="Public customer support page and embed code."
+          >
+            <SupportWidgetSettings />
           </SettingsSection>
 
           <SettingsSection

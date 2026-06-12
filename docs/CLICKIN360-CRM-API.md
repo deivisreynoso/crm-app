@@ -1183,11 +1183,13 @@ Google OAuth uses `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (or legacy `GOOGLE
 | `GET` | `/api/auth/google-gmail` | Start Gmail OAuth |
 | `GET` | `/api/auth/google-gmail/reconnect` | Re-consent (send + read scopes) |
 | `POST` | `/api/integrations/n8n/inbound` | Inbound N8N callbacks (`x-n8n-secret`) |
-| `GET`, `POST` | `/api/integrations/whatsapp/inbound` | WhatsApp webhook verify + inbound (Meta) |
+| `POST` | `/api/public/support/validate-cid` | Public — validate CID; returns short-lived session token (rate limited) |
+| `POST` | `/api/public/support/tickets` | Public — submit support ticket (requires session token from validate step) |
+| `GET`, `PATCH` | `/api/settings/support-widget` | Admin/owner — enable `/support`, embed code, default assignee, email notifications |
 | `POST` | `/api/webhooks/stripe` | Stripe webhooks (`STRIPE_WEBHOOK_SECRET`): `checkout.session.completed`, `payment_intent.succeeded`, `invoice.paid` — records `payments` row, quote payment notes |
 | `POST` | `/api/quotes/public/[token]/checkout` | Public — create Stripe Checkout session for accepted quote (no session auth) |
 
-Calendar events created in CRM sync using the connected account of the event assignee, then actor, then workspace owner (`resolveCalendarUserId`).
+Calendar events sync to the **logged-in user's** connected Google Calendar on create/update (`google_sync_user_id` stores the sync account for legacy rows). If the actor has not connected Calendar, the form shows a non-blocking warning.
 
 ---
 
@@ -1197,7 +1199,6 @@ Calendar events created in CRM sync using the connected account of the event ass
 |------|-----------|
 | **Payments** | `GET /api/payments` |
 | **Search** | `GET /api/search?q=...` |
-| **Dashboard** | `GET /api/dashboard/stats` — **unused**; home page uses server-side `lib/dashboard-stats.ts` |
 | **Analytics** | `GET /api/analytics/pipeline`, `/api/analytics/operations`, `GET /api/analytics/ga4?days=7\|30\|90` (authenticated; GA4 env required) |
 | **Duplicates** | `GET|POST /api/duplicate-reviews`, `PATCH /api/duplicate-reviews/[id]` (`action`: `dismiss` \| `merge`) |
 | **Custom fields** | `GET|POST /api/custom-fields`, `GET|PATCH|DELETE /api/custom-fields/[id]` |
@@ -1468,8 +1469,9 @@ See [§9](#9-crm-api-session). Full route list matches files under `app/api/**/r
 | Google OAuth | `lib/google/oauth-config.ts` |
 | Auth / login policy | `lib/auth.ts`, `lib/auth/login-policy.ts`, `lib/auth/canonical-user.ts` |
 | Email signature | `lib/email/signature.ts` |
-| N8N / WhatsApp / Stripe | `lib/integrations/n8n/`, `lib/integrations/whatsapp/`, `lib/integrations/stripe/` |
+| N8N / Stripe | `lib/integrations/n8n/`, `lib/integrations/stripe/` |
+| Public support (CID) | `lib/support/`, `app/api/public/support/` |
 
 ---
 
-*Last updated: 2026-06-10 (`main` @ `c12c4d9`). Update this file when adding or changing API routes.*
+*Last updated: 2026-06-12 (Sprint 3 — migration 052). Update this file when adding or changing API routes.*

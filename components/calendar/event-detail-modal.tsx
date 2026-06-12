@@ -9,7 +9,6 @@ import {
   formatEventRange,
   isAppointmentEvent,
   isUrlLocation,
-  LOCATION_TYPES,
 } from "@/lib/calendar/utils";
 import type { CalendarEvent } from "@/types";
 
@@ -34,7 +33,6 @@ export function EventDetailModal({
 
   if (!event) return null;
 
-  const locLabel = LOCATION_TYPES.find((t) => t.value === event.location_type)?.label;
   const appointment = isAppointmentEvent(event);
 
   return (
@@ -50,23 +48,21 @@ export function EventDetailModal({
             {" · "}
             {formatEventRange(event.start_time, event.end_time)}
           </p>
+          {event.owner_name && !appointment && (
+            <p>
+              <span className="text-body-muted">Owner: </span>
+              <span className="text-heading font-medium">{event.owner_name}</span>
+            </p>
+          )}
           {contactName && (
             <p>
               <span className="text-body-muted">Contact: </span>
               <span className="text-heading font-medium">{contactName}</span>
             </p>
           )}
-          {event.location_type && !appointment && (
-            <p className="flex items-center gap-2">
-              <span
-                className="h-2.5 w-2.5 rounded-full shrink-0"
-                style={{ background: calendarEventColor(event) }}
-              />
-              <span className="text-body-muted">{locLabel}</span>
-            </p>
-          )}
-          {event.location && (
+          {event.location_type === "google_meet" && event.location && (
             <p>
+              <span className="text-body-muted">Google Meet: </span>
               {isUrlLocation(event.location) ? (
                 <a
                   href={event.location}
@@ -74,34 +70,40 @@ export function EventDetailModal({
                   rel="noreferrer"
                   className="text-[var(--primary)] hover:underline break-all"
                 >
-                  {event.location}
+                  Join meeting
                 </a>
               ) : (
                 <span className="text-heading">{event.location}</span>
               )}
             </p>
           )}
+          {event.location_type !== "google_meet" && event.location && (
+            <p>
+              <span className="text-body-muted">Location: </span>
+              <span className="text-heading">{event.location}</span>
+            </p>
+          )}
           {event.description && (
             <p className="whitespace-pre-wrap text-heading">{event.description}</p>
           )}
           {(onEdit || onDelete) && (
-          <div className="flex flex-wrap gap-2 pt-2">
-            {onEdit && (
-            <Button size="sm" variant="outline" onClick={onEdit}>
-              Edit
-            </Button>
-            )}
-            {onDelete && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-[var(--error)] border-red-200"
-              onClick={() => setConfirmDelete(true)}
-            >
-              Delete
-            </Button>
-            )}
-          </div>
+            <div className="flex flex-wrap gap-2 pt-2">
+              {onEdit && (
+                <Button size="sm" variant="outline" onClick={onEdit}>
+                  Edit
+                </Button>
+              )}
+              {onDelete && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-[var(--error)] border-red-200"
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  Delete
+                </Button>
+              )}
+            </div>
           )}
         </div>
       </Modal>

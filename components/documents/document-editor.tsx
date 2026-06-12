@@ -18,7 +18,8 @@ import {
   useGenerateDocumentPdf,
   useUpdateDocument,
 } from "@/hooks/useDocument";
-import { useContacts } from "@/hooks/useContacts";
+import { useContact } from "@/hooks/useContacts";
+import { ContactSearchCombobox } from "@/components/forms/contact-search-combobox";
 import { useCompanies } from "@/hooks/useCompanies";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import {
@@ -50,13 +51,12 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
   const { data: doc, isLoading, error } = useDocument(documentId);
   const updateDoc = useUpdateDocument(documentId);
   const generatePdf = useGenerateDocumentPdf(documentId);
-  const { data: contactsData } = useContacts(1, 200);
-  const contacts = contactsData?.data ?? [];
   const { data: companies = [] } = useCompanies();
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [contactId, setContactId] = useState("");
+  const { data: linkedContact } = useContact(contactId);
   const [footerHtml, setFooterHtml] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [sendEmailOpen, setSendEmailOpen] = useState(false);
@@ -68,7 +68,6 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
     null
   );
 
-  const linkedContact = contacts.find((c) => c.id === contactId);
   const linkedCompany = companies.find(
     (co) => co.id === (linkedContact?.company_id ?? doc?.company_id)
   );
@@ -287,23 +286,15 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
                     <label className="text-xs font-medium text-heading block mb-1">
                       {q?.customer}
                     </label>
-                    <select
-                      className="input-field w-full"
+                    <ContactSearchCombobox
                       value={contactId}
-                      disabled={readOnly}
-                      onChange={(e) => {
+                      onChange={(id) => {
                         if (readOnly) return;
-                        setContactId(e.target.value);
-                        void save({ contact_id: e.target.value || undefined });
+                        setContactId(id);
+                        void save({ contact_id: id || undefined });
                       }}
-                    >
-                      <option value="">Select contact</option>
-                      {contacts.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.first_name} {c.last_name}
-                        </option>
-                      ))}
-                    </select>
+                      disabled={readOnly}
+                    />
                   </div>
 
                   <div>
@@ -533,23 +524,16 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
             <label className="text-[10px] font-semibold uppercase text-body-muted block mb-1">
               Link contact (for autofill)
             </label>
-            <select
-              className="input-field text-xs w-full"
+            <ContactSearchCombobox
               value={contactId}
-              disabled={readOnly}
-              onChange={(e) => {
+              onChange={(id) => {
                 if (readOnly) return;
-                setContactId(e.target.value);
-                void save({ contact_id: e.target.value || undefined });
+                setContactId(id);
+                void save({ contact_id: id || undefined });
               }}
-            >
-              <option value="">— None —</option>
-              {contacts.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.first_name} {c.last_name}
-                </option>
-              ))}
-            </select>
+              disabled={readOnly}
+              label="Contact"
+            />
           </div>
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wide text-body-muted mb-2">

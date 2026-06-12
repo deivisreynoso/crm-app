@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FormLabel } from "@/components/ui/form-label";
 import { TagsInput } from "@/components/forms/tags-input";
-import { useContacts } from "@/hooks/useContacts";
+import { ContactSearchCombobox } from "@/components/forms/contact-search-combobox";
 import { useCustomFields } from "@/hooks/useCustomFields";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import axios from "axios";
@@ -36,9 +36,6 @@ export function OpportunityForm({
   onCancel,
   isLoading,
 }: OpportunityFormProps) {
-  const { data: contactsData } = useContacts(1, 200);
-  const allContacts = contactsData?.data ?? [];
-
   const [contactId, setContactId] = useState(
     initial?.contact_id ?? defaultContactId ?? ""
   );
@@ -112,23 +109,7 @@ export function OpportunityForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <FormLabel required>Contact</FormLabel>
-        <select
-          value={contactId}
-          onChange={(e) => setContactId(e.target.value)}
-          required
-          className="input-field"
-        >
-          <option value="">Select contact</option>
-          {allContacts.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.first_name} {c.last_name}
-              {c.company?.trim() ? ` · ${c.company}` : ""}
-            </option>
-          ))}
-        </select>
-      </div>
+      <ContactSearchCombobox value={contactId} onChange={setContactId} required />
 
       <div>
         <FormLabel required>Deal name</FormLabel>

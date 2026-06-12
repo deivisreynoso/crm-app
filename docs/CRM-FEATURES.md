@@ -28,6 +28,7 @@ git log -1 --format='%h %s (%cs)'
 
 | Date | Commit | Type | Summary |
 |------|--------|------|---------|
+| 2026-06-12 | `da37544` | feature | **CRM enhancement sprint — iteration 3:** calendar ownership + per-user colors + My/All calendar views; Google Calendar sync uses logged-in user OAuth; meeting type removed; WhatsApp integration code removed (proposal on hold); public `/support` CID widget + tickets; audit backlog (contact combobox, batch signed URLs, storage cleanup); migration 052 |
 | 2026-06-10 | `90c7522` | feature | **CRM enhancement sprint — iteration 2:** unified email composer (TipTap rich text, merge fields, templates, attachments, preview) on contacts/tickets/quotes; product catalog edit/delete with quote-reference guard; Stripe quote Pay Now + webhooks; GA4 Website analytics tab; MFA scaffolding removed (migration 051); WhatsApp/Webchat + CID tickets remain proposal-only |
 | 2026-06-10 | `c12c4d9` | feature | **CRM enhancement sprint (iteration 1):** settings redesign (member vs admin sections), quote branding + product catalog tabs on Quotes, email signatures, calendar location types (physical / Google Meet / other) + assignee, public quote acceptance disclaimer (EN/ES), N8N/WhatsApp/Stripe inbound scaffolding, admin integrations status panel |
 | 2026-06-10 | `bd31186` | feature + fix | **Dual-email owner login:** canonical session maps personal + workspace emails to same CRM profile (`OWNER_LOGIN_ALIASES`, `team_members` lookup); `authUserId` for password/profile updates |
@@ -208,7 +209,7 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 ### Settings (owner / admin)
 
 - Platform language (EN/ES)
-- **Admin integrations** — status panel for N8N, WhatsApp, **Stripe** (checkout + webhook path), Mailgun, **GA4 Data API**, Google OAuth (`GET /api/settings/integrations`)
+- **Admin integrations** — status panel for N8N, **Stripe** (checkout + webhook path), Mailgun, **GA4 Data API**, Google OAuth, **Support widget** (`GET /api/settings/integrations`)
 - Website leads (default assignee)
 - Duplicate contacts panel
 - Team invites and roles (`sales`, `admin`, `viewer`)
@@ -230,8 +231,8 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 | Website chat | Public + optional secret | Marketing chat widget |
 | PATCH integrations | Integration secret | Server-to-server updates |
 | N8N webhooks | Outbound from CRM | `contact.*`, `website.lead`, etc. |
-| N8N inbound | `x-n8n-secret` | `POST /api/integrations/n8n/inbound` — workflow callbacks (scaffolding) |
-| WhatsApp inbound | Meta verify token | `GET/POST /api/integrations/whatsapp/inbound` (scaffolding) |
+| N8N inbound | `x-n8n-secret` | `POST /api/integrations/n8n/inbound` — workflow callbacks (webchat live) |
+| Public support | Session token | `POST /api/public/support/validate-cid`, `POST /api/public/support/tickets` — CID-gated ticket widget |
 | Stripe Checkout | `STRIPE_SECRET_KEY` | Public quote **Pay Now** after acceptance; `POST /api/quotes/public/[token]/checkout` |
 | Stripe webhooks | `STRIPE_WEBHOOK_SECRET` | `POST /api/webhooks/stripe` — `checkout.session.completed`, `payment_intent.succeeded`, `invoice.paid` |
 | GA4 Data API | Service account env | `GET /api/analytics/ga4` — website dashboard |
@@ -291,7 +292,7 @@ Historical phases map to git eras (not separate products):
 | **4 — Operations** | Contact merge, in-app notifications, payments, ticket improvements | ✅ Shipped |
 | **5 — Production platform** | Website↔CRM, team/roles, quotes, contact UX, security, audit log | ✅ **Shipped** on `main` (`8fc9cee`) — migrations **035–037** applied in Supabase |
 
-**Phase 5 is complete.** **Phase 6 iteration 1** shipped on `main` @ `c12c4d9`; **iteration 2** adds email composer, catalog CRUD, Stripe payments, GA4 dashboard (pending merge). **On hold (proposal only):** [WhatsApp/Webchat unified inbox](./WHATSAPP-WEBCHAT-INBOX-PROPOSAL.md), [service ticket CID widget](./SERVICE-TICKET-CID-PROPOSAL.md).
+**Phase 5 is complete.** **Phase 6 iteration 1–2** shipped (`c12c4d9`, `90c7522`). **Iteration 3** (`da37544`): calendar ownership/colors/views, CID support widget, WhatsApp code removed. **On hold (proposal only):** [WhatsApp/Webchat unified inbox](./WHATSAPP-WEBCHAT-INBOX-PROPOSAL.md). **Implemented:** [service ticket CID widget](./SERVICE-TICKET-CID-PROPOSAL.md) (Sprint 3).
 
 ---
 
@@ -333,7 +334,7 @@ Historical phases map to git eras (not separate products):
 |---|------|------|
 | 6 | **Quote UX** | Consolidate `/documents` vs `/quotes` flows |
 | 6b | **Unified inbox** | WhatsApp + webchat — see proposal; not implemented |
-| 6c | **Service tickets (public)** | CID-gated widget — see proposal; not implemented |
+| 6c | **Service tickets (public)** | CID-gated `/support` widget — implemented Sprint 3 |
 | 7 | **Reporting** | Deeper dashboards, CSV exports, scheduled reports |
 | 8 | **Automation** | In-app workflows beyond N8N webhooks |
 | 9 | **Quality** | E2E or integration test suite in CI |

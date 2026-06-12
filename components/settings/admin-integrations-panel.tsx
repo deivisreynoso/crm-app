@@ -5,7 +5,6 @@ import axios from "axios";
 
 type IntegrationStatus = {
   n8n: { configured: boolean; inbound_path: string };
-  whatsapp: { configured: boolean; inbound_path: string };
   stripe: {
     configured: boolean;
     webhook_path?: string;
@@ -35,7 +34,6 @@ export function AdminIntegrationsPanel() {
 
   const rows = [
     { label: "N8N", ok: data.n8n.configured, detail: data.n8n.inbound_path },
-    { label: "WhatsApp", ok: data.whatsapp.configured, detail: data.whatsapp.inbound_path },
     {
       label: "Stripe",
       ok: data.stripe.configured,

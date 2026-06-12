@@ -11,7 +11,7 @@ function maskPropertyId(propertyId: string | undefined): string | null {
   return `${id.slice(0, 4)}…${id.slice(-3)}`;
 }
 
-/** Admin integration status (WhatsApp, N8N, GA, Mailgun scaffolding). */
+/** Admin integration status (N8N, GA, Mailgun, Stripe). */
 export async function GET() {
   const { role, isWorkspaceOwner, error } = await requireAuth();
   if (error) return error;
@@ -26,13 +26,6 @@ export async function GET() {
       n8n: {
         configured: Boolean(process.env.N8N_WEBHOOK_URL?.trim()),
         inbound_path: "/api/integrations/n8n/inbound",
-      },
-      whatsapp: {
-        configured: Boolean(
-          process.env.WHATSAPP_ACCESS_TOKEN?.trim() &&
-            process.env.WHATSAPP_PHONE_NUMBER_ID?.trim()
-        ),
-        inbound_path: "/api/integrations/whatsapp/inbound",
       },
       stripe: {
         configured: isStripeConfigured(),

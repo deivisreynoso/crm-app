@@ -41,6 +41,9 @@ export function WebsiteFooter({ lang, dict }: Props) {
             <Link href={`/${lang}/contact`} className="text-white/80 hover:text-white transition-colors">
               {dict.footer.contact}
             </Link>
+            <Link href={`/${lang}/support`} className="text-white/80 hover:text-white transition-colors">
+              {dict.footer.support}
+            </Link>
             <a href={`/${lang}#faq`} className="text-white/80 hover:text-white transition-colors">
               {dict.nav.faq}
             </a>

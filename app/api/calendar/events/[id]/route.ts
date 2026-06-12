@@ -13,7 +13,8 @@ import {
   deleteGoogleCalendarEvent,
   updateGoogleCalendarEvent,
 } from "@/lib/google/calendar";
-import { resolveCalendarUserId } from "@/lib/google/resolve-calendar-user";
+import { assertCalendarAssigneePermission } from "@/lib/calendar/assert-assignee";
+import { resolveGoogleSyncUserId } from "@/lib/calendar/resolve-sync-user";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -94,6 +95,21 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     if (d.opportunity_id !== undefined) {
       updates.opportunity_id = d.opportunity_id?.trim() ? d.opportunity_id : null;
     }
+    if (d.assigned_to !== undefined) {
+      const assigneeId = assertCalendarAssigneePermission(
+        role!,
+        isWorkspaceOwner,
+        userId!,
+        d.assigned_to
+      );
+      if (!assigneeId) {
+        return NextResponse.json(
+          { error: "You can only assign events to yourself." },
+          { status: 403 }
+        );
+      }
+      updates.assigned_to = assigneeId;
+    }
 
     const parentCheck = await assertParentsInWorkspace(supabase, workspaceOwnerId!, {
       contact_id: d.contact_id,
@@ -113,7 +129,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           .select()
           .single(),
       updates,
-      ["location_type", "updated_at"]
+      ["location_type", "updated_at", "assigned_to"]
     );
 
     if (dbError) {
@@ -141,14 +157,13 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const eventRow = data as Record<string, unknown>;
     if (eventRow.google_event_id) {
       try {
-        const syncUserId = await resolveCalendarUserId(
-          supabase,
-          [
-            eventRow.assigned_to as string | null,
-            userId,
-          ],
-          workspaceOwnerId!
-        );
+        const syncUserId = await resolveGoogleSyncUserId(supabase, {
+          actorUserId: userId!,
+          workspaceOwnerId: workspaceOwnerId!,
+          googleSyncUserId: eventRow.google_sync_user_id as string | null,
+          assignedTo: eventRow.assigned_to as string | null,
+          preferActor: false,
+        });
         await updateGoogleCalendarEvent(syncUserId, String(eventRow.google_event_id), {
           title: String(eventRow.title),
           description: (eventRow.description as string | null) ?? null,
@@ -178,18 +193,20 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
 
     const { data: existing } = await supabase
       .from("calendar_events")
-      .select("google_event_id, assigned_to")
+      .select("google_event_id, assigned_to, google_sync_user_id")
       .eq("id", id)
       .eq("user_id", workspaceOwnerId!)
       .maybeSingle();
 
     if (existing?.google_event_id) {
       try {
-        const syncUserId = await resolveCalendarUserId(
-          supabase,
-          [(existing as { assigned_to?: string }).assigned_to, userId],
-          workspaceOwnerId!
-        );
+        const syncUserId = await resolveGoogleSyncUserId(supabase, {
+          actorUserId: userId!,
+          workspaceOwnerId: workspaceOwnerId!,
+          googleSyncUserId: (existing as { google_sync_user_id?: string }).google_sync_user_id,
+          assignedTo: (existing as { assigned_to?: string }).assigned_to,
+          preferActor: false,
+        });
         await deleteGoogleCalendarEvent(
           syncUserId,
           existing.google_event_id as string

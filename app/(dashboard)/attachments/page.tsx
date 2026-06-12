@@ -8,7 +8,7 @@ import { Modal } from "@/components/ui/modal";
 import { PageHeader } from "@/components/ui/page-shell";
 import { DocumentUploadForm } from "@/components/documents/document-upload-form";
 import { useDocuments, useUploadDocument, useDeleteDocument } from "@/hooks/useDocuments";
-import { useContacts } from "@/hooks/useContacts";
+import { ContactSearchCombobox } from "@/components/forms/contact-search-combobox";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 
 export default function AttachmentsPage() {
@@ -24,8 +24,6 @@ export default function AttachmentsPage() {
   });
   const upload = useUploadDocument();
   const deleteDoc = useDeleteDocument();
-  const { data: contactsData } = useContacts(1, 200);
-
   return (
     <div className="space-y-6 w-full">
       <PageHeader
@@ -109,25 +107,11 @@ export default function AttachmentsPage() {
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={att?.upload}>
         <div className="space-y-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium text-heading mb-1">
-              Contact <span className="text-[var(--error)]">*</span>
-            </label>
-            <select
-              value={linkContactId}
-              onChange={(e) => setLinkContactId(e.target.value)}
-              className="input-field"
-              required
-            >
-              <option value="">— Select contact —</option>
-              {(contactsData?.data ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.first_name} {c.last_name}
-                  {c.company?.trim() ? ` · ${c.company}` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
+          <ContactSearchCombobox
+            value={linkContactId}
+            onChange={setLinkContactId}
+            required
+          />
         </div>
         <DocumentUploadForm
           defaultContactId={linkContactId}

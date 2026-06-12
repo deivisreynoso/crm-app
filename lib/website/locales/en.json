@@ -13,7 +13,9 @@
     "faq": "FAQ",
     "book": "Book a call",
     "bookCta": "Book",
-    "login": "CRM"
+    "login": "CRM",
+    "support": "Support",
+    "supportCta": "Get support"
   },
   "hero": {
     "badge": "AI assistants for eCommerce",
@@ -306,6 +308,36 @@
     "book": "Book a free discovery call",
     "chat": "Chat with AI"
   },
+  "support": {
+    "metaTitle": "Customer support — ClickIn 360",
+    "metaDescription": "Submit a support ticket with your Customer ID (CID).",
+    "title": "Customer support",
+    "subtitle": "Existing customers: enter your Customer ID (CID) to open a ticket.",
+    "disabled": "Online ticket submission is temporarily unavailable. Please use chat on our Contact page or email your account manager.",
+    "contactLink": "Already a customer?",
+    "contactCta": "Submit a support ticket",
+    "form": {
+      "title": "Customer support",
+      "subtitle": "Enter your Customer ID (CID) to open a support request.",
+      "cidLabel": "Customer ID",
+      "continue": "Continue",
+      "verifying": "Verifying…",
+      "subject": "Subject",
+      "description": "Description",
+      "priority": "Priority",
+      "priorityLow": "Low",
+      "priorityMedium": "Medium",
+      "priorityHigh": "High",
+      "priorityUrgent": "Urgent",
+      "back": "Back",
+      "submit": "Submit ticket",
+      "submitting": "Submitting…",
+      "doneTitle": "Request received",
+      "doneBody": "Your reference number is {reference}. A confirmation email will be sent if we have your email on file.",
+      "genericError": "Unable to verify customer ID.",
+      "submitError": "Could not submit your request. Please try again."
+    }
+  },
   "footer": {
     "tagline": "AI & automation connected to your eCommerce store.",
     "rights": "All rights reserved.",
@@ -313,7 +345,8 @@
     "login": "CRM Login",
     "howItWorks": "How it works",
     "services": "Services",
-    "contact": "Contact"
+    "contact": "Contact",
+    "support": "Customer support"
   },
   "cookies": {
     "title": "Cookies & analytics",

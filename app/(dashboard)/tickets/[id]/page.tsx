@@ -67,6 +67,7 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
   }
 
   const headerLabel = formatServiceTicketLabel(ticket.ticket_number);
+  const isWidgetTicket = ticket.source === "website_widget";
   const displaySubject = ticket.subject?.trim() || ticket.title;
   const linkedContact = ticket.contact;
   const contactEmail = linkedContact?.email?.trim() ?? "";
@@ -202,6 +203,9 @@ export default function ServiceTicketDetailPage({ params }: PageProps) {
                 {ticket.priority} priority
               </Badge>
               {ticket.category && <Badge variant="neutral">{ticket.category}</Badge>}
+              {isWidgetTicket && (
+                <Badge variant="info">Customer portal</Badge>
+              )}
             </div>
             {linkedContact && (
               <p className="text-sm text-body-muted mt-2">

@@ -1,0 +1,66 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+const CID_FORMAT = /^CID-\d{4}-\d{5}$/;
+
+export function isValidCustomerIdFormat(value: string): boolean {
+  return CID_FORMAT.test(value.trim().toUpperCase());
+}
+
+export function normalizeCustomerId(value: string): string {
+  return value.trim().toUpperCase();
+}
+
+/** Sequential CID per workspace: CID-YYYY-00001 */
+export async function allocateCustomerId(
+  supabase: SupabaseClient,
+  workspaceOwnerId: string
+): Promise<string> {
+  const year = new Date().getFullYear();
+  const prefix = `CID-${year}-`;
+
+  const { data } = await supabase
+    .from("contacts")
+    .select("customer_id")
+    .eq("user_id", workspaceOwnerId)
+    .not("customer_id", "is", null)
+    .like("customer_id", `${prefix}%`);
+
+  let maxSeq = 0;
+  for (const row of data ?? []) {
+    const cid = (row.customer_id as string)?.trim();
+    if (!cid?.startsWith(prefix)) continue;
+    const seq = Number.parseInt(cid.slice(prefix.length), 10);
+    if (Number.isFinite(seq) && seq > maxSeq) maxSeq = seq;
+  }
+
+  const next = String(maxSeq + 1).padStart(5, "0");
+  return `${prefix}${next}`;
+}
+
+export async function findContactByCustomerId(
+  supabase: SupabaseClient,
+  customerId: string
+): Promise<{ id: string; user_id: string; email: string | null; first_name: string; last_name: string } | null> {
+  const normalized = normalizeCustomerId(customerId);
+  if (!isValidCustomerIdFormat(normalized)) return null;
+
+  const { data } = await supabase
+    .from("contacts")
+    .select("id, user_id, email, first_name, last_name, customer_id")
+    .not("customer_id", "is", null);
+
+  const match = (data ?? []).find(
+    (row) =>
+      typeof row.customer_id === "string" &&
+      row.customer_id.toUpperCase() === normalized
+  );
+
+  if (!match) return null;
+  return {
+    id: match.id as string,
+    user_id: match.user_id as string,
+    email: (match.email as string | null) ?? null,
+    first_name: match.first_name as string,
+    last_name: match.last_name as string,
+  };
+}

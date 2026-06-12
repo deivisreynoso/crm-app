@@ -21,6 +21,7 @@ import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { formatDateTimeInTimeZone } from "@/lib/utils/datetime";
 import { useDisplayTimeZone } from "@/hooks/useDisplayTimeZone";
 import { EntityCustomFieldsOverview } from "@/components/custom-fields/entity-custom-fields-overview";
+import { CustomerIdField } from "@/components/contact/customer-id-field";
 import { cn } from "@/lib/utils";
 import type { Contact, ContactFormInput } from "@/types";
 
@@ -50,7 +51,7 @@ function SectionTitle({
 }
 
 export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) {
-  const { canWrite } = useWorkspaceCapabilities();
+  const { canWrite, canManage } = useWorkspaceCapabilities();
   const { dict } = useCrmLocale();
   const r = dict.reviewRequest;
   const f = dict.contacts.fields;
@@ -114,6 +115,15 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
     <div className="space-y-6">
       {/* Primary contact fields */}
       <section>
+        {canManage && (
+          <div className="mb-4">
+            <CustomerIdField
+              contactId={contact.id}
+              customerId={contact.customer_id}
+              canManage={canManage}
+            />
+          </div>
+        )}
         <div className={fieldGrid}>
           <div className={fieldCell}>
             <InlineEditableField

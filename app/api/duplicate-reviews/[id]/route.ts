@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { mergeContacts, type ContactRow } from "@/lib/contacts/merge-contacts";
 import { humanizeDbError } from "@/lib/validation-errors";
+import { recordAuditLog } from "@/lib/audit/record";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -92,6 +93,16 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           { status: 500 }
         );
       }
+
+      await recordAuditLog({
+        workspaceOwnerId: workspaceOwnerId!,
+        actorUserId: userId!,
+        action: "contact.merge",
+        entityType: "contact",
+        entityId: primaryId,
+        changeSummary: `Merged contact ${secondaryId} into ${primaryId}`,
+        req,
+      });
 
       return NextResponse.json({ review: data, merged_into: primaryId });
     }

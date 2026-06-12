@@ -10,7 +10,8 @@ import {
 } from "@/lib/api/assert-workspace-parents";
 import { enrichCompanyIdFromContact } from "@/lib/contacts/enrich-company-from-contact";
 import { createGoogleCalendarEvent } from "@/lib/google/calendar";
-import { resolveCalendarUserId } from "@/lib/google/resolve-calendar-user";
+import { assertCalendarAssigneePermission } from "@/lib/calendar/assert-assignee";
+import { enrichCalendarEventsWithOwners } from "@/lib/calendar/enrich-events";
 
 function emptyToNull(value: string | undefined): string | null {
   return value?.trim() ? value.trim() : null;
@@ -32,12 +33,14 @@ export async function GET(req: NextRequest) {
     const contactId = params.get("contact_id");
     const companyId = params.get("company_id");
     const opportunityId = params.get("opportunity_id");
+    const assignedTo = params.get("assigned_to");
     const startDate = params.get("start_date");
     const endDate = params.get("end_date");
 
     if (contactId) query = query.eq("contact_id", contactId);
     if (companyId) query = query.eq("company_id", companyId);
     if (opportunityId) query = query.eq("opportunity_id", opportunityId);
+    if (assignedTo) query = query.eq("assigned_to", assignedTo);
     if (startDate) {
       query = query.gte("start_time", `${startDate}T00:00:00.000Z`);
     }
@@ -56,7 +59,11 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ data: data ?? [] });
+    const enriched = await enrichCalendarEventsWithOwners(
+      supabase,
+      (data ?? []) as Record<string, unknown>[]
+    );
+    return NextResponse.json({ data: enriched });
   } catch (err) {
     console.error("GET /api/calendar/events:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -94,14 +101,18 @@ export async function POST(req: NextRequest) {
       parsed.data.company_id
     );
 
-    const assigneeId =
-      parsed.data.assigned_to?.trim() || userId!;
-
-    const calendarUserId = await resolveCalendarUserId(
-      supabase,
-      [assigneeId, userId],
-      workspaceOwnerId!
+    const assigneeId = assertCalendarAssigneePermission(
+      role!,
+      isWorkspaceOwner,
+      userId!,
+      parsed.data.assigned_to
     );
+    if (!assigneeId) {
+      return NextResponse.json(
+        { error: "You can only assign events to yourself." },
+        { status: 403 }
+      );
+    }
 
     const isGoogleMeet = parsed.data.location_type === "google_meet";
 
@@ -137,7 +148,7 @@ export async function POST(req: NextRequest) {
     let googleEventId: string | null = null;
     let meetLink: string | null = null;
     try {
-      const createdGoogle = await createGoogleCalendarEvent(calendarUserId, {
+      const createdGoogle = await createGoogleCalendarEvent(userId!, {
         title: row.title,
         description: row.description,
         location: row.location,
@@ -155,6 +166,7 @@ export async function POST(req: NextRequest) {
     if ((googleEventId || meetLink) && created?.id) {
       const syncPatch: Record<string, unknown> = {
         is_synced: Boolean(googleEventId),
+        google_sync_user_id: googleEventId ? userId! : null,
         updated_at: new Date().toISOString(),
       };
       if (googleEventId) syncPatch.google_event_id = googleEventId;

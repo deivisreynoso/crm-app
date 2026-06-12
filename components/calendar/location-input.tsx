@@ -1,51 +1,44 @@
 "use client";
 
-import { LOCATION_TYPES } from "@/lib/calendar/utils";
-
 interface LocationInputProps {
-  locationType: string;
+  isVirtual: boolean;
   location: string;
-  onTypeChange: (type: string) => void;
+  onVirtualChange: (virtual: boolean) => void;
   onLocationChange: (value: string) => void;
 }
 
 export function LocationInput({
-  locationType,
+  isVirtual,
   location,
-  onTypeChange,
+  onVirtualChange,
   onLocationChange,
 }: LocationInputProps) {
-  const meta = LOCATION_TYPES.find((t) => t.value === locationType);
-
   return (
     <div className="space-y-3">
-      <div>
-        <label className="block text-sm font-medium text-heading mb-1">
-          Meeting type
-        </label>
-        <select
-          className="input-field w-full"
-          value={locationType}
-          onChange={(e) => onTypeChange(e.target.value)}
-        >
-          {LOCATION_TYPES.map((t) => (
-            <option key={t.value} value={t.value}>
-              {t.label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-heading mb-1">
-          Location / link
-        </label>
+      <label className="flex items-center gap-2 text-sm">
         <input
-          className="input-field w-full"
-          value={location}
-          onChange={(e) => onLocationChange(e.target.value)}
-          placeholder={meta?.placeholder ?? "Meeting details"}
+          type="checkbox"
+          checked={isVirtual}
+          onChange={(e) => onVirtualChange(e.target.checked)}
         />
-      </div>
+        <span className="font-medium text-heading">Virtual / Google Meet</span>
+        <span className="text-body-muted font-normal">
+          (Meet link generated when Google Calendar is connected)
+        </span>
+      </label>
+      {!isVirtual && (
+        <div>
+          <label className="block text-sm font-medium text-heading mb-1">
+            Location
+          </label>
+          <input
+            className="input-field w-full"
+            value={location}
+            onChange={(e) => onLocationChange(e.target.value)}
+            placeholder="Street address or meeting room"
+          />
+        </div>
+      )}
     </div>
   );
 }

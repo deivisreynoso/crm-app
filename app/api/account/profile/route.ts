@@ -2,12 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { z } from "zod";
+import { isValidCalendarColor } from "@/lib/users/calendar-colors";
 import { humanizeDbError } from "@/lib/validation-errors";
 
 const patchSchema = z.object({
   full_name: z.string().min(1).max(120).optional(),
   email: z.string().email().optional(),
   email_signature_html: z.string().max(20000).optional().or(z.literal("")),
+  calendar_color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .refine((v) => isValidCalendarColor(v), {
+      message: "Choose a non-grey color from the calendar palette",
+    })
+    .optional()
+    .or(z.literal("")),
 });
 
 export async function GET() {
@@ -17,7 +26,7 @@ export async function GET() {
   const supabase = createServerSideClient();
   const { data } = await supabase
     .from("user_profiles")
-    .select("email, display_name, email_signature_html")
+    .select("email, display_name, email_signature_html, calendar_color")
     .eq("id", userId!)
     .maybeSingle();
 
@@ -25,6 +34,7 @@ export async function GET() {
     full_name: data?.display_name ?? "",
     email: data?.email ?? "",
     email_signature_html: data?.email_signature_html ?? "",
+    calendar_color: data?.calendar_color ?? "",
   });
 }
 
@@ -67,7 +77,7 @@ export async function PATCH(req: NextRequest) {
 
     const { data: existingProfile } = await supabase
       .from("user_profiles")
-      .select("email, display_name, email_signature_html")
+      .select("email, display_name, email_signature_html, calendar_color")
       .eq("id", userId!)
       .maybeSingle();
 
@@ -82,6 +92,12 @@ export async function PATCH(req: NextRequest) {
               ? null
               : parsed.data.email_signature_html
             : existingProfile?.email_signature_html,
+        calendar_color:
+          parsed.data.calendar_color !== undefined
+            ? parsed.data.calendar_color === ""
+              ? null
+              : parsed.data.calendar_color
+            : existingProfile?.calendar_color,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "id" }

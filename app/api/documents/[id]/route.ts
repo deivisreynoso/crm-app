@@ -176,6 +176,13 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
 
     const { id } = await context.params;
     const supabase = createServerSideClient();
+    const { data: existing } = await supabase
+      .from("documents")
+      .select("storage_path")
+      .eq("id", id)
+      .eq("user_id", workspaceOwnerId!)
+      .maybeSingle();
+
     const { data: deleted, error: dbError } = await supabase
       .from("documents")
       .delete()
@@ -183,6 +190,11 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
       .eq("user_id", workspaceOwnerId!)
       .select("id")
       .maybeSingle();
+
+    if (deleted && existing?.storage_path) {
+      const { deleteDocumentStorage } = await import("@/lib/storage/cleanup-document");
+      await deleteDocumentStorage(supabase, existing.storage_path as string);
+    }
 
     if (dbError) {
       return NextResponse.json({ error: dbError.message }, { status: 500 });
