@@ -187,15 +187,25 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 - `event_kind` column (migration 032)
 - Booking availability in Settings (Lead API uses this)
 
-### Payments
+### Finances
 
-- Payment history list (linked to contacts/opportunities)
+- **Finances** module (`/finances`) — overview dashboard, invoices, transactions (income/expenses), payment links
+- **Invoices** — list, detail editor, PDF, send via Gmail or Mailgun, void, duplicate; filter by `contact_id` / `quote_id`
+- **Invoice wizard** (`/finances/invoices/new`) — types (quote-linked, services, retainer, deposit, change order, milestone); collection method **manual** (log partial payments) or **payment link** (Stripe Checkout + email)
+- **Partial payments** — invoice status `partially_paid` until balance cleared; multiple payment links per invoice
+- **Transactions ledger** — income and expenses with categories, recurrence, void
+- **Payment links** — Stripe Checkout sessions tied to invoices; webhook at `POST /api/webhooks/stripe`
+- **Quote billing workflow** — Finances tab on quote editor; billing progress stepper; auto-invoice from accepted quote
+- **Contact related** — invoices section on contact detail with links to invoice records
+- **Finance settings** (owner/admin) — default currency, tax rate, invoice numbering, due days, footer; Stripe status in Settings → Integrations
+- Legacy **`/payments`** redirects to `/finances/transactions` (migrated from old `payments` table in migration 058)
 
 ### Analytics
 
 - Pipeline metrics
 - Operations analytics API
 - **Website** tab — GA4 sessions, users, pageviews, top pages, traffic sources (7/30/90 days); all roles when GA4 connected; configuration owner/admin only
+- **Finances** tab — revenue overview, outstanding invoices, expense breakdown (`/analytics?tab=finances`)
 
 ### Search
 
@@ -233,8 +243,9 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 | N8N webhooks | Outbound from CRM | `contact.*`, `website.lead`, etc. |
 | N8N inbound | `x-n8n-secret` | `POST /api/integrations/n8n/inbound` — workflow callbacks (webchat live) |
 | Public support | Session token | `POST /api/public/support/validate-cid`, `POST /api/public/support/tickets` — CID-gated ticket widget |
-| Stripe Checkout | `STRIPE_SECRET_KEY` | Public quote **Pay Now** after acceptance; `POST /api/quotes/public/[token]/checkout` |
+| Stripe Checkout | `STRIPE_SECRET_KEY` | Public quote **Pay Now** after acceptance; invoice **payment links**; `POST /api/quotes/public/[token]/checkout` |
 | Stripe webhooks | `STRIPE_WEBHOOK_SECRET` | `POST /api/webhooks/stripe` — `checkout.session.completed`, `payment_intent.succeeded`, `invoice.paid` |
+| Mailgun | `MAILGUN_*` | Invoice send with payment link when Gmail not used |
 | GA4 Data API | Service account env | `GET /api/analytics/ga4` — website dashboard |
 
 See [CLICKIN360-CRM-API.md](./CLICKIN360-CRM-API.md) for endpoints.
@@ -256,7 +267,7 @@ See [CLICKIN360-CRM-API.md](./CLICKIN360-CRM-API.md) for endpoints.
 
 ## Database migrations
 
-Production should run migrations **001–050** in order. Notable groups:
+Production should run migrations **001–060** in order. Notable groups:
 
 | Range | Theme |
 |-------|--------|
@@ -277,6 +288,15 @@ Production should run migrations **001–050** in order. Notable groups:
 | 049 | Auth user delete FKs — `ON DELETE SET NULL` for teammate removal |
 | 050 | Email signatures, quote branding colors/fonts, calendar `assigned_to`, quote disclaimer timestamp |
 | 051 | Remove unused `user_profiles.mfa_enabled` (iteration 2 MFA cleanup) |
+| 052 | Calendar colors, CID support widget, ticket source |
+| 053 | Support session language |
+| 054 | Finances core — categories, transactions ledger, RLS helpers |
+| 055 | Invoices, payment links, invoice numbering sequences |
+| 056 | Quote `payment_status` / `amount_paid` on documents |
+| 057 | Finance settings on `user_settings` (tax, invoice prefix, due days, Stripe metadata) |
+| 058 | Backfill legacy `payments` into `finance_transactions`; drop `payments` table |
+| 059 | Invoice wizard fields (`invoice_type`, `collection_method`, `pending` status) |
+| 060 | Invoice `partially_paid` status for partial payment workflow |
 
 ---
 
@@ -317,12 +337,13 @@ Historical phases map to git eras (not separate products):
 | **Note/task edit-delete** | Timeline and tasks panel (`37c8ae2`) |
 | **Pipeline stage reorder** | Settings drag-and-drop (`33b5e51`) |
 | **Migration 048** | DB orphan cleanup — run preflight (`scripts/db-preflight-audit.sql`) first |
+| **Finances sprint (current)** | Invoices, transactions, payment links, wizard, partial payments, quote billing workflow, Analytics finances tab, `/payments` → `/finances/transactions` (migrations **054–060**) |
 
 ### Post–Phase 5 ops (do first)
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | **VPS deploy** | Pull `main`; run migrations **044–051** if not applied; set `OWNER_LOGIN_ALIASES`, Stripe, and GA4 env as needed; `./scripts/deploy-vps.sh` (cached build). Use `--no-cache` only when `package.json` or `Dockerfile` changes |
+| 1 | **VPS deploy** | Pull `main`; run migrations **044–060** if not applied; set `OWNER_LOGIN_ALIASES`, Stripe (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`), Mailgun, and GA4 env as needed; `./scripts/deploy-vps.sh` (cached build). Use `--no-cache` only when `package.json` or `Dockerfile` changes |
 | 2 | **GA4 conversions** | Mark `generate_lead`, `booking_completed` in GA4 Admin |
 | 3 | **GSC follow-up** | Fix remaining 404s / canonical issues after sitemap deploy |
 | 4 | **AUDIT-FIX-TRACKER F1–F2, F5–F6** | Async contact combobox; batch signed URLs; storage cleanup; remove unused dashboard stats API |
@@ -366,11 +387,13 @@ Historical phases map to git eras (not separate products):
 | `/account` | My Account (profile, signature, password) |
 | `/attachments` | Files |
 | `/calendar` | Events |
-| `/payments` | Payments |
-| `/analytics` | Charts |
+| `/finances`, `/finances/overview`, `/finances/invoices`, `/finances/invoices/new`, `/finances/invoices/[id]` | Finances hub, invoices, wizard |
+| `/finances/transactions`, `/finances/expenses`, `/finances/payment-links` | Ledger, expenses, Stripe payment links |
+| `/payments` | Redirects to `/finances/transactions` |
+| `/analytics`, `/analytics?tab=finances` | Charts; finances overview tab |
 | `/settings` | Workspace config |
 | `/quote/[token]` | Public quote accept/decline (disclaimer EN/ES) |
 
 ---
 
-*Last updated: 2026-06-10 (`main` @ `90c7522`).*
+*Last updated: 2026-06-12 — Finances module (migrations 054–060).*

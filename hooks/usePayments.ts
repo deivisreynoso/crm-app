@@ -1,26 +1,14 @@
-import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+import type { FinanceTransaction } from "@/types";
+import { useFinanceTransactions } from "@/hooks/useFinanceTransactions";
 
-export interface PaymentRecord {
-  id: string;
-  amount: number;
-  currency: string;
-  status: string;
-  payment_method?: string | null;
-  stripe_payment_id?: string | null;
-  receipt_url?: string | null;
-  notes?: string | null;
-  created_at: string;
-  contact?: { id: string; first_name: string; last_name: string } | null;
-  opportunity?: { id: string; title: string } | null;
-}
+/** @deprecated Legacy alias — use FinanceTransaction / useFinanceTransactions */
+export type PaymentRecord = FinanceTransaction;
 
+/** @deprecated Use useFinanceTransactions — reads finance_transactions ledger */
 export function usePayments() {
-  return useQuery({
-    queryKey: ["payments"],
-    queryFn: async () => {
-      const { data } = await axios.get<{ data: PaymentRecord[] }>("/api/payments");
-      return data.data;
-    },
-  });
+  const q = useFinanceTransactions();
+  return {
+    ...q,
+    data: q.data?.filter((t) => t.type === "income") ?? [],
+  };
 }

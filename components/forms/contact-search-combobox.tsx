@@ -27,8 +27,6 @@ export function ContactSearchCombobox({
   const [debounced, setDebounced] = useState("");
   const [options, setOptions] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedLabel, setSelectedLabel] = useState("");
-
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query.trim()), 300);
     return () => clearTimeout(t);
@@ -61,26 +59,6 @@ export function ContactSearchCombobox({
     };
   }, [debounced]);
 
-  useEffect(() => {
-    if (!value) {
-      setSelectedLabel("");
-      return;
-    }
-    const inList = options.find((c) => c.id === value);
-    if (inList) {
-      setSelectedLabel(
-        `${inList.first_name} ${inList.last_name}${inList.company?.trim() ? ` · ${inList.company}` : ""}`
-      );
-      return;
-    }
-    void axios.get<Contact>(`/api/contacts/${value}`).then((res) => {
-      const c = res.data;
-      setSelectedLabel(
-        `${c.first_name} ${c.last_name}${c.company?.trim() ? ` · ${c.company}` : ""}`
-      );
-    }).catch(() => setSelectedLabel(""));
-  }, [value, options]);
-
   const showList = debounced.length >= 2 && !disabled;
 
   const hint = useMemo(() => {
@@ -98,11 +76,6 @@ export function ContactSearchCombobox({
         {label}
         {required && <span className="text-[var(--error)]"> *</span>}
       </label>
-      {value && selectedLabel && (
-        <p className="text-xs text-body-muted mb-1">
-          Selected: <span className="text-heading font-medium">{selectedLabel}</span>
-        </p>
-      )}
       <input
         id={id}
         className="input-field w-full"

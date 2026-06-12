@@ -1193,11 +1193,48 @@ Calendar events sync to the **logged-in user's** connected Google Calendar on cr
 
 ---
 
-### 9.11 Other CRM resources
+### 9.11 Finances
+
+Owner/admin manage writes; all roles with read access can list invoices and transactions. Stripe payment links require `STRIPE_SECRET_KEY`; invoice email with Pay now uses Gmail or Mailgun.
+
+| Method | Path | Notes |
+|--------|------|--------|
+| `GET` | `/api/finances/overview` | Dashboard metrics (`period`, optional `from`/`to`) |
+| `GET` | `/api/finances/invoices` | List invoices; query `status`, `contact_id`, `quote_id`, `limit` |
+| `POST` | `/api/finances/invoices` | Create draft invoice (owner/admin) |
+| `GET` | `/api/finances/invoices/[id]` | Invoice detail |
+| `PATCH` | `/api/finances/invoices/[id]` | Update invoice |
+| `POST` | `/api/finances/invoices/wizard` | Wizard create — type, collection method, optional payment link + email |
+| `POST` | `/api/finances/invoices/[id]/duplicate` | Duplicate invoice |
+| `POST` | `/api/finances/invoices/[id]/void` | Void invoice |
+| `GET` | `/api/finances/invoices/[id]/pdf` | Download PDF |
+| `POST` | `/api/finances/invoices/[id]/send` | Send invoice email (Mailgun) |
+| `POST` | `/api/finances/invoices/[id]/send-via-gmail` | Send via connected Gmail |
+| `GET` | `/api/finances/transactions` | Income/expense ledger |
+| `POST` | `/api/finances/transactions` | Create transaction |
+| `GET` | `/api/finances/transactions/[id]` | Transaction detail |
+| `PATCH` | `/api/finances/transactions/[id]` | Update transaction |
+| `POST` | `/api/finances/transactions/[id]/void` | Void transaction |
+| `PATCH` | `/api/finances/transactions/[id]/recurrence` | Set recurrence |
+| `GET` | `/api/finances/payment-links` | List Stripe payment links |
+| `POST` | `/api/finances/payment-links` | Create payment link for invoice balance |
+| `POST` | `/api/finances/payment-links/[id]/deactivate` | Deactivate link |
+| `GET` | `/api/finances/categories` | Finance categories |
+| `POST` | `/api/finances/categories` | Create category |
+| `PATCH` | `/api/finances/categories/[id]` | Update category |
+| `DELETE` | `/api/finances/categories/[id]` | Delete category |
+| `GET` | `/api/settings/finances` | Finance settings (currency, tax, invoice numbering) |
+| `PATCH` | `/api/settings/finances` | Update finance settings (owner/admin) |
+| `POST` | `/api/webhooks/stripe` | Stripe webhook (no session; `STRIPE_WEBHOOK_SECRET`) |
+
+Legacy `GET /api/payments` may still exist for compatibility; UI uses `/api/finances/transactions`.
+
+---
+
+### 9.12 Other CRM resources
 
 | Area | Endpoints |
 |------|-----------|
-| **Payments** | `GET /api/payments` |
 | **Search** | `GET /api/search?q=...` |
 | **Analytics** | `GET /api/analytics/pipeline`, `/api/analytics/operations`, `GET /api/analytics/ga4?days=7\|30\|90` (authenticated; GA4 env required) |
 | **Duplicates** | `GET|POST /api/duplicate-reviews`, `PATCH /api/duplicate-reviews/[id]` (`action`: `dismiss` \| `merge`) |

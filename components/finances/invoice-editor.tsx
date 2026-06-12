@@ -1,0 +1,377 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import axios from "axios";
+import { Copy, FileDown, Mail } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ContactSelect } from "@/components/forms/contact-select";
+import { AcceptedQuoteSelect } from "@/components/forms/accepted-quote-select";
+import { FormSection } from "@/components/ui/form-section";
+import { BillingWorkflowPanel } from "@/components/finances/billing-workflow-panel";
+import { InvoicePaymentsPanel } from "@/components/finances/invoice-payments-panel";
+import { useFinanceTransactions } from "@/hooks/useFinanceTransactions";
+import { SendInvoiceEmailModal } from "@/components/finances/send-invoice-email-modal";
+import {
+  useDuplicateInvoice,
+  useInvoice,
+  usePaymentLinks,
+  useUpdateInvoice,
+} from "@/hooks/useFinances";
+import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
+import { formatApiError } from "@/lib/validation-errors";
+import { formatCurrency } from "@/lib/utils";
+import type { InvoiceLineItem } from "@/types";
+
+type DraftLine = InvoiceLineItem & { key: string };
+
+function linesFromInvoice(items: InvoiceLineItem[]): DraftLine[] {
+  return items.map((line, i) => ({
+    ...line,
+    key: `line-${i}`,
+  }));
+}
+
+function recalc(lines: DraftLine[], taxRate: number) {
+  const subtotal = lines.reduce((s, l) => s + Number(l.line_total || 0), 0);
+  const taxAmount = Math.round(subtotal * (taxRate / 100) * 100) / 100;
+  return { subtotal, taxAmount, total: subtotal + taxAmount };
+}
+
+type Props = {
+  invoiceId: string;
+};
+
+export function InvoiceEditor({ invoiceId }: Props) {
+  const router = useRouter();
+  const { canManage } = useWorkspaceCapabilities();
+  const { data: invoice, isLoading, error, refetch } = useInvoice(invoiceId);
+  const { data: paymentLinks = [] } = usePaymentLinks();
+  const { data: invoiceTxs = [] } = useFinanceTransactions({
+    invoice_id: invoiceId,
+    type: "income",
+  });
+  const updateInvoice = useUpdateInvoice(invoiceId);
+  const duplicateInvoice = useDuplicateInvoice();
+
+  const [contactId, setContactId] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [notes, setNotes] = useState("");
+  const [footerText, setFooterText] = useState("");
+  const [taxRate, setTaxRate] = useState("0");
+  const [lines, setLines] = useState<DraftLine[]>([]);
+  const [toast, setToast] = useState<{ text: string; ok?: boolean } | null>(null);
+  const [sendOpen, setSendOpen] = useState(false);
+
+  const loadedRef = useMemo(() => ({ id: "" }), []);
+  useEffect(() => {
+    if (!invoice || loadedRef.id === invoice.id) return;
+    loadedRef.id = invoice.id;
+    setContactId(invoice.contact_id);
+    setDueDate(invoice.due_date?.slice(0, 10) ?? "");
+    setNotes(invoice.notes ?? "");
+    setFooterText(invoice.footer_text ?? "");
+    setTaxRate(String(invoice.tax_rate ?? 0));
+    setLines(linesFromInvoice(invoice.line_items ?? []));
+  }, [invoice, loadedRef]);
+
+  const totals = useMemo(
+    () => recalc(lines, Number(taxRate) || 0),
+    [lines, taxRate]
+  );
+
+  const readOnly = !canManage || (invoice?.status !== "draft" && invoice?.status !== undefined);
+
+  const amountPaid = useMemo(
+    () =>
+      invoiceTxs
+        .filter((t) => t.status === "completed")
+        .reduce((sum, t) => sum + Number(t.amount || 0), 0),
+    [invoiceTxs]
+  );
+
+  async function saveDraft() {
+    if (!invoice) return;
+    try {
+      await updateInvoice.mutateAsync({
+        contact_id: contactId,
+        due_date: dueDate || null,
+        notes: notes || null,
+        footer_text: footerText || null,
+        tax_rate: Number(taxRate) || 0,
+        line_items: lines.map(({ description, quantity, unit_price, line_total }) => ({
+          description,
+          quantity,
+          unit_price,
+          line_total,
+        })),
+        subtotal: totals.subtotal,
+        tax_amount: totals.taxAmount,
+        total: totals.total,
+      });
+      setToast({ text: "Draft saved", ok: true });
+    } catch (err) {
+      setToast({ text: formatApiError(err, "Save failed"), ok: false });
+    }
+  }
+
+  async function downloadPdf() {
+    const { data } = await axios.get<{ file_url: string }>(
+      `/api/finances/invoices/${invoiceId}/pdf`
+    );
+    if (data.file_url) window.open(data.file_url, "_blank");
+  }
+
+  async function voidInvoice() {
+    const ok = window.confirm("Void this invoice?");
+    if (!ok) return;
+    await axios.post(`/api/finances/invoices/${invoiceId}/void`);
+    void refetch();
+  }
+
+  async function duplicate() {
+    const copy = await duplicateInvoice.mutateAsync(invoiceId);
+    router.push(`/finances/invoices/${copy.id}`);
+  }
+
+  function updateLine(key: string, patch: Partial<DraftLine>) {
+    setLines((prev) =>
+      prev.map((line) => {
+        if (line.key !== key) return line;
+        const next = { ...line, ...patch };
+        const qty = Number(next.quantity) || 0;
+        const price = Number(next.unit_price) || 0;
+        next.line_total = Math.round(qty * price * 100) / 100;
+        return next;
+      })
+    );
+  }
+
+  if (isLoading) {
+    return <p className="text-sm text-body-muted">Loading invoice…</p>;
+  }
+
+  if (error || !invoice) {
+    return (
+      <div className="space-y-3">
+        <p className="text-[var(--error)]">Invoice not found.</p>
+        <Link href="/finances/invoices" className="text-sm text-[var(--primary)] hover:underline">
+          ← Invoices
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-8rem)] min-h-[520px] -m-6 lg:-m-8">
+      <header className="shrink-0 flex flex-wrap items-center gap-3 px-4 lg:px-6 py-3 border-b border-[var(--card-border)] bg-[var(--card)]">
+        <Link href="/finances/invoices" className="text-xs text-body-muted hover:text-[var(--primary)]">
+          ← Invoices
+        </Link>
+        <span className="text-lg font-semibold text-heading">{invoice.invoice_number}</span>
+        <Badge
+          variant={
+            invoice.status === "pending" || invoice.status === "partially_paid"
+              ? "warning"
+              : invoice.status === "paid"
+                ? "success"
+                : "info"
+          }
+        >
+          {invoice.status === "partially_paid" ? "partially paid" : invoice.status}
+        </Badge>
+        {invoice.collection_method && (
+          <span className="text-xs text-body-muted capitalize">
+            · {invoice.collection_method.replace("_", " ")}
+          </span>
+        )}
+        {invoice.quote?.quote_reference && (
+          <Link
+            href={`/quotes/${invoice.quote_id}`}
+            className="text-xs text-[var(--secondary)] hover:underline"
+          >
+            Quote {invoice.quote.quote_reference}
+          </Link>
+        )}
+        <div className="flex flex-wrap items-center gap-2 ml-auto">
+          {toast && (
+            <span
+              className={`text-xs font-medium px-2 py-1 rounded-md ${
+                toast.ok ? "bg-emerald-600 text-white" : "bg-red-500/10 text-[var(--error)]"
+              }`}
+            >
+              {toast.text}
+            </span>
+          )}
+          {canManage && invoice.status === "draft" && (
+            <Button variant="outline" size="sm" disabled={updateInvoice.isPending} onClick={() => void saveDraft()}>
+              Save draft
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => void downloadPdf()}>
+            <FileDown className="h-4 w-4 mr-1.5" />
+            Download PDF
+          </Button>
+          {canManage && !["voided", "paid"].includes(invoice.status) && (
+            <Button variant="outline" size="sm" onClick={() => setSendOpen(true)}>
+              <Mail className="h-4 w-4 mr-1.5" />
+              Send
+            </Button>
+          )}
+          {canManage && (
+            <Button variant="outline" size="sm" onClick={() => void duplicate()}>
+              <Copy className="h-4 w-4 mr-1.5" />
+              Duplicate
+            </Button>
+          )}
+          {canManage && !["voided", "paid"].includes(invoice.status) && (
+            <Button variant="outline" size="sm" onClick={() => void voidInvoice()}>
+              Void
+            </Button>
+          )}
+        </div>
+      </header>
+
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 lg:p-6">
+        <div className="max-w-3xl space-y-6">
+          {invoice.status !== "voided" && (
+            <BillingWorkflowPanel
+              hasQuote={Boolean(invoice.quote_id)}
+              hasInvoice
+              quoteAccepted={Boolean(invoice.quote_id)}
+              quoteId={invoice.quote_id ?? undefined}
+              invoiceId={invoice.id}
+              invoiceStatus={invoice.status}
+              hasActiveLink={paymentLinks.some(
+                (l) => l.invoice_id === invoice.id && l.status === "active"
+              )}
+              amountPaid={amountPaid}
+              total={Number(invoice.total)}
+              onInvoicePage
+              onRequestSend={() => setSendOpen(true)}
+            />
+          )}
+
+          <FormSection
+            title="Invoice & customer"
+            description={
+              invoice.quote_id
+                ? "Linked to an accepted quote."
+                : "Optionally link an accepted quote while this invoice is still a draft."
+            }
+          >
+            {invoice.quote_id ? (
+              <AcceptedQuoteSelect
+                value={invoice.quote_id}
+                onChange={() => undefined}
+                locked
+                allowStandalone={false}
+              />
+            ) : (
+              <p className="text-xs text-body-muted">
+                No linked quote. Standalone invoices are created without a quote reference.
+              </p>
+            )}
+            <ContactSelect
+              value={contactId}
+              onChange={setContactId}
+              disabled={readOnly || Boolean(invoice.quote_id)}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium block mb-1">Due date</label>
+                <input
+                  type="date"
+                  className="input-field w-full"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  disabled={readOnly}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium block mb-1">Currency</label>
+                <input className="input-field w-full" value={invoice.currency} disabled readOnly />
+              </div>
+            </div>
+          </FormSection>
+
+          <FormSection title="Line items">
+            <div className="space-y-2">
+              {lines.map((line) => (
+                <div key={line.key} className="grid grid-cols-12 gap-2 items-end">
+                  <div className="col-span-6">
+                    <input
+                      className="input-field w-full text-sm"
+                      value={line.description}
+                      onChange={(e) => updateLine(line.key, { description: e.target.value })}
+                      disabled={readOnly}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <input
+                      type="number"
+                      className="input-field w-full text-sm"
+                      value={line.quantity}
+                      onChange={(e) => updateLine(line.key, { quantity: Number(e.target.value) })}
+                      disabled={readOnly}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="input-field w-full text-sm"
+                      value={line.unit_price}
+                      onChange={(e) => updateLine(line.key, { unit_price: Number(e.target.value) })}
+                      disabled={readOnly}
+                    />
+                  </div>
+                  <div className="col-span-2 text-sm text-right font-medium">
+                    {formatCurrency(line.line_total, invoice.currency)}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end text-sm space-x-6 pt-2 border-t border-[var(--card-border)]">
+              <span>Subtotal: {formatCurrency(totals.subtotal, invoice.currency)}</span>
+              <span>
+                Tax ({taxRate}%): {formatCurrency(totals.taxAmount, invoice.currency)}
+              </span>
+              <span className="font-semibold">Total: {formatCurrency(totals.total, invoice.currency)}</span>
+            </div>
+          </FormSection>
+
+          {invoice.status !== "voided" && (
+            <InvoicePaymentsPanel invoice={invoice} onUpdated={() => void refetch()} />
+          )}
+
+          <FormSection title="Notes & footer">
+            <label className="text-xs font-medium block">Notes</label>
+            <textarea
+              className="input-field w-full min-h-[80px]"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              disabled={readOnly}
+            />
+            <label className="text-xs font-medium block">Footer</label>
+            <textarea
+              className="input-field w-full min-h-[60px]"
+              value={footerText}
+              onChange={(e) => setFooterText(e.target.value)}
+              disabled={readOnly}
+            />
+          </FormSection>
+        </div>
+      </div>
+
+      <SendInvoiceEmailModal
+        invoice={invoice}
+        open={sendOpen}
+        onClose={() => setSendOpen(false)}
+        onSent={() => void refetch()}
+      />
+    </div>
+  );
+}

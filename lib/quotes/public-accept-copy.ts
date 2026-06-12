@@ -18,6 +18,14 @@ export function getQuoteAcceptCopy(locale: "en" | "es") {
       accepted: "Gracias. Su aceptación fue registrada.",
       rejected: "Su respuesta fue registrada.",
       alreadyResponded: "Esta cotización ya fue respondida.",
+      payNowTitle: "Pagar ahora",
+      payNowHint: "Pague de forma segura con tarjeta. Recibirá un recibo por correo.",
+      payNowCta: "Pagar con tarjeta",
+      payNowLoading: "Redirigiendo…",
+      paymentSuccess: "Pago recibido. Gracias — le enviaremos un recibo por correo.",
+      paymentCancelled: "El pago fue cancelado. Puede intentarlo de nuevo cuando lo desee.",
+      paymentReceived: "Pago recibido. Gracias.",
+      paymentError: "No se pudo iniciar el pago. Inténtelo de nuevo.",
     };
   }
 
@@ -39,5 +47,13 @@ export function getQuoteAcceptCopy(locale: "en" | "es") {
     accepted: "Thank you. Your acceptance was recorded.",
     rejected: "Your response was recorded.",
     alreadyResponded: "This quote has already been responded to.",
+    payNowTitle: "Pay now",
+    payNowHint: "Pay securely by card. You will receive a receipt by email.",
+    payNowCta: "Pay with card",
+    payNowLoading: "Redirecting…",
+    paymentSuccess: "Payment received. Thank you — we will email your receipt shortly.",
+    paymentCancelled: "Payment was cancelled. You can try again whenever you are ready.",
+    paymentReceived: "Payment received. Thank you.",
+    paymentError: "Could not start checkout. Please try again.",
   };
 }

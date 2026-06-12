@@ -11,6 +11,7 @@ import { BookingAvailabilitySettings } from "@/components/settings/booking-avail
 import { GoogleReviewRequestSettings } from "@/components/settings/google-review-request-settings";
 import { AuditLogsPanel } from "@/components/settings/audit-logs-panel";
 import { AdminIntegrationsPanel } from "@/components/settings/admin-integrations-panel";
+import { FinanceSettingsPanel } from "@/components/settings/finance-settings-panel";
 import { SupportWidgetSettings } from "@/components/settings/support-widget-settings";
 import { SettingsSection } from "@/components/settings/settings-section";
 import { CrmLanguageSwitcher } from "@/components/crm/crm-language-switcher";
@@ -72,6 +73,13 @@ export function SettingsPageContent() {
             description={s?.languageHelp ?? "Applies to CRM navigation and common labels."}
           >
             <CrmLanguageSwitcher />
+          </SettingsSection>
+
+          <SettingsSection
+            title="Finances"
+            description="Default currency, invoice numbering, categories, and Stripe status."
+          >
+            <FinanceSettingsPanel />
           </SettingsSection>
 
           <SettingsSection

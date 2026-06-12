@@ -11,6 +11,7 @@ import { DocumentVersionHistory } from "@/components/documents/document-version-
 import { QuoteLineItemsSection } from "@/components/documents/quote-line-items-section";
 import { QuotePreview } from "@/components/documents/quote-preview";
 import { QuoteAcceptLinkPanel } from "@/components/documents/quote-accept-link-panel";
+import { QuoteFinancesTab } from "@/components/documents/quote-finances-tab";
 import { SendQuoteEmailModal } from "@/components/documents/send-quote-email-modal";
 import { insertAtTextareaCursor } from "@/lib/documents/insert-at-cursor";
 import {
@@ -19,7 +20,8 @@ import {
   useUpdateDocument,
 } from "@/hooks/useDocument";
 import { useContact } from "@/hooks/useContacts";
-import { ContactSearchCombobox } from "@/components/forms/contact-search-combobox";
+import { ContactSelect } from "@/components/forms/contact-select";
+import { FormSection } from "@/components/ui/form-section";
 import { useCompanies } from "@/hooks/useCompanies";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import {
@@ -67,6 +69,7 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
   const [lineItemsDraft, setLineItemsDraft] = useState<QuoteLineItemsDraft | null>(
     null
   );
+  const [quoteTab, setQuoteTab] = useState<"editor" | "billing">("editor");
 
   const linkedCompany = companies.find(
     (co) => co.id === (linkedContact?.company_id ?? doc?.company_id)
@@ -207,6 +210,27 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
             readOnly={readOnly}
           />
           <DocumentStatusBadge status={doc.status} />
+          <nav className="flex gap-1 ml-4 border-b border-transparent">
+            {(
+              [
+                { id: "editor" as const, label: "Quote" },
+                { id: "billing" as const, label: "Billing" },
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setQuoteTab(tab.id)}
+                className={`px-3 py-1.5 text-xs font-medium border-b-2 -mb-px transition-colors ${
+                  quoteTab === tab.id
+                    ? "border-[var(--secondary)] text-[var(--primary)]"
+                    : "border-transparent text-body-muted hover:text-heading"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
           <div className="flex flex-wrap items-center gap-2 ml-auto">
             {toast && (
               <span
@@ -274,19 +298,18 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
           </div>
         </header>
 
+        {quoteTab === "billing" ? (
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 lg:p-6">
+            <QuoteFinancesTab doc={previewDoc ?? doc} />
+          </div>
+        ) : (
         <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2">
           <div className="min-h-0 overflow-y-auto bg-[var(--background)] p-4 lg:p-6">
             <div className="max-w-2xl space-y-6">
-              <section className="surface-card p-4 space-y-3">
-                <h3 className="text-sm font-semibold text-heading">
-                  {q?.customerInfo}
-                </h3>
+              <FormSection title={q?.customerInfo ?? "Quote & customer information"}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="sm:col-span-2">
-                    <label className="text-xs font-medium text-heading block mb-1">
-                      {q?.customer}
-                    </label>
-                    <ContactSearchCombobox
+                    <ContactSelect
                       value={contactId}
                       onChange={(id) => {
                         if (readOnly) return;
@@ -294,6 +317,7 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
                         void save({ contact_id: id || undefined });
                       }}
                       disabled={readOnly}
+                      label={q?.customer ?? "Contact"}
                     />
                   </div>
 
@@ -340,7 +364,7 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
                     </select>
                   </div>
                 </div>
-              </section>
+              </FormSection>
 
               <QuoteLineItemsSection
                 documentId={documentId}
@@ -406,6 +430,7 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
             </div>
           </div>
         </div>
+        )}
         <SendQuoteEmailModal
           documentId={documentId}
           documentTitle={title}
@@ -524,7 +549,7 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
             <label className="text-[10px] font-semibold uppercase text-body-muted block mb-1">
               Link contact (for autofill)
             </label>
-            <ContactSearchCombobox
+            <ContactSelect
               value={contactId}
               onChange={(id) => {
                 if (readOnly) return;

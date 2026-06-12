@@ -37,6 +37,7 @@ import type {
   CalendarEvent,
   CompanyRelated,
   CrmDocument,
+  Invoice,
   OpportunityWithContact,
   Ticket,
 } from "@/types";
@@ -55,6 +56,7 @@ interface EntityRelatedPanelProps {
   opportunities?: OpportunityWithContact[];
   tickets?: Ticket[];
   quotes?: CrmDocument[];
+  invoices?: Invoice[];
   attachments?: CrmDocument[];
   calendarEvents?: CalendarEvent[];
   contacts?: CompanyRelated["contacts"];
@@ -73,6 +75,7 @@ export function EntityRelatedPanel({
   opportunities = [],
   tickets = [],
   quotes = [],
+  invoices = [],
   attachments = [],
   calendarEvents = [],
   contacts = [],
@@ -119,6 +122,13 @@ export function EntityRelatedPanel({
     }
     return "/quotes/new";
   }, [context.contactId, context.companyId]);
+
+  const newInvoiceHref = useMemo(() => {
+    if (context.contactId) {
+      return `/finances/invoices/new?contact_id=${context.contactId}`;
+    }
+    return "/finances/invoices/new";
+  }, [context.contactId]);
 
   return (
     <div className="space-y-4">
@@ -252,6 +262,48 @@ export function EntityRelatedPanel({
                     {d.status}
                     {d.total_amount != null && Number(d.total_amount) > 0
                       ? ` · ${formatCurrency(Number(d.total_amount))}`
+                      : ""}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </RelatedListSection>
+
+      <RelatedListSection
+        title={rel.invoices}
+        count={invoices.length}
+        iconBg="bg-emerald-600"
+        iconGlyph="🧾"
+        viewAllHref={
+          context.contactId
+            ? `/finances/invoices?contact_id=${context.contactId}`
+            : "/finances/invoices"
+        }
+        onNew={canWrite ? () => router.push(newInvoiceHref) : undefined}
+        newLabel={rel.new}
+      >
+        {invoices.length === 0 ? (
+          <p className="text-sm text-[var(--muted)]">No invoices yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {invoices.map((inv) => (
+              <li
+                key={inv.id}
+                className="flex items-center justify-between gap-2 text-sm border border-[var(--card-border)] rounded-md px-3 py-2 bg-[var(--card)]"
+              >
+                <div className="min-w-0">
+                  <Link
+                    href={`/finances/invoices/${inv.id}`}
+                    className="font-medium text-[var(--primary)] hover:underline truncate block"
+                  >
+                    {inv.invoice_number || "Invoice"}
+                  </Link>
+                  <p className="text-xs text-[var(--muted)]">
+                    {inv.status}
+                    {inv.total != null && Number(inv.total) > 0
+                      ? ` · ${formatCurrency(Number(inv.total), inv.currency)}`
                       : ""}
                   </p>
                 </div>

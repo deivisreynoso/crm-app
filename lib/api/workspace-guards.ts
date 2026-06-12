@@ -10,6 +10,7 @@ const PUBLIC_API_PREFIXES = [
   "/api/website/",
   "/api/team/invites/",
   "/api/quotes/public/",
+  "/api/webhooks/stripe",
   "/api/integrations/n8n/",
   "/api/public/support/",
 ];

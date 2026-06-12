@@ -5,6 +5,11 @@ import axios from "axios";
 
 type IntegrationStatus = {
   n8n: { configured: boolean; inbound_path: string };
+  stripe: {
+    configured: boolean;
+    webhook_path?: string;
+    webhook_secret_set?: boolean;
+  };
   mailgun: { configured: boolean };
   google_analytics: {
     configured: boolean;
@@ -29,6 +34,15 @@ export function AdminIntegrationsPanel() {
 
   const rows = [
     { label: "N8N", ok: data.n8n.configured, detail: data.n8n.inbound_path },
+    {
+      label: "Stripe",
+      ok: data.stripe?.configured ?? false,
+      detail: data.stripe?.configured
+        ? `${data.stripe.webhook_path ?? "/api/webhooks/stripe"} · webhook secret ${
+            data.stripe.webhook_secret_set ? "set" : "missing"
+          }`
+        : "Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET in server env",
+    },
     { label: "Mailgun", ok: data.mailgun.configured, detail: "Transactional email" },
     {
       label: "Google Analytics (GA4 Data API)",
@@ -60,6 +74,17 @@ export function AdminIntegrationsPanel() {
           </li>
         ))}
       </ul>
+
+      <div className="rounded-xl border border-[var(--card-border)] p-4 text-xs text-body-muted space-y-3">
+        <p className="font-medium text-heading text-sm">Stripe setup</p>
+        <p>
+          Set <code className="text-[11px]">STRIPE_SECRET_KEY</code> and{" "}
+          <code className="text-[11px]">STRIPE_WEBHOOK_SECRET</code>. Point your Stripe webhook to{" "}
+          <code className="text-[11px]">/api/webhooks/stripe</code> for{" "}
+          <code className="text-[11px]">checkout.session.completed</code> and{" "}
+          <code className="text-[11px]">payment_intent.succeeded</code>.
+        </p>
+      </div>
 
       <div className="rounded-xl border border-[var(--card-border)] p-4 text-xs text-body-muted space-y-3">
         <p className="font-medium text-heading text-sm">Google Analytics setup</p>

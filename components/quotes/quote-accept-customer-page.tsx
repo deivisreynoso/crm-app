@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
 import type { PublicQuoteView } from "@/lib/quotes/load-public-quote";
 import { getQuoteAcceptCopy } from "@/lib/quotes/public-accept-copy";
+import { PayNowSection } from "@/components/quotes/pay-now-section";
 
 export function QuoteAcceptCustomerPage({ token }: { token: string }) {
+  const searchParams = useSearchParams();
+  const paymentNotice = searchParams.get("payment");
   const [quote, setQuote] = useState<PublicQuoteView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -176,6 +180,25 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
                 {isAccepted ? copy.accepted : copy.rejected}
               </p>
             </div>
+            {isAccepted && paymentNotice === "success" && (
+              <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-center">
+                {copy.paymentSuccess}
+              </p>
+            )}
+            {isAccepted && paymentNotice === "cancelled" && (
+              <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-center">
+                {copy.paymentCancelled}
+              </p>
+            )}
+            {isAccepted && (
+              <PayNowSection
+                token={token}
+                defaultEmail={quote.response_email ?? email}
+                locale={quote.locale}
+                paymentsEnabled={quote.payments_enabled}
+                paymentReceived={quote.payment_received}
+              />
+            )}
           </div>
         ) : (
           <div className="mt-8 space-y-4">

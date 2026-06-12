@@ -313,6 +313,8 @@ export interface User {
     footer_html?: string | null;
     line_items?: QuoteLineItem[];
     quote_payment?: QuotePaymentSummary | null;
+    payment_status?: "unpaid" | "partially_paid" | "paid";
+    amount_paid?: number;
     created_at: string;
     updated_at: string;
   }
@@ -489,6 +491,171 @@ export interface User {
       contact_name?: string | null;
       location?: string;
     }>;
+  }
+
+  export type FinanceCurrency = "USD" | "MXN";
+
+  export type FinanceTransactionType = "income" | "expense" | "refund" | "adjustment";
+  export type FinanceTransactionStatus = "pending" | "completed" | "failed" | "voided";
+  export type FinanceTransactionSource =
+    | "manual"
+    | "stripe_payment_link"
+    | "stripe_checkout"
+    | "invoice"
+    | "import";
+
+  export interface FinanceCategory {
+    id: string;
+    user_id: string;
+    kind: "income" | "expense";
+    slug: string;
+    label: string;
+    is_system: boolean;
+    sort_order: number;
+    created_at: string;
+    updated_at: string;
+  }
+
+  export interface FinanceTransaction {
+    id: string;
+    user_id: string;
+    type: FinanceTransactionType;
+    category_id?: string | null;
+    amount: number;
+    currency: FinanceCurrency;
+    status: FinanceTransactionStatus;
+    source: FinanceTransactionSource;
+    direction: "inbound" | "outbound";
+    quote_id?: string | null;
+    contact_id?: string | null;
+    invoice_id?: string | null;
+    payment_link_id?: string | null;
+    description?: string | null;
+    notes?: string | null;
+    payment_method?: string | null;
+    vendor_name?: string | null;
+    transaction_date: string;
+    recorded_by?: string | null;
+    recurrence_rule?: Record<string, unknown> | null;
+    recurrence_parent_id?: string | null;
+    is_recurring_parent?: boolean;
+    voided_at?: string | null;
+    void_reason?: string | null;
+    created_at: string;
+    updated_at: string;
+    category?: Pick<FinanceCategory, "id" | "label" | "kind" | "slug"> | null;
+    contact?: { id: string; first_name: string; last_name: string } | null;
+    quote?: { id: string; title: string; quote_reference?: string | null } | null;
+    invoice?: {
+      id: string;
+      invoice_number: string;
+      quote_id?: string | null;
+      quote?: { id: string; title: string; quote_reference?: string | null } | null;
+    } | null;
+  }
+
+  export type InvoiceStatus =
+    | "draft"
+    | "pending"
+    | "partially_paid"
+    | "sent"
+    | "viewed"
+    | "paid"
+    | "overdue"
+    | "voided";
+
+  export type InvoiceType =
+    | "quote"
+    | "services"
+    | "retainer"
+    | "deposit"
+    | "change_order"
+    | "milestone";
+
+  export type InvoiceCollectionMethod = "manual" | "payment_link";
+
+  export interface InvoiceLineItem {
+    description: string;
+    quantity: number;
+    unit_price: number;
+    line_total: number;
+  }
+
+  export interface Invoice {
+    id: string;
+    user_id: string;
+    invoice_number: string;
+    quote_id?: string | null;
+    contact_id: string;
+    invoice_type?: InvoiceType;
+    collection_method?: InvoiceCollectionMethod | null;
+    status: InvoiceStatus;
+    line_items: InvoiceLineItem[];
+    subtotal: number;
+    tax_rate: number;
+    tax_amount: number;
+    discount_amount: number;
+    total: number;
+    currency: FinanceCurrency;
+    due_date?: string | null;
+    sent_at?: string | null;
+    paid_at?: string | null;
+    notes?: string | null;
+    footer_text?: string | null;
+    pdf_storage_path?: string | null;
+    created_at: string;
+    updated_at: string;
+    contact?: { id: string; first_name: string; last_name: string; email?: string | null } | null;
+    quote?: { id: string; title: string; quote_reference?: string | null } | null;
+  }
+
+  export type PaymentLinkStatus = "active" | "paid" | "deactivated" | "expired";
+
+  export interface PaymentLink {
+    id: string;
+    user_id: string;
+    invoice_id: string;
+    contact_id?: string | null;
+    url: string;
+    amount: number;
+    currency: FinanceCurrency;
+    status: PaymentLinkStatus;
+    paid_at?: string | null;
+    created_at: string;
+    updated_at: string;
+    contact?: { id: string; first_name: string; last_name: string } | null;
+    invoice?: {
+      id: string;
+      invoice_number: string;
+      total?: number;
+      quote_id?: string | null;
+      quote?: { id: string; title: string; quote_reference?: string | null } | null;
+    } | null;
+  }
+
+  export interface FinanceOverview {
+    total_revenue: number;
+    total_expenses: number | null;
+    net_profit: number | null;
+    outstanding_invoices_total: number;
+    pending_payment_links_total: number;
+    revenue_by_month: Array<{ month: string; revenue: number; expenses: number | null }>;
+    income_by_category: Array<{ category_label: string; total: number }>;
+    expenses_by_category: Array<{ category_label: string; total: number }> | null;
+    period?: string;
+    from?: string;
+    to?: string;
+  }
+
+  export interface FinanceSettings {
+    default_currency?: FinanceCurrency;
+    finance_default_tax_rate?: number;
+    invoice_number_prefix?: string;
+    invoice_number_start?: number;
+    invoice_default_due_days?: number;
+    invoice_default_footer_text?: string | null;
+    stripe_configured?: boolean;
+    invoice_number_locked?: boolean;
   }
 
   // API Response types

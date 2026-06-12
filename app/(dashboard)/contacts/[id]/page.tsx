@@ -32,6 +32,7 @@ import { useOpportunities } from "@/hooks/useOpportunities";
 import { useTickets, useCreateTicket } from "@/hooks/useTickets";
 import { useDocuments, useUploadDocument } from "@/hooks/useDocuments";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
+import { useInvoices } from "@/hooks/useFinances";
 import { contactToFormDefaults } from "@/lib/contact-payload";
 import type { ContactFormInput, Task } from "@/types";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
@@ -83,6 +84,7 @@ export default function ContactDetailPage({ params }: PageProps) {
     kind: "attachments",
   });
   const { data: contactEvents = [] } = useCalendarEvents({ contact_id: id });
+  const { data: contactInvoices = [] } = useInvoices({ contact_id: id });
   const createTicket = useCreateTicket();
   const uploadDocument = useUploadDocument();
 
@@ -122,6 +124,7 @@ export default function ContactDetailPage({ params }: PageProps) {
     contactOpportunities.length +
     contactTickets.length +
     contactQuotes.length +
+    contactInvoices.length +
     contactAttachments.length +
     contactEvents.length;
 
@@ -135,6 +138,7 @@ export default function ContactDetailPage({ params }: PageProps) {
       opportunities={contactOpportunities}
       tickets={contactTickets}
       quotes={contactQuotes}
+      invoices={contactInvoices}
       attachments={contactAttachments}
       calendarEvents={contactEvents}
       onCreateTicket={async (data) => {

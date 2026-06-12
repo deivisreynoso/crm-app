@@ -66,12 +66,12 @@ export const MAIN_NAV: NavItem[] = [
     description: "Pipeline metrics and charts",
   },
   {
-    href: "/payments",
-    label: "Payments",
-    labelKey: "payments",
+    href: "/finances",
+    label: "Finances",
+    labelKey: "finances",
     icon: CreditCard,
     iconAccent: "success",
-    description: "Payment history",
+    description: "Revenue, invoices, and expenses",
   },
 ];
 
