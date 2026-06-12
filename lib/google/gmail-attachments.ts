@@ -12,6 +12,7 @@ export function buildGmailRawMessage(input: {
   body: string;
   from?: string | null;
   cc?: string | null;
+  bcc?: string | null;
   inReplyTo?: string | null;
   references?: string | null;
   attachments?: GmailAttachment[];
@@ -23,6 +24,9 @@ export function buildGmailRawMessage(input: {
     : "";
   const cc = input.cc?.trim()
     ? `Cc: ${escapeHeaderValue(input.cc)}\r\n`
+    : "";
+  const bcc = input.bcc?.trim()
+    ? `Bcc: ${escapeHeaderValue(input.bcc)}\r\n`
     : "";
   const inReplyTo = input.inReplyTo?.trim()
     ? `In-Reply-To: ${escapeHeaderValue(input.inReplyTo)}\r\n`
@@ -40,7 +44,7 @@ export function buildGmailRawMessage(input: {
 
   if (attachments.length === 0) {
     const raw = [
-      `${from}${to ? `To: ${to}\r\n` : ""}${cc}${inReplyTo}${references}Subject: ${subject}`,
+      `${from}${to ? `To: ${to}\r\n` : ""}${cc}${bcc}${inReplyTo}${references}Subject: ${subject}`,
       "MIME-Version: 1.0",
       `Content-Type: ${contentType}`,
       "",
@@ -51,7 +55,7 @@ export function buildGmailRawMessage(input: {
 
   const boundary = `crm_${Date.now().toString(36)}`;
   const lines: string[] = [
-    `${from}${to ? `To: ${to}\r\n` : ""}${cc}${inReplyTo}${references}Subject: ${subject}`,
+    `${from}${to ? `To: ${to}\r\n` : ""}${cc}${bcc}${inReplyTo}${references}Subject: ${subject}`,
     "MIME-Version: 1.0",
     `Content-Type: multipart/mixed; boundary="${boundary}"`,
     "",

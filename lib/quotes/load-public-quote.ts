@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isQuoteDocument } from "@/lib/documents/kinds";
 import { resolveCrmLocale } from "@/lib/crm/i18n";
+import { getLatestQuotePayment } from "@/lib/integrations/stripe/record-quote-payment";
+import { isStripeConfigured } from "@/lib/integrations/stripe/client";
 import { resolveQuoteLogoUrl } from "@/lib/storage/quote-logo";
 import type { QuoteLineItem } from "@/types";
 
@@ -23,6 +25,9 @@ export type PublicQuoteView = {
   accepted_at: string | null;
   rejected_at: string | null;
   response_name: string | null;
+  response_email: string | null;
+  payments_enabled: boolean;
+  payment_received: boolean;
 };
 
 export async function loadPublicQuoteByToken(
@@ -74,6 +79,12 @@ export async function loadPublicQuoteByToken(
   const taxAmount = Number(doc.tax_amount) || 0;
   const totalAmount = Number(doc.total_amount) || subtotal + taxAmount;
 
+  const payment = await getLatestQuotePayment(
+    supabase,
+    doc.user_id as string,
+    doc.id as string
+  );
+
   return {
     id: doc.id,
     title: doc.title as string,
@@ -93,5 +104,8 @@ export async function loadPublicQuoteByToken(
     accepted_at: (doc.accepted_at as string | null) ?? null,
     rejected_at: (doc.rejected_at as string | null) ?? null,
     response_name: (doc.response_name as string | null) ?? null,
+    response_email: (doc.response_email as string | null) ?? null,
+    payments_enabled: isStripeConfigured(),
+    payment_received: Boolean(payment),
   };
 }

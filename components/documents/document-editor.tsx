@@ -420,6 +420,20 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
           documentTitle={title}
           quoteReference={doc?.quote_reference}
           defaultTo={linkedContact?.email}
+          contact={
+            linkedContact
+              ? {
+                  id: linkedContact.id,
+                  first_name: linkedContact.first_name,
+                  last_name: linkedContact.last_name,
+                  email: linkedContact.email,
+                  phone: linkedContact.phone,
+                  company: linkedContact.company,
+                  company_id: linkedContact.company_id,
+                }
+              : null
+          }
+          companyName={linkedCompany?.name}
           open={sendEmailOpen}
           onClose={() => setSendEmailOpen(false)}
           onSent={() => {

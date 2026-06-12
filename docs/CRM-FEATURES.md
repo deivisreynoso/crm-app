@@ -28,7 +28,8 @@ git log -1 --format='%h %s (%cs)'
 
 | Date | Commit | Type | Summary |
 |------|--------|------|---------|
-| 2026-06-10 | `c12c4d9` | feature | **CRM enhancement sprint:** settings redesign (member vs admin sections), quote branding + product catalog tabs on Quotes, email signatures, MFA preference flag, calendar location types (physical / Google Meet / other) + assignee, public quote acceptance disclaimer (EN/ES), N8N/WhatsApp/Stripe inbound scaffolding, admin integrations status panel |
+| 2026-06-10 | `feat/crm-iteration-2` | feature | **CRM enhancement sprint — iteration 2:** unified email composer (TipTap rich text, merge fields, templates, attachments, preview) on contacts/tickets/quotes; product catalog edit/delete with quote-reference guard; Stripe quote Pay Now + webhooks; GA4 Website analytics tab; MFA scaffolding removed (migration 051); WhatsApp/Webchat + CID tickets remain proposal-only |
+| 2026-06-10 | `c12c4d9` | feature | **CRM enhancement sprint (iteration 1):** settings redesign (member vs admin sections), quote branding + product catalog tabs on Quotes, email signatures, calendar location types (physical / Google Meet / other) + assignee, public quote acceptance disclaimer (EN/ES), N8N/WhatsApp/Stripe inbound scaffolding, admin integrations status panel |
 | 2026-06-10 | `bd31186` | feature + fix | **Dual-email owner login:** canonical session maps personal + workspace emails to same CRM profile (`OWNER_LOGIN_ALIASES`, `team_members` lookup); `authUserId` for password/profile updates |
 | 2026-06-10 | `ecbd72d` | feature | **Login policy:** owner/admin/sales/viewer email/password; Google SSO `@clickin360.com` only; viewers blocked from Google |
 | 2026-06-10 | `4fdf298` | fix | Google OAuth post-callback redirects use public app URL (`buildAppRedirectUrl`) instead of `0.0.0.0:3000` in Docker |
@@ -106,7 +107,7 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 - **Login:** email/password (all roles) or **Google Workspace** (`@clickin360.com`; owner/admin/sales only — viewers use password)
 - **Dual-email owner:** personal Gmail + workspace email resolve to same CRM profile via `OWNER_LOGIN_ALIASES` / `team_members` (see [AUTH-ROADMAP.md](./AUTH-ROADMAP.md))
 - Forgot password / reset password (`/forgot-password`, `/reset-password`, `/auth/callback`) — reset email via `POST /api/auth/forgot-password`; production requires Supabase redirect URL `https://www.clickin360.com/auth/callback` and `NEXT_PUBLIC_APP_URL` on the server
-- **My Account** (`/account`): profile, password, **HTML email signature** (appended on Gmail compose), **MFA preference** toggle (flag only; TOTP enrollment not built), notification prefs, currency
+- **My Account** (`/account`): profile, password, **HTML email signature** (appended on Gmail compose), notification prefs, currency
 - Workspace owner can delete own account (guarded)
 
 ### Home (dashboard)
@@ -125,8 +126,9 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 - Activity timestamps use contact timezone → user notification timezone → browser
 - Appointments appear on activity timeline; website reschedule updates existing event (no duplicate)
 - Notes, tasks (with assignee/due), activity feed (notes + activities including email metadata)
+- **Activity composer tabs:** Post | Email | Log a Call | New Task on contact detail
 - **Notes & tasks:** edit and delete from activity timeline / tasks panel (author or admin)
-- **Gmail:** send with **templates**, **Cc**, and **reply** (In-Reply-To threading); sync thread into `contact_emails`; auto-sync after send and on panel load (~2 min)
+- **Gmail — unified email composer:** rich text (bold, italic, lists, tables, links), **Cc/Bcc**, attachments, merge fields, template insert/save, preview, signature append; used on contact activity, send-email modal, tickets, and quote send
 - **Email timeline colors:** inbound rose, outbound sky blue
 - **Inbound email notifications** (preference `email_notifications`; deep link to contact)
 - **Google review request** from contact — editable subject/body/Cc; workspace review template in Settings (not in general template list)
@@ -156,11 +158,12 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
   - **All quotes** — list, create, edit, PDF, Gmail send
   - **Templates** — quote document templates
   - **Branding** (owner/admin) — logo, company name, **primary color**, **font family**, EN/ES locale
-  - **Products** (owner/admin) — product catalog for line items
+  - **Products** (owner/admin) — product catalog for line items; **edit** and **delete** (delete blocked when product is on existing quotes, with affected-quote list)
 - Line items from **Product Catalog** (`quote_services` + `quote_line_items`)
 - Sequential reference numbers (`Q-YYYY-#####`)
 - PDF generation and **send via Gmail** (connected user; signature appended when set)
-- **Public quote page** (`/quote/[token]`) — accept / decline with **binding disclaimer** checkbox (EN/ES); records `acceptance_disclaimer_acknowledged_at`
+- **Public quote page** (`/quote/[token]`) — accept / decline with **binding disclaimer** checkbox (EN/ES); records `acceptance_disclaimer_acknowledged_at`; **Pay Now** via Stripe Checkout when configured (test mode locally)
+- **Quote payment status** visible on quote record in CRM (all roles); Stripe config owner/admin only
 - Quote analytics API
 - Legacy **Documents** routes still present (`/documents`) alongside quotes
 - Attachments list with optional signed URLs
@@ -168,6 +171,7 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 ### Product catalog
 
 - **Quotes → Products** tab (owner/admin manage; all roles use on quote line items)
+- **Edit** (modal) and **delete** with confirmation; `DELETE /api/quote-services/[id]` returns `409` with affected quotes when referenced
 - `/services` redirects to `/quotes?tab=products`
 - `quote_services` + `quote_line_items` tables
 
@@ -190,6 +194,7 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 
 - Pipeline metrics
 - Operations analytics API
+- **Website** tab — GA4 sessions, users, pageviews, top pages, traffic sources (7/30/90 days); all roles when GA4 connected; configuration owner/admin only
 
 ### Search
 
@@ -203,7 +208,7 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 ### Settings (owner / admin)
 
 - Platform language (EN/ES)
-- **Admin integrations** — status panel for N8N, WhatsApp, Stripe, Mailgun, Google Analytics, Google OAuth (`GET /api/settings/integrations`)
+- **Admin integrations** — status panel for N8N, WhatsApp, **Stripe** (checkout + webhook path), Mailgun, **GA4 Data API**, Google OAuth (`GET /api/settings/integrations`)
 - Website leads (default assignee)
 - Duplicate contacts panel
 - Team invites and roles (`sales`, `admin`, `viewer`)
@@ -227,7 +232,9 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 | N8N webhooks | Outbound from CRM | `contact.*`, `website.lead`, etc. |
 | N8N inbound | `x-n8n-secret` | `POST /api/integrations/n8n/inbound` — workflow callbacks (scaffolding) |
 | WhatsApp inbound | Meta verify token | `GET/POST /api/integrations/whatsapp/inbound` (scaffolding) |
-| Stripe webhooks | `STRIPE_WEBHOOK_SECRET` | `POST /api/webhooks/stripe` — quote payment events (scaffolding) |
+| Stripe Checkout | `STRIPE_SECRET_KEY` | Public quote **Pay Now** after acceptance; `POST /api/quotes/public/[token]/checkout` |
+| Stripe webhooks | `STRIPE_WEBHOOK_SECRET` | `POST /api/webhooks/stripe` — `checkout.session.completed`, `payment_intent.succeeded`, `invoice.paid` |
+| GA4 Data API | Service account env | `GET /api/analytics/ga4` — website dashboard |
 
 See [CLICKIN360-CRM-API.md](./CLICKIN360-CRM-API.md) for endpoints.
 
@@ -267,7 +274,8 @@ Production should run migrations **001–050** in order. Notable groups:
 | 047 | `email_notifications` on `notification_preferences` |
 | 048 | Orphan schema cleanup (legacy OAuth tables, automations, WhatsApp tables) |
 | 049 | Auth user delete FKs — `ON DELETE SET NULL` for teammate removal |
-| 050 | Email signatures, MFA flag, quote branding colors/fonts, calendar `assigned_to`, quote disclaimer timestamp |
+| 050 | Email signatures, quote branding colors/fonts, calendar `assigned_to`, quote disclaimer timestamp |
+| 051 | Remove unused `user_profiles.mfa_enabled` (iteration 2 MFA cleanup) |
 
 ---
 
@@ -283,7 +291,7 @@ Historical phases map to git eras (not separate products):
 | **4 — Operations** | Contact merge, in-app notifications, payments, ticket improvements | ✅ Shipped |
 | **5 — Production platform** | Website↔CRM, team/roles, quotes, contact UX, security, audit log | ✅ **Shipped** on `main` (`8fc9cee`) — migrations **035–037** applied in Supabase |
 
-**Phase 5 is complete.** **Phase 6 enhancement sprint shipped** on `main` @ `c12c4d9` (auth, settings, quotes UX, signatures, calendar/Meet, integration scaffolding). Remaining Phase 6 backlog items below.
+**Phase 5 is complete.** **Phase 6 iteration 1** shipped on `main` @ `c12c4d9`; **iteration 2** adds email composer, catalog CRUD, Stripe payments, GA4 dashboard (pending merge). **On hold (proposal only):** [WhatsApp/Webchat unified inbox](./WHATSAPP-WEBCHAT-INBOX-PROPOSAL.md), [service ticket CID widget](./SERVICE-TICKET-CID-PROPOSAL.md).
 
 ---
 
@@ -293,7 +301,8 @@ Historical phases map to git eras (not separate products):
 
 | Item | Commit / notes |
 |------|----------------|
-| **CRM enhancement sprint** | Settings redesign, Quotes tabs (branding/products), signatures, MFA flag, calendar Meet, quote disclaimer, N8N/WhatsApp/Stripe scaffolding (`c12c4d9`) |
+| **CRM enhancement sprint (iter 1)** | Settings redesign, Quotes tabs (branding/products), signatures, calendar Meet, quote disclaimer, N8N/WhatsApp/Stripe scaffolding (`c12c4d9`) |
+| **CRM enhancement sprint (iter 2)** | Email composer overhaul, catalog edit/delete, Stripe Pay Now, GA4 Website tab, MFA removed (`051`) |
 | **Google SSO login** | `@clickin360.com` Workspace sign-in; role-based method policy (`ecbd72d`) |
 | **Dual-email owner login** | Canonical session + `authUserId` (`bd31186`) |
 | **Services catalog tool** | Quotes → Products tab; `/services` redirects |
@@ -312,7 +321,7 @@ Historical phases map to git eras (not separate products):
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | **VPS deploy** | Pull `main`; run migrations **044–050** if not applied; set `OWNER_LOGIN_ALIASES` if owner uses dual emails; `./scripts/deploy-vps.sh` (cached build). Use `--no-cache` only when `package.json` or `Dockerfile` changes |
+| 1 | **VPS deploy** | Pull `main`; run migrations **044–051** if not applied; set `OWNER_LOGIN_ALIASES`, Stripe, and GA4 env as needed; `./scripts/deploy-vps.sh` (cached build). Use `--no-cache` only when `package.json` or `Dockerfile` changes |
 | 2 | **GA4 conversions** | Mark `generate_lead`, `booking_completed` in GA4 Admin |
 | 3 | **GSC follow-up** | Fix remaining 404s / canonical issues after sitemap deploy |
 | 4 | **AUDIT-FIX-TRACKER F1–F2, F5–F6** | Async contact combobox; batch signed URLs; storage cleanup; remove unused dashboard stats API |
@@ -322,7 +331,9 @@ Historical phases map to git eras (not separate products):
 
 | # | Area | Idea |
 |---|------|------|
-| 6 | **Quote UX** | Consolidate `/documents` vs `/quotes` flows; Stripe quote payments (scaffolding exists) |
+| 6 | **Quote UX** | Consolidate `/documents` vs `/quotes` flows |
+| 6b | **Unified inbox** | WhatsApp + webchat — see proposal; not implemented |
+| 6c | **Service tickets (public)** | CID-gated widget — see proposal; not implemented |
 | 7 | **Reporting** | Deeper dashboards, CSV exports, scheduled reports |
 | 8 | **Automation** | In-app workflows beyond N8N webhooks |
 | 9 | **Quality** | E2E or integration test suite in CI |
@@ -351,7 +362,7 @@ Historical phases map to git eras (not separate products):
 | `/tickets`, `/tickets/[id]` | Support |
 | `/quotes`, `/quotes/new`, `/quotes/[id]` | Quotes (tabs: all, templates, branding, products) |
 | `/services` | Redirects to `/quotes?tab=products` |
-| `/account` | My Account (profile, signature, MFA, password) |
+| `/account` | My Account (profile, signature, password) |
 | `/attachments` | Files |
 | `/calendar` | Events |
 | `/payments` | Payments |
@@ -361,4 +372,4 @@ Historical phases map to git eras (not separate products):
 
 ---
 
-*Last updated: 2026-06-10 (`main` @ `c12c4d9`).*
+*Last updated: 2026-06-10 (`feat/crm-iteration-2`).*

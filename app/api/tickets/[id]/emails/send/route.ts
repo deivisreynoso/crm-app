@@ -15,6 +15,7 @@ import {
   buildTemplateContext,
   interpolateTemplate,
 } from "@/lib/documents/template-variables";
+import { appendEmailSignature } from "@/lib/email/signature";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -103,8 +104,28 @@ export async function POST(req: NextRequest, context: RouteContext) {
       );
     }
 
+    if (!parsed.data.skip_signature_append) {
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("email_signature_html")
+        .eq("id", userId!)
+        .maybeSingle();
+      emailBody = appendEmailSignature(
+        emailBody,
+        profile?.email_signature_html as string | null | undefined
+      );
+    }
+
+    const attachments: import("@/lib/google/gmail-attachments").GmailAttachment[] =
+      (parsed.data.attachments ?? []).map((a) => ({
+        filename: a.filename,
+        mimeType: a.mime_type,
+        content: Buffer.from(a.content_base64, "base64"),
+      }));
+
     const sendOptions = await resolveGmailSendOptions(userId!, {
       cc: parsed.data.cc,
+      bcc: parsed.data.bcc,
       reply_to_gmail_message_id: parsed.data.reply_to_gmail_message_id,
     });
 
@@ -112,6 +133,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
       to,
       subject,
       body: emailBody,
+      attachments: attachments.length ? attachments : undefined,
       ...sendOptions,
     });
 

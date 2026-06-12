@@ -11,6 +11,7 @@ import {
 } from "@/lib/api/assert-workspace-parents";
 import { coerceQuoteDocumentType, isQuoteDocument } from "@/lib/documents/kinds";
 import { ensureQuoteReference } from "@/lib/quotes/reference";
+import { getLatestQuotePayment } from "@/lib/integrations/stripe/record-quote-payment";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -54,11 +55,17 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       });
     }
 
+    let quote_payment = null;
+    if (isQuoteDocument(data.type as string)) {
+      quote_payment = await getLatestQuotePayment(supabase, workspaceOwnerId!, id);
+    }
+
     return NextResponse.json({
       ...data,
       quote_reference: quote_reference ?? data.quote_reference,
       file_url: file_url ?? data.file_url,
       line_items: lineItems ?? [],
+      quote_payment,
     });
   } catch (err) {
     console.error("GET /api/documents/[id]:", err);

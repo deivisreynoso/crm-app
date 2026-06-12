@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MfaSettings } from "@/components/settings/mfa-settings";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -154,10 +153,6 @@ export function AccountSettings() {
             Save signature
           </Button>
         </form>
-      </SettingsSection>
-
-      <SettingsSection title="Multi-factor authentication" description="Optional extra sign-in security.">
-        <MfaSettings />
       </SettingsSection>
 
       <SettingsSection title="Password" description="Update your sign-in password.">

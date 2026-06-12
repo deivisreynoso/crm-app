@@ -310,8 +310,20 @@ export interface User {
     header_html?: string | null;
     footer_html?: string | null;
     line_items?: QuoteLineItem[];
+    quote_payment?: QuotePaymentSummary | null;
     created_at: string;
     updated_at: string;
+  }
+
+  export interface QuotePaymentSummary {
+    id: string;
+    amount: number;
+    currency?: string | null;
+    status: string;
+    stripe_payment_id?: string | null;
+    stripe_invoice_id?: string | null;
+    receipt_url?: string | null;
+    created_at: string;
   }
 
   export interface DocumentFormInput {

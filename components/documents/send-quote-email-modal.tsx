@@ -1,24 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Mail } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { FormLabel } from "@/components/ui/form-label";
+import { EmailComposer, type EmailComposerSendPayload } from "@/components/email/email-composer";
 import { useGmailStatus } from "@/hooks/useGmail";
 import {
   useSendDocumentViaGmail,
-  type SendDocumentViaGmailInput,
 } from "@/hooks/useDocument";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { getQuoteEmailDefaults } from "@/lib/crm/quote-pdf-labels";
 import { formatApiError } from "@/lib/validation-errors";
+import type { Contact } from "@/types";
 
 type Props = {
   documentId: string;
   documentTitle: string;
   quoteReference?: string | null;
   defaultTo?: string | null;
+  contact?: Pick<
+    Contact,
+    "id" | "first_name" | "last_name" | "email" | "phone" | "company" | "company_id"
+  > | null;
+  companyName?: string | null;
   open: boolean;
   onClose: () => void;
   onSent?: () => void;
@@ -29,6 +33,8 @@ export function SendQuoteEmailModal({
   documentTitle,
   quoteReference,
   defaultTo,
+  contact,
+  companyName,
   open,
   onClose,
   onSent,
@@ -41,43 +47,93 @@ export function SendQuoteEmailModal({
   const { data: gmailStatus, isLoading: statusLoading } = useGmailStatus();
   const sendQuote = useSendDocumentViaGmail(documentId);
 
-  const [to, setTo] = useState(defaultTo ?? "");
-  const [subject, setSubject] = useState(defaultSubject);
-  const [body, setBody] = useState(emailDefaults.body);
+  const [defaultToValue, setDefaultToValue] = useState(defaultTo ?? "");
+  const [defaultSubjectValue, setDefaultSubjectValue] = useState(defaultSubject);
+  const [defaultBodyValue, setDefaultBodyValue] = useState(emailDefaults.body);
+  const [templateId, setTemplateId] = useState("");
+  const [fullscreen, setFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     const defaults = getQuoteEmailDefaults(locale);
     const ref = quoteReference?.trim() || documentTitle;
-    setTo(defaultTo ?? "");
-    setSubject(`${defaults.subjectPrefix} ${ref}`);
-    setBody(defaults.body);
+    setDefaultToValue(defaultTo ?? contact?.email ?? "");
+    setDefaultSubjectValue(`${defaults.subjectPrefix} ${ref}`);
+    setDefaultBodyValue(defaults.body);
+    setTemplateId("");
     setError(null);
-  }, [open, defaultTo, documentTitle, quoteReference, locale]);
+    setFullscreen(false);
+  }, [open, defaultTo, contact?.email, documentTitle, quoteReference, locale]);
 
   const connected = gmailStatus?.connected ?? false;
   const configured = gmailStatus?.configured ?? true;
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSend(payload: EmailComposerSendPayload) {
     setError(null);
-    const payload: SendDocumentViaGmailInput = {
-      to: to.trim() || undefined,
-      subject: subject.trim() || undefined,
-      body: body.trim() || undefined,
-    };
     try {
-      await sendQuote.mutateAsync(payload);
+      await sendQuote.mutateAsync({
+        to: payload.to,
+        cc: payload.cc,
+        bcc: payload.bcc,
+        subject: payload.subject,
+        body: payload.body,
+        template_id: payload.template_id,
+        skip_signature_append: payload.skip_signature_append,
+        attachments: payload.attachments,
+      });
       onSent?.();
       onClose();
     } catch (err) {
-      setError(formatApiError(err, "Could not send quote"));
+      const msg = formatApiError(err, "Could not send quote");
+      setError(msg);
+      throw new Error(msg);
     }
   }
 
+  const composer = (
+    <EmailComposer
+      contact={contact ?? undefined}
+      companyName={companyName}
+      defaultTo={defaultToValue}
+      defaultSubject={defaultSubjectValue}
+      defaultBody={defaultBodyValue}
+      templateId={templateId}
+      onTemplateIdChange={setTemplateId}
+      onSend={handleSend}
+      sending={sendQuote.isPending}
+      sendLabel="Send with PDF"
+      fullscreen={fullscreen}
+      onToggleFullscreen={() => setFullscreen((v) => !v)}
+      onCancel={onClose}
+    />
+  );
+
+  if (fullscreen && open && connected) {
+    return (
+      <div className="fixed inset-0 z-[70] bg-[var(--background)] flex flex-col">
+        <div className="border-b border-[var(--card-border)] px-4 py-3 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-heading">Send quote via email</h2>
+          <Button type="button" variant="outline" size="sm" onClick={() => setFullscreen(false)}>
+            Exit full screen
+          </Button>
+        </div>
+        <div className="flex-1 overflow-auto p-4 max-w-4xl mx-auto w-full">
+          {gmailStatus?.email && (
+            <p className="text-xs text-body-muted mb-3">
+              Sending as <span className="font-medium">{gmailStatus.email}</span>
+              {" · PDF attached automatically"}
+            </p>
+          )}
+          {composer}
+        </div>
+        {error && <p className="text-sm text-[var(--error)] px-4 pb-4">{error}</p>}
+      </div>
+    );
+  }
+
   return (
-    <Modal open={open} onClose={onClose} title="Send quote via email" size="lg">
+    <Modal open={open} onClose={onClose} title="Send quote via email" size="xl">
       {statusLoading ? (
         <p className="text-sm text-body-muted">Checking mailbox connection…</p>
       ) : !configured ? (
@@ -103,53 +159,20 @@ export function SendQuoteEmailModal({
           </a>
         </div>
       ) : (
-        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
+        <>
           {gmailStatus?.email && (
-            <p className="text-xs text-body-muted">
+            <p className="text-xs text-body-muted mb-3">
               Sending as <span className="font-medium">{gmailStatus.email}</span>
               {" · PDF attached automatically"}
             </p>
           )}
-          {error && <p className="text-sm text-[var(--error)]">{error}</p>}
-          <div>
-            <FormLabel>To</FormLabel>
-            <input
-              type="email"
-              className="input-field w-full"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              required
-              placeholder="customer@company.com"
-            />
-          </div>
-          <div>
-            <FormLabel>Subject</FormLabel>
-            <input
-              className="input-field w-full"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <FormLabel>Message</FormLabel>
-            <textarea
-              className="input-field w-full min-h-[140px]"
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              required
-            />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" size="sm" disabled={sendQuote.isPending}>
-              <Mail className="h-4 w-4 mr-1.5" />
-              {sendQuote.isPending ? "Sending…" : "Send with PDF"}
-            </Button>
-          </div>
-        </form>
+          {error && (
+            <p className="text-sm text-[var(--error)] bg-red-500/10 rounded-lg px-3 py-2 mb-3">
+              {error}
+            </p>
+          )}
+          {composer}
+        </>
       )}
     </Modal>
   );

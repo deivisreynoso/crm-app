@@ -6,16 +6,19 @@ export async function resolveGmailSendOptions(
   actorUserId: string,
   input: {
     cc?: string | null;
+    bcc?: string | null;
     reply_to_gmail_message_id?: string | null;
   }
-): Promise<Pick<GmailSendInput, "cc" | "threadId" | "inReplyTo" | "references">> {
+): Promise<Pick<GmailSendInput, "cc" | "bcc" | "threadId" | "inReplyTo" | "references">> {
   const cc = normalizeRecipientList(input.cc);
+  const bcc = normalizeRecipientList(input.bcc);
   const options: Pick<
     GmailSendInput,
-    "cc" | "threadId" | "inReplyTo" | "references"
+    "cc" | "bcc" | "threadId" | "inReplyTo" | "references"
   > = {};
 
   if (cc) options.cc = cc;
+  if (bcc) options.bcc = bcc;
 
   if (input.reply_to_gmail_message_id) {
     const reply = await getGmailReplyContext(

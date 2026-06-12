@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
+import type { DocumentSendViaGmailInput } from "@/lib/validators";
 import type { CrmDocument } from "@/types";
 
 export function useDocument(id: string) {
@@ -41,11 +42,7 @@ export function useGenerateDocumentPdf(id: string) {
   });
 }
 
-export type SendDocumentViaGmailInput = {
-  to?: string;
-  subject?: string;
-  body?: string;
-};
+export type SendDocumentViaGmailInput = DocumentSendViaGmailInput;
 
 export function useSendDocumentViaGmail(id: string) {
   const queryClient = useQueryClient();

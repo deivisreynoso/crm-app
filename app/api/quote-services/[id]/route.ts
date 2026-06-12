@@ -16,8 +16,10 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
-    const { workspaceOwnerId, error } = await requireAuth();
+    const { workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
+    const manageError = requireWorkspaceManage(role!, isWorkspaceOwner);
+    if (manageError) return manageError;
 
     const { id } = await context.params;
     const parsed = patchSchema.safeParse(await req.json());
@@ -73,6 +75,36 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
 
     const { id } = await context.params;
     const supabase = createServerSideClient();
+
+    const { data: lineItems } = await supabase
+      .from("quote_line_items")
+      .select("document_id")
+      .eq("service_id", id);
+
+    if (lineItems?.length) {
+      const documentIds = [...new Set(lineItems.map((row) => row.document_id))];
+      const { data: quotes } = await supabase
+        .from("documents")
+        .select("id, title, reference_number")
+        .in("id", documentIds)
+        .eq("user_id", workspaceOwnerId!);
+
+      if (quotes?.length) {
+        return NextResponse.json(
+          {
+            error:
+              "This product is used on existing quotes and cannot be deleted.",
+            quotes: quotes.map((q) => ({
+              id: q.id,
+              title: q.title,
+              reference_number: q.reference_number,
+            })),
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     const { error: dbError } = await supabase
       .from("quote_services")
       .delete()

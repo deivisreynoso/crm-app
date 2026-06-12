@@ -1,28 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useMemo, useState } from "react";
+import { differenceInCalendarDays, parseISO } from "date-fns";
 import { PageHeader } from "@/components/ui/page-shell";
 import { AnalyticsDashboard } from "@/components/analytics/analytics-dashboard";
 import { OperationsDashboard } from "@/components/analytics/operations-dashboard";
+import { WebsiteAnalyticsDashboard } from "@/components/analytics/website-analytics-dashboard";
 import {
   AnalyticsDateFilters,
   getDefaultAnalyticsRange,
 } from "@/components/analytics/analytics-date-filters";
 import { usePipelines } from "@/hooks/usePipelines";
 
-type Tab = "operations" | "pipeline";
+type Tab = "operations" | "pipeline" | "website";
 
-export default function AnalyticsPage() {
+function ga4DaysFromRange(startDate: string, endDate: string): "7" | "30" | "90" {
+  const days = differenceInCalendarDays(parseISO(endDate), parseISO(startDate)) + 1;
+  if (days <= 7) return "7";
+  if (days <= 30) return "30";
+  return "90";
+}
+
+function AnalyticsPageInner() {
   const { data: pipelines = [] } = usePipelines();
   const [tab, setTab] = useState<Tab>("operations");
   const [pipelineId, setPipelineId] = useState("");
   const [dateRange, setDateRange] = useState(getDefaultAnalyticsRange);
 
+  const ga4Days = useMemo(
+    () => ga4DaysFromRange(dateRange.start_date, dateRange.end_date),
+    [dateRange.end_date, dateRange.start_date]
+  );
+
   return (
     <div className="space-y-6 w-full">
       <PageHeader
         title="Analytics"
-        description="Pipeline revenue, service tickets, appointments, and lead metrics"
+        description="Pipeline revenue, service tickets, appointments, website traffic, and lead metrics"
       />
 
       <nav className="flex gap-4 border-b border-[var(--card-border)]">
@@ -30,6 +44,7 @@ export default function AnalyticsPage() {
           [
             { id: "operations" as const, label: "Operations" },
             { id: "pipeline" as const, label: "Pipeline" },
+            { id: "website" as const, label: "Website" },
           ] as const
         ).map((t) => (
           <button
@@ -51,6 +66,8 @@ export default function AnalyticsPage() {
 
       {tab === "operations" ? (
         <OperationsDashboard dateRange={dateRange} />
+      ) : tab === "website" ? (
+        <WebsiteAnalyticsDashboard days={ga4Days} />
       ) : (
         <>
           {pipelines.length > 0 && (
@@ -77,5 +94,13 @@ export default function AnalyticsPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function AnalyticsPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-body-muted">Loading analytics…</p>}>
+      <AnalyticsPageInner />
+    </Suspense>
   );
 }

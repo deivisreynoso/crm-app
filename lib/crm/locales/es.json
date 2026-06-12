@@ -119,6 +119,7 @@
     "acceptLinkError": "No se pudo generar el enlace de aceptación.",
     "acceptedOn": "Aceptada",
     "declinedOn": "Rechazada",
+    "paymentReceived": "Pago recibido",
     "analyticsLoading": "Cargando analíticas…",
     "analyticsTotal": "Total cotizaciones",
     "analyticsPipeline": "Pipeline abierto",
@@ -147,6 +148,10 @@
     "editPrice": "Editar precio",
     "deleteService": "Quitar producto",
     "delete": "Eliminar",
+    "edit": "Editar",
+    "editService": "Editar producto",
+    "deleteConfirmTitle": "¿Eliminar producto?",
+    "saving": "Guardando…",
     "salesManageHint": "Ventas puede agregar productos; solo propietarios y administradores pueden cambiar precios o quitar entradas del catálogo."
   },
   "attachments": {

@@ -5,6 +5,7 @@ import { Copy, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { formatQuoteDate } from "@/lib/crm/format-date";
+import { formatCurrency } from "@/lib/utils";
 import axios from "axios";
 import type { CrmDocument } from "@/types";
 
@@ -83,6 +84,15 @@ export function QuoteAcceptLinkPanel({
           {q?.declinedOn ?? "Declined"}{" "}
           {formatQuoteDate(doc.rejected_at, locale)}
           {doc.response_name ? ` — ${doc.response_name}` : ""}
+        </p>
+      )}
+
+      {doc.quote_payment?.status === "completed" && (
+        <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+          {q?.paymentReceived ?? "Payment received"}{" "}
+          {formatCurrency(Number(doc.quote_payment.amount), doc.quote_payment.currency ?? "USD")}
+          {" · "}
+          {formatQuoteDate(doc.quote_payment.created_at, locale)}
         </p>
       )}
 

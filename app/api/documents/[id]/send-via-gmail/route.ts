@@ -19,6 +19,12 @@ import { triggerN8NWebhook } from "@/lib/n8n";
 import { getQuoteEmailDefaults } from "@/lib/crm/quote-pdf-labels";
 import { ensureAcceptToken, quoteAcceptPublicUrl } from "@/lib/quotes/accept-token";
 import { ensureQuoteReference } from "@/lib/quotes/reference";
+import { resolveGmailSendOptions } from "@/lib/emails/build-gmail-send-options";
+import {
+  buildTemplateContext,
+  interpolateTemplate,
+} from "@/lib/documents/template-variables";
+import { appendEmailSignature } from "@/lib/email/signature";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -89,7 +95,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     if (!to && doc.contact_id) {
       const { data: contact } = await supabase
         .from("contacts")
-        .select("email, first_name")
+        .select("email, first_name, last_name, phone, company, company_id")
         .eq("id", doc.contact_id)
         .maybeSingle();
       to = contact?.email?.trim().toLowerCase() ?? "";
@@ -102,15 +108,28 @@ export async function POST(req: NextRequest, context: RouteContext) {
       );
     }
 
-    let contactLocale: string | null = null;
+    let contactRow: {
+      first_name?: string | null;
+      last_name?: string | null;
+      email?: string | null;
+      phone?: string | null;
+      company?: string | null;
+      company_id?: string | null;
+      preferred_language?: string | null;
+    } | null = null;
+
     if (doc.contact_id) {
       const { data: contact } = await supabase
         .from("contacts")
-        .select("preferred_language")
+        .select(
+          "email, first_name, last_name, phone, company, company_id, preferred_language"
+        )
         .eq("id", doc.contact_id)
         .maybeSingle();
-      contactLocale = (contact?.preferred_language as string | null) ?? null;
+      contactRow = contact;
     }
+
+    let contactLocale: string | null = contactRow?.preferred_language ?? null;
 
     const { data: settings } = await supabase
       .from("user_settings")
@@ -136,10 +155,64 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const acceptUrl = acceptToken ? quoteAcceptPublicUrl(acceptToken) : null;
     const emailDefaults = getQuoteEmailDefaults(uiLocale, acceptUrl);
 
-    const subject =
+    let subject =
       parsed.data.subject?.trim() ||
       `${emailDefaults.subjectPrefix} ${quoteRef ?? (doc.title as string)}`;
-    const emailBody = parsed.data.body?.trim() || emailDefaults.body;
+    let emailBody = parsed.data.body?.trim() || emailDefaults.body;
+
+    if (parsed.data.template_id && doc.contact_id && contactRow) {
+      const { data: template } = await supabase
+        .from("email_templates")
+        .select("subject, body")
+        .eq("id", parsed.data.template_id)
+        .eq("user_id", workspaceOwnerId!)
+        .maybeSingle();
+
+      if (!template) {
+        return NextResponse.json({ error: "Email template not found" }, { status: 404 });
+      }
+
+      let companyName: string | undefined;
+      if (contactRow.company_id) {
+        const { data: company } = await supabase
+          .from("companies")
+          .select("name")
+          .eq("id", contactRow.company_id)
+          .eq("user_id", workspaceOwnerId!)
+          .maybeSingle();
+        companyName = company?.name;
+      }
+
+      const ctx = buildTemplateContext({
+        contact: {
+          first_name: contactRow.first_name ?? undefined,
+          last_name: contactRow.last_name ?? undefined,
+          email: contactRow.email ?? undefined,
+          phone: contactRow.phone ?? undefined,
+          company: contactRow.company ?? undefined,
+        },
+        company: companyName ? { name: companyName } : null,
+      });
+
+      if (!parsed.data.subject?.trim()) {
+        subject = interpolateTemplate(template.subject, ctx);
+      }
+      if (!parsed.data.body?.trim()) {
+        emailBody = interpolateTemplate(template.body, ctx);
+      }
+    }
+
+    if (!parsed.data.skip_signature_append) {
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("email_signature_html")
+        .eq("id", userId!)
+        .maybeSingle();
+      emailBody = appendEmailSignature(
+        emailBody,
+        profile?.email_signature_html as string | null | undefined
+      );
+    }
 
     const { buffer, fileName } = await generateDocumentPdfBuffer(
       supabase,
@@ -173,6 +246,18 @@ export async function POST(req: NextRequest, context: RouteContext) {
       pdfFile
     );
 
+    const extraAttachments: import("@/lib/google/gmail-attachments").GmailAttachment[] =
+      (parsed.data.attachments ?? []).map((a) => ({
+        filename: a.filename,
+        mimeType: a.mime_type,
+        content: Buffer.from(a.content_base64, "base64"),
+      }));
+
+    const sendOptions = await resolveGmailSendOptions(userId!, {
+      cc: parsed.data.cc,
+      bcc: parsed.data.bcc,
+    });
+
     const sent = await sendGmailMessage(userId!, {
       to,
       subject,
@@ -183,7 +268,9 @@ export async function POST(req: NextRequest, context: RouteContext) {
           mimeType: "application/pdf",
           content: buffer,
         },
+        ...extraAttachments,
       ],
+      ...sendOptions,
     });
 
     if (!sent) {

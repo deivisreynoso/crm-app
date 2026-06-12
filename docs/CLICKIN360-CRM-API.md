@@ -625,7 +625,7 @@ Quotes use the `documents` table (types `estimate`, `proposal`, `contract`). Req
 | `GET` | `/api/quote-services` | Service catalog for line items. |
 | `POST` | `/api/quote-services` | Add catalog service (`name`, `unit_price`, …). |
 | `PATCH` | `/api/quote-services/[id]` | Update catalog service. |
-| `DELETE` | `/api/quote-services/[id]` | Remove catalog service. |
+| `DELETE` | `/api/quote-services/[id]` | Remove catalog service (owner/admin). Returns `409` with `quotes[]` when referenced on quote line items. |
 
 **Line items body (`PUT /api/documents/[id]/line-items`):**
 
@@ -823,18 +823,6 @@ Change password (authenticated). Verifies current password against session email
 }
 ```
 
-#### `GET /api/account/mfa`
-
-MFA preference flag: `{ "enabled": true }`.
-
-#### `PATCH /api/account/mfa`
-
-Set MFA preference (scaffolding; TOTP enrollment not enforced yet).
-
-```json
-{ "enabled": true }
-```
-
 ---
 
 ### 9.2 Team (owner / admin)
@@ -945,14 +933,19 @@ Each CRM user connects their own mailbox (`google_gmail_tokens.user_id` = actor)
 {
   "to": "customer@example.com",
   "subject": "Follow up",
-  "body": "Plain-text message.",
-  "cc": "colleague@example.com, other@example.com",
+  "body": "<p>HTML message from rich text composer.</p>",
+  "cc": "colleague@example.com",
+  "bcc": "archive@example.com",
   "template_id": "optional-uuid",
-  "reply_to_gmail_message_id": "optional-gmail-message-id-for-threading"
+  "skip_signature_append": false,
+  "reply_to_gmail_message_id": "optional-gmail-message-id-for-threading",
+  "attachments": [
+    { "filename": "brief.pdf", "mime_type": "application/pdf", "content_base64": "..." }
+  ]
 }
 ```
 
-Either `template_id` **or** both `subject` and `body` are required. With `template_id`, missing `subject`/`body` are filled from the template (variable interpolation). `cc` is optional comma-separated addresses. `reply_to_gmail_message_id` sets In-Reply-To / References for Gmail threading.
+Either `template_id` **or** both `subject` and `body` are required. `body` is HTML from the TipTap composer (merge fields resolved on send). `cc` / `bcc` optional (comma-separated or single). `skip_signature_append: true` omits the user's My Account signature block. `attachments` optional base64 array. `reply_to_gmail_message_id` sets In-Reply-To / References for Gmail threading.
 
 **Send responses:**
 
@@ -1001,11 +994,16 @@ Requires workspace write role. Uses workspace review template unless overridden.
 {
   "to": "customer@example.com",
   "subject": "Quote: Acme estimate",
-  "body": "Optional message (plain text). PDF is attached automatically."
+  "body": "<p>Optional HTML message. PDF attached automatically.</p>",
+  "cc": "optional",
+  "bcc": "optional",
+  "template_id": "optional-uuid",
+  "skip_signature_append": false,
+  "attachments": []
 }
 ```
 
-Requires Gmail connected for the signed-in user. Updates document `status` to `sent`, stores PDF, logs on linked contact when `contact_id` is set.
+Same `gmailSendSchema` as contact send. Requires Gmail connected for the signed-in user. Updates document `status` to `sent`, stores PDF, logs on linked contact when `contact_id` is set.
 
 ---
 
@@ -1166,7 +1164,7 @@ Member-accessible workspace settings (sales+). Booking availability, Google revi
 
 ##### `GET /api/settings/integrations`
 
-Admin integration status (owner/admin): N8N, WhatsApp, Stripe, Mailgun, GA, Google OAuth configured flags.
+Admin integration status (owner/admin): N8N, WhatsApp, Stripe, Mailgun, GA4 Data API (`GA4_PROPERTY_ID` + service account), Google OAuth configured flags; masked property id when set.
 
 ---
 
@@ -1186,7 +1184,8 @@ Google OAuth uses `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (or legacy `GOOGLE
 | `GET` | `/api/auth/google-gmail/reconnect` | Re-consent (send + read scopes) |
 | `POST` | `/api/integrations/n8n/inbound` | Inbound N8N callbacks (`x-n8n-secret`) |
 | `GET`, `POST` | `/api/integrations/whatsapp/inbound` | WhatsApp webhook verify + inbound (Meta) |
-| `POST` | `/api/webhooks/stripe` | Stripe payment webhooks (`STRIPE_WEBHOOK_SECRET`) |
+| `POST` | `/api/webhooks/stripe` | Stripe webhooks (`STRIPE_WEBHOOK_SECRET`): `checkout.session.completed`, `payment_intent.succeeded`, `invoice.paid` — records `payments` row, quote payment notes |
+| `POST` | `/api/quotes/public/[token]/checkout` | Public — create Stripe Checkout session for accepted quote (no session auth) |
 
 Calendar events created in CRM sync using the connected account of the event assignee, then actor, then workspace owner (`resolveCalendarUserId`).
 
@@ -1199,7 +1198,7 @@ Calendar events created in CRM sync using the connected account of the event ass
 | **Payments** | `GET /api/payments` |
 | **Search** | `GET /api/search?q=...` |
 | **Dashboard** | `GET /api/dashboard/stats` — **unused**; home page uses server-side `lib/dashboard-stats.ts` |
-| **Analytics** | `GET /api/analytics/pipeline`, `/api/analytics/operations` |
+| **Analytics** | `GET /api/analytics/pipeline`, `/api/analytics/operations`, `GET /api/analytics/ga4?days=7\|30\|90` (authenticated; GA4 env required) |
 | **Duplicates** | `GET|POST /api/duplicate-reviews`, `PATCH /api/duplicate-reviews/[id]` (`action`: `dismiss` \| `merge`) |
 | **Custom fields** | `GET|POST /api/custom-fields`, `GET|PATCH|DELETE /api/custom-fields/[id]` |
 | **Tags** | `GET|POST /api/contact-tags`, `GET|PATCH|DELETE /api/contact-tags/[id]` |
@@ -1378,8 +1377,11 @@ sequenceDiagram
 | `WHATSAPP_ACCESS_TOKEN` | Optional | WhatsApp Cloud API |
 | `WHATSAPP_PHONE_NUMBER_ID` | Optional | WhatsApp sender |
 | `WHATSAPP_VERIFY_TOKEN` | Optional | Meta webhook verification |
-| `STRIPE_SECRET_KEY` | Optional | Stripe payments (scaffolding) |
-| `STRIPE_WEBHOOK_SECRET` | Optional | Stripe webhook signature |
+| `STRIPE_SECRET_KEY` | Optional | Stripe Checkout for public quote Pay Now |
+| `STRIPE_WEBHOOK_SECRET` | Optional | Stripe webhook signature verification |
+| `GA4_PROPERTY_ID` | Optional | GA4 property resource name, e.g. `properties/123456789` |
+| `GOOGLE_ANALYTICS_CLIENT_EMAIL` | Optional | Service account email with Analytics Data API |
+| `GOOGLE_ANALYTICS_PRIVATE_KEY` | Optional | Service account PEM (`\n` in `.env.local`) |
 | `NEXT_PUBLIC_N8N_WEBCHAT_EMBED_URL` | Optional | Chat iframe |
 | `NEXT_PUBLIC_N8N_WEBCHAT_SCRIPT_URL` | Optional | Chat script |
 | Supabase keys | Yes | `NEXT_PUBLIC_SUPABASE_URL`, service role, etc. |

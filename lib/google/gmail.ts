@@ -163,6 +163,7 @@ export type GmailSendInput = {
   subject: string;
   body: string;
   cc?: string;
+  bcc?: string;
   threadId?: string;
   inReplyTo?: string;
   references?: string;

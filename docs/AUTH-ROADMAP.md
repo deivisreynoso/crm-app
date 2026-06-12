@@ -17,7 +17,6 @@ Related: [CLICKIN360-CRM-API.md](./CLICKIN360-CRM-API.md) (env vars, auth endpoi
 | **Password reset** | `POST /api/auth/forgot-password` → Mailgun email with `token_hash` link |
 | **Team invite email** | Mailgun when configured; copy link in UI as fallback |
 | **Gmail + Calendar** | Post-login Integrations (per-user OAuth), separate from login OAuth |
-| **MFA** | Preference flag on `user_profiles.mfa_enabled` (Settings → My Account); TOTP enrollment UI not built yet |
 | **Dual-email owner** | Canonical session maps alias emails to `WEBSITE_LEADS_USER_ID` via `OWNER_LOGIN_ALIASES` and/or `team_members` |
 
 ### Login methods by role
@@ -123,8 +122,6 @@ After our register API (`email_confirm: true`), new invite signups should show *
 | 2 | Role-based login methods (viewer = credentials only) | ✅ |
 | — | Canonical owner dual-email session mapping | ✅ |
 | — | `authUserId` for password/profile auth-admin calls | ✅ |
-| — | MFA preference flag (`GET/PATCH /api/account/mfa`) | ✅ (scaffolding) |
-
 ### Not yet shipped
 
 | Phase | Item | Notes |
@@ -132,7 +129,7 @@ After our register API (`email_confirm: true`), new invite signups should show *
 | 3 | Google login + auto Gmail/Calendar on first sign-in | Integrations still separate OAuth |
 | 3 | Combined OAuth scopes at login | Gmail app verification may be required |
 | 4 | Decommission personal emails | Optional; `OWNER_LOGIN_ALIASES` supports break-glass |
-| — | Supabase TOTP enrollment UI when `mfa_enabled` | Flag only today |
+| — | MFA / TOTP | Removed in iteration 2 (migration **051**); not planned until product decision |
 | — | SSO/SAML | Not planned |
 
 ---
@@ -161,6 +158,7 @@ Transactional email (Mailgun):
 
 | Date | Change |
 |------|--------|
-| 2026-06 | CRM enhancement sprint: Google SSO login, role-based methods, MFA flag, canonical dual-email owner mapping, `authUserId` session field |
+| 2026-06 | Iteration 2: removed MFA scaffolding (migration 051); auth login/session logic unchanged |
+| 2026-06 | CRM enhancement sprint: Google SSO login, role-based methods, canonical dual-email owner mapping, `authUserId` session field |
 | 2026-06 | Fix teammate login (fresh service-role client after sign-in); password reset via `token_hash`; OAuth redirects use `buildAppRedirectUrl` |
 | 2026-06 | Invite register via admin API (`email_confirm: true`); Mailgun-only reset in prod; clearer login errors; remove teammate deletes auth user |

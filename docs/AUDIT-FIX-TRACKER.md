@@ -40,6 +40,17 @@ Status: **done** | **todo**
 | L5 | Contact page i18n | `contacts.*`, `activity.*`, `quickActions.*`, `tasks.*` in en/es (Phase 5) |
 | L6 | Contact-centric parent links | Tickets/events require `contact_id`; migration 037 |
 
+## Iteration 2 — done (2026-06-10)
+
+| ID | Item | Notes |
+|----|------|--------|
+| I1 | MFA scaffolding removed | `051_remove_mfa_flag.sql`; no login/session changes |
+| I2 | Product catalog edit/delete | `409` when referenced on quotes |
+| I3 | Unified email composer | TipTap on contacts, tickets, quotes; bcc/attachments/signature |
+| I4 | Stripe quote Pay Now | Checkout session + webhooks |
+| I5 | GA4 Website dashboard | `GET /api/analytics/ga4` + Analytics UI tab |
+| I6 | Proposals on hold | `WHATSAPP-WEBCHAT-INBOX-PROPOSAL.md`, `SERVICE-TICKET-CID-PROPOSAL.md` — no implementation |
+
 ## Optional follow-ups (todo)
 
 | ID | Idea | Status |

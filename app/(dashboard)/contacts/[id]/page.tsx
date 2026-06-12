@@ -9,7 +9,9 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ContactForm } from "@/components/forms/ContactForm";
 import { ContactOverview } from "@/components/contact/contact-overview";
-import { ContactLogActivity } from "@/components/contact/contact-log-activity";
+import { RecordActivityComposer } from "@/components/contact/record-activity-composer";
+import type { EmailComposerSendPayload } from "@/components/email/email-composer";
+import { useGmailStatus, useSendContactEmail } from "@/hooks/useGmail";
 import { ActivityPanel } from "@/components/contact/activity-panel";
 import { TasksPanel } from "@/components/contact/tasks-panel";
 import { TaskDetailModal } from "@/components/contact/task-detail-modal";
@@ -65,6 +67,8 @@ export default function ContactDetailPage({ params }: PageProps) {
   const { data: activityItems = [], isLoading: activityLoading } =
     useContactActivityFeed(id);
   const createNote = useCreateContactNote(id);
+  const sendContactEmail = useSendContactEmail(id);
+  const { data: gmailStatus } = useGmailStatus();
   const { data: tasks = [] } = useContactTasks(id);
   const createTask = useCreateContactTask(id);
   const deleteTask = useDeleteContactTask(id);
@@ -158,17 +162,37 @@ export default function ContactDetailPage({ params }: PageProps) {
 
   const activityPanel = (
     <>
-      <ContactLogActivity
-        contactEmail={contact.email}
+      <RecordActivityComposer
+        contact={contact}
+        companyName={companyLabel !== "—" ? companyLabel : null}
         canWrite={canWrite}
-        isAdding={createNote.isPending}
+        gmailConnected={Boolean(gmailStatus?.connected)}
+        isAdding={createNote.isPending || createTask.isPending}
+        isSendingEmail={sendContactEmail.isPending}
         onLog={async (input) => {
           await createNote.mutateAsync({
             content: input.content,
             activity_type: input.activity_type,
           });
         }}
-        onSendEmail={() => setEmailModalOpen(true)}
+        onSendEmail={async (payload: EmailComposerSendPayload) => {
+          await sendContactEmail.mutateAsync({
+            to: payload.to,
+            cc: payload.cc,
+            bcc: payload.bcc,
+            subject: payload.subject,
+            body: payload.body,
+            template_id: payload.template_id,
+            skip_signature_append: payload.skip_signature_append,
+            attachments: payload.attachments,
+          });
+        }}
+        onAddTask={async (input) => {
+          await createTask.mutateAsync({
+            title: input.title,
+            due_date: input.due_date ?? undefined,
+          });
+        }}
       />
       <ActivityPanel
         contactId={id}

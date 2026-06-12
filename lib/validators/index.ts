@@ -392,14 +392,23 @@ export const emailTemplateSchema = z.object({
 
 export type EmailTemplateFormData = z.infer<typeof emailTemplateSchema>;
 
+const attachmentSchema = z.object({
+  filename: z.string().min(1).max(255),
+  mime_type: z.string().min(1).max(128),
+  content_base64: z.string().min(1),
+});
+
 export const gmailSendSchema = z
   .object({
-    to: z.string().email("Enter a valid recipient email"),
+    to: z.string().min(3).max(2000),
     cc: z.string().max(2000).optional().or(z.literal("")),
+    bcc: z.string().max(2000).optional().or(z.literal("")),
     subject: z.string().max(998).optional().or(z.literal("")),
     body: z.string().max(100_000).optional().or(z.literal("")),
     template_id: z.string().uuid().optional(),
     reply_to_gmail_message_id: z.string().min(1).optional(),
+    skip_signature_append: z.boolean().optional(),
+    attachments: z.array(attachmentSchema).max(5).optional(),
   })
   .refine(
     (data) =>
@@ -413,11 +422,26 @@ export const gmailSendSchema = z
 
 export type GmailSendInput = z.infer<typeof gmailSendSchema>;
 
-export const documentSendViaGmailSchema = z.object({
-  to: z.string().email("Enter a valid recipient email").optional(),
-  subject: z.string().max(998).optional().or(z.literal("")),
-  body: z.string().max(100_000).optional().or(z.literal("")),
-});
+export const documentSendViaGmailSchema = z
+  .object({
+    to: z.string().email("Enter a valid recipient email").optional().or(z.literal("")),
+    cc: z.string().max(2000).optional().or(z.literal("")),
+    bcc: z.string().max(2000).optional().or(z.literal("")),
+    subject: z.string().max(998).optional().or(z.literal("")),
+    body: z.string().max(100_000).optional().or(z.literal("")),
+    template_id: z.string().uuid().optional(),
+    skip_signature_append: z.boolean().optional(),
+    attachments: z.array(attachmentSchema).max(5).optional(),
+  })
+  .refine(
+    (data) =>
+      data.template_id ||
+      (Boolean(data.subject?.trim()) && Boolean(data.body?.trim())),
+    {
+      message: "Subject and message are required (or choose a template)",
+      path: ["body"],
+    }
+  );
 
 export type DocumentSendViaGmailInput = z.infer<typeof documentSendViaGmailSchema>;
 

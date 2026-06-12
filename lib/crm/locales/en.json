@@ -119,6 +119,7 @@
     "acceptLinkError": "Could not generate acceptance link.",
     "acceptedOn": "Accepted",
     "declinedOn": "Declined",
+    "paymentReceived": "Payment received",
     "analyticsLoading": "Loading analytics…",
     "analyticsTotal": "Total quotes",
     "analyticsPipeline": "Open pipeline",
@@ -147,6 +148,10 @@
     "editPrice": "Edit price",
     "deleteService": "Remove product",
     "delete": "Delete",
+    "edit": "Edit",
+    "editService": "Edit product",
+    "deleteConfirmTitle": "Delete product?",
+    "saving": "Saving…",
     "salesManageHint": "Sales can add products; only owners and admins can change prices or remove catalog entries."
   },
   "attachments": {
