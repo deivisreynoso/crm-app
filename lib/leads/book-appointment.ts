@@ -89,6 +89,7 @@ export async function bookDiscoveryCall(
     },
     conversation_transcript: input.conversation_transcript ?? null,
     ga_client_id: input.ga_client_id ?? null,
+    language: options?.lang ?? "es",
   });
 
   return {

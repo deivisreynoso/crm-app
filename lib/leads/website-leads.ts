@@ -5,6 +5,8 @@ import { findDuplicateContact } from "@/lib/identity/contact-duplicate";
 import { getWorkspaceWebsiteLeadsConfig } from "@/lib/team/workspace";
 import type { WebsiteCalendarSelection } from "@/lib/leads/booking-calendar-event";
 import { upsertBookingCalendarEvent } from "@/lib/leads/reschedule-booking";
+import { notifyWebsiteLeadAssignee } from "@/lib/leads/website-lead-notify";
+import type { CrmLocale } from "@/lib/crm/i18n";
 
 export type WebsiteContactInfo = {
   name: string;
@@ -52,6 +54,7 @@ function buildNoteContent(
     source: "webchat" | "form";
     qualification?: WebsiteQualification;
     conversation_transcript?: string | null;
+    language?: string | null;
   },
   returning: boolean
 ) {
@@ -117,6 +120,9 @@ async function maybeCreateBookingCalendarEvent(
     company?: string | null;
     calendar?: WebsiteCalendarSelection | null;
     reschedule?: boolean;
+    assigneeId?: string | null;
+    leadEmail?: string | null;
+    locale?: CrmLocale;
   }
 ): Promise<string | null> {
   if (!input.calendar?.date || !input.calendar?.time) return null;
@@ -128,6 +134,9 @@ async function maybeCreateBookingCalendarEvent(
     company: input.company,
     calendar: input.calendar,
     reschedule: input.reschedule,
+    assigneeId: input.assigneeId,
+    leadEmail: input.leadEmail,
+    locale: input.locale,
   });
 }
 
@@ -141,6 +150,7 @@ async function appendToExistingContact(
     qualification?: WebsiteQualification;
     conversation_transcript?: string | null;
     calendar_selection?: WebsiteCalendarSelection | null;
+    language?: string | null;
   },
   defaultSalesAssignee: string | null
 ): Promise<WebsiteLeadResult> {
@@ -192,6 +202,9 @@ async function appendToExistingContact(
       company,
       calendar: input.calendar_selection,
       reschedule: isReschedule,
+      assigneeId: defaultSalesAssignee,
+      leadEmail: input.contact_info.email,
+      locale: input.language === "en" ? "en" : "es",
     }
   );
 
@@ -206,13 +219,15 @@ async function appendToExistingContact(
   });
 
   if (defaultSalesAssignee) {
-    const { createNotification } = await import("@/lib/notifications/create-notification");
-    await createNotification(supabase, defaultSalesAssignee, {
-      kind: "opportunity_reminder",
-      title: "Returning lead — new request",
-      message: `${first_name} ${last_name}`.trim(),
-      related_entity_type: "contact",
-      related_entity_id: contactId,
+    await notifyWebsiteLeadAssignee(supabase, {
+      workspaceOwnerId,
+      assigneeId: defaultSalesAssignee,
+      contactId,
+      leadName: `${first_name} ${last_name}`.trim(),
+      leadEmail: input.contact_info.email.trim().toLowerCase(),
+      source: input.source,
+      hasAppointment: Boolean(calendarEventId),
+      returningVisitor: true,
     });
   }
 
@@ -350,6 +365,9 @@ export async function createLeadFromWebsite(input: {
       contactName: `${first_name} ${last_name}`.trim(),
       company,
       calendar: input.calendar_selection,
+      assigneeId: defaultSalesAssignee,
+      leadEmail: email,
+      locale: preferredLanguage ?? "es",
     }
   );
 
@@ -366,13 +384,15 @@ export async function createLeadFromWebsite(input: {
   });
 
   if (defaultSalesAssignee) {
-    const { createNotification } = await import("@/lib/notifications/create-notification");
-    await createNotification(supabase, defaultSalesAssignee, {
-      kind: "opportunity_reminder",
-      title: "New website lead",
-      message: `${first_name} ${last_name}`.trim(),
-      related_entity_type: "contact",
-      related_entity_id: contactId,
+    await notifyWebsiteLeadAssignee(supabase, {
+      workspaceOwnerId,
+      assigneeId: defaultSalesAssignee,
+      contactId,
+      leadName: `${first_name} ${last_name}`.trim(),
+      leadEmail: email,
+      source: input.source,
+      hasAppointment: Boolean(calendarEventId),
+      returningVisitor: false,
     });
   }
 

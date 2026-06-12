@@ -7,6 +7,7 @@ import type { BookingAvailabilityConfig } from "@/lib/website/booking-availabili
 export interface WorkspaceSettings {
   default_currency: WorkspaceCurrency;
   default_sales_assignee?: string | null;
+  website_leads_email_notify?: boolean;
   booking_availability?: BookingAvailabilityConfig;
   ui_locale?: "en" | "es";
   quote_logo_storage_path?: string | null;
@@ -35,6 +36,7 @@ export function useUpdateWorkspaceSettings() {
     mutationFn: (patch: {
       default_currency?: WorkspaceCurrency;
       default_sales_assignee?: string | null;
+      website_leads_email_notify?: boolean;
       booking_availability?: BookingAvailabilityConfig;
       quote_company_name?: string;
       quote_primary_color?: string;

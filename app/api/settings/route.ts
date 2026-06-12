@@ -24,6 +24,7 @@ const bookingAvailabilityPatchSchema = z.object({
 const settingsPatchSchema = z.object({
   default_currency: z.enum(["USD", "MXN"]).optional(),
   default_sales_assignee: z.string().uuid().nullable().optional(),
+  website_leads_email_notify: z.boolean().optional(),
   booking_availability: bookingAvailabilityPatchSchema.optional(),
   ui_locale: z.enum(["en", "es"]).optional(),
   quote_company_name: z.string().max(120).optional().or(z.literal("")),
@@ -40,13 +41,14 @@ const settingsPatchSchema = z.object({
   quote_font_family: z.string().max(80).optional().or(z.literal("")),
 });
 
+const SETTINGS_SELECT =
+  "default_currency, default_sales_assignee, website_leads_email_notify, booking_availability, ui_locale, quote_logo_storage_path, quote_company_name, quote_primary_color, quote_font_family, google_reviews_url, review_request_template_id, updated_at";
+
 async function loadSettings(workspaceOwnerId: string) {
   const supabase = createServerSideClient();
   let { data, error: dbError } = await supabase
     .from("user_settings")
-    .select(
-      "default_currency, default_sales_assignee, booking_availability, ui_locale, quote_logo_storage_path, quote_company_name, quote_primary_color, quote_font_family, google_reviews_url, review_request_template_id, updated_at"
-    )
+    .select(SETTINGS_SELECT)
     .eq("user_id", workspaceOwnerId)
     .maybeSingle();
 
@@ -56,9 +58,7 @@ async function loadSettings(workspaceOwnerId: string) {
     const { data: created, error: insertError } = await supabase
       .from("user_settings")
       .insert({ user_id: workspaceOwnerId, default_currency: "USD" })
-      .select(
-      "default_currency, default_sales_assignee, booking_availability, ui_locale, quote_logo_storage_path, quote_company_name, quote_primary_color, quote_font_family, google_reviews_url, review_request_template_id, updated_at"
-    )
+      .select(SETTINGS_SELECT)
       .single();
 
     if (insertError) throw insertError;
@@ -121,6 +121,7 @@ export async function PATCH(req: NextRequest) {
     if (
       parsed.data.default_currency === undefined &&
       parsed.data.default_sales_assignee === undefined &&
+      parsed.data.website_leads_email_notify === undefined &&
       parsed.data.booking_availability === undefined &&
       parsed.data.ui_locale === undefined &&
       parsed.data.quote_company_name === undefined &&
@@ -142,6 +143,9 @@ export async function PATCH(req: NextRequest) {
     }
     if (parsed.data.default_sales_assignee !== undefined) {
       patch.default_sales_assignee = parsed.data.default_sales_assignee;
+    }
+    if (parsed.data.website_leads_email_notify !== undefined) {
+      patch.website_leads_email_notify = parsed.data.website_leads_email_notify;
     }
     if (parsed.data.booking_availability !== undefined) {
       patch.booking_availability = parsed.data.booking_availability;
@@ -168,9 +172,7 @@ export async function PATCH(req: NextRequest) {
     const { data, error: dbError } = await supabase
       .from("user_settings")
       .upsert(patch, { onConflict: "user_id" })
-      .select(
-      "default_currency, default_sales_assignee, booking_availability, ui_locale, quote_logo_storage_path, quote_company_name, quote_primary_color, quote_font_family, google_reviews_url, review_request_template_id, updated_at"
-    )
+      .select(SETTINGS_SELECT)
       .single();
 
     if (dbError) {

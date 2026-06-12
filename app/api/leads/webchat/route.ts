@@ -23,6 +23,14 @@ const webchatSchema = z.object({
     })
     .optional(),
   conversation_transcript: z.string().optional(),
+  calendar_selection: z
+    .object({
+      date: z.string(),
+      time: z.string(),
+      timezone: z.string().optional(),
+    })
+    .optional(),
+  language: z.enum(["en", "es"]).optional(),
   source: z.literal("webchat").optional(),
   ga_client_id: z.string().optional(),
   visitor_id: z.string().optional(),
@@ -44,6 +52,8 @@ export async function POST(req: NextRequest) {
 
     const q = parsed.data.ai_insights ?? {};
 
+    const requestLang = parsed.data.language === "en" ? "en" : "es";
+
     const result = await createLeadFromWebsite({
       source: "webchat",
       contact_info: parsed.data.contact_info,
@@ -57,8 +67,10 @@ export async function POST(req: NextRequest) {
         qualified: q.qualified,
         confidence_score: q.confidence_score,
       },
+      calendar_selection: parsed.data.calendar_selection ?? null,
       ga_client_id: parsed.data.ga_client_id ?? parsed.data.visitor_id ?? null,
       conversation_transcript: parsed.data.conversation_transcript ?? null,
+      language: requestLang,
     });
 
     return NextResponse.json(result, { status: 201 });

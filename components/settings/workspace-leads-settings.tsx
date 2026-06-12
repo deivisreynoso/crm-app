@@ -9,11 +9,18 @@ import { formatApiError } from "@/lib/validation-errors";
 
 type Member = { id: string; label: string; email: string; role?: string };
 
+function findElizabeth(members: Member[]): Member | undefined {
+  return members.find((m) =>
+    m.label.toLowerCase().includes("elizabeth reynoso")
+  );
+}
+
 export function WorkspaceLeadsSettings() {
   const { data: settings, isLoading } = useWorkspaceSettings();
   const update = useUpdateWorkspaceSettings();
   const [members, setMembers] = useState<Member[]>([]);
   const [assignee, setAssignee] = useState("");
+  const [emailNotify, setEmailNotify] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,10 +31,18 @@ export function WorkspaceLeadsSettings() {
   }, []);
 
   useEffect(() => {
-    setAssignee(settings?.default_sales_assignee ?? "");
-  }, [settings?.default_sales_assignee]);
+    if (settings?.default_sales_assignee) {
+      setAssignee(settings.default_sales_assignee);
+    } else {
+      const elizabeth = findElizabeth(members);
+      if (elizabeth) setAssignee(elizabeth.id);
+    }
+    setEmailNotify(settings?.website_leads_email_notify !== false);
+  }, [settings?.default_sales_assignee, settings?.website_leads_email_notify, members]);
 
-  const salesOptions = members.filter((m) => m.role === "sales" || m.role === "owner");
+  const assignableMembers = members.filter(
+    (m) => m.role === "owner" || m.role === "admin" || m.role === "sales"
+  );
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -36,8 +51,9 @@ export function WorkspaceLeadsSettings() {
     try {
       await update.mutateAsync({
         default_sales_assignee: assignee || null,
+        website_leads_email_notify: emailNotify,
       });
-      setMsg("Website lead assignment saved.");
+      setMsg("Website lead routing saved.");
     } catch (err) {
       setError(formatApiError(err, "Could not save lead settings"));
     }
@@ -47,11 +63,14 @@ export function WorkspaceLeadsSettings() {
     return <p className="text-sm text-body-muted">Loading…</p>;
   }
 
+  const elizabethHint = findElizabeth(members);
+
   return (
-    <form onSubmit={handleSave} className="space-y-3 max-w-lg">
+    <form onSubmit={handleSave} className="space-y-4 max-w-lg">
       <p className="text-sm text-body-muted">
-        Website leads are stored in your shared workspace. Choose who gets auto-assigned
-        when someone submits the booking form (optional until your sales partner joins).
+        Website leads are stored in your shared workspace. Choose who gets assigned
+        and notified when someone submits the booking form or completes an AI webchat
+        conversation.
       </p>
       <div>
         <FormLabel>Default sales assignee</FormLabel>
@@ -60,14 +79,29 @@ export function WorkspaceLeadsSettings() {
           value={assignee}
           onChange={(e) => setAssignee(e.target.value)}
         >
-          <option value="">Unassigned (visible to whole workspace)</option>
-          {salesOptions.map((m) => (
+          {assignableMembers.map((m) => (
             <option key={m.id} value={m.id}>
               {m.label}
             </option>
           ))}
         </select>
+        {!settings?.default_sales_assignee && elizabethHint && assignee === elizabethHint.id && (
+          <p className="mt-1 text-xs text-body-muted">
+            Elizabeth Reynoso is pre-selected as the default. Save to persist, or pick another teammate.
+          </p>
+        )}
       </div>
+      <label className="flex items-start gap-2 text-sm cursor-pointer">
+        <input
+          type="checkbox"
+          className="mt-0.5"
+          checked={emailNotify}
+          onChange={(e) => setEmailNotify(e.target.checked)}
+        />
+        <span>
+          Email the assignee when a new website lead arrives (in addition to in-app notification)
+        </span>
+      </label>
       {error && <p className="text-sm text-[var(--error)]">{error}</p>}
       {msg && <p className="text-sm text-emerald-700">{msg}</p>}
       <Button type="submit" size="sm" disabled={update.isPending}>

@@ -1,4 +1,5 @@
 import { createServerSideClient } from "@/lib/supabase";
+import { resolveWebLeadsAssignee } from "@/lib/leads/resolve-web-leads-assignee";
 
 export type TeamRole = "owner" | "admin" | "sales" | "viewer";
 
@@ -88,8 +89,14 @@ export async function getWorkspaceWebsiteLeadsConfig(workspaceOwnerId: string) {
     .eq("user_id", ownerId)
     .maybeSingle();
 
+  const defaultSalesAssignee = await resolveWebLeadsAssignee(
+    supabase,
+    ownerId,
+    (settings?.default_sales_assignee as string | null) ?? null
+  );
+
   return {
     workspaceOwnerId: ownerId,
-    defaultSalesAssignee: (settings?.default_sales_assignee as string | null) ?? null,
+    defaultSalesAssignee,
   };
 }
