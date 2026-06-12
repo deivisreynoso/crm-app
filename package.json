@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@google-analytics/data": "^6.1.0",
@@ -49,6 +50,7 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.0",

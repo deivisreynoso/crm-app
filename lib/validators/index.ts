@@ -258,6 +258,7 @@ export const documentPatchSchema = z.object({
   total_amount: z.coerce.number().nonnegative().optional(),
   header_html: z.string().optional().or(z.literal("")),
   footer_html: z.string().optional().or(z.literal("")),
+  currency: z.enum(["USD", "MXN"]).optional(),
 });
 
 export const quoteLineItemInputSchema = z.object({

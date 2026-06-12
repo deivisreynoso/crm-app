@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { CreateInvoiceWizard } from "@/components/finances/create-invoice-wizard";
 import { ArrowRight, ExternalLink } from "lucide-react";
@@ -25,12 +25,11 @@ type Props = {
 
 export function QuoteFinancesTab({ doc }: Props) {
   const [wizardOpen, setWizardOpen] = useState(false);
-  const { data: invoices = [] } = useInvoices();
-  const { data: links = [] } = usePaymentLinks();
-
-  const activeInvoice = useMemo(
-    () => invoices.find((i) => i.quote_id === doc.id && i.status !== "voided"),
-    [invoices, doc.id]
+  const { data: invoices = [] } = useInvoices({ quote_id: doc.id });
+  const activeInvoice = invoices.find((i) => i.status !== "voided");
+  const { data: links = [] } = usePaymentLinks(
+    activeInvoice ? { invoice_id: activeInvoice.id } : undefined,
+    { enabled: Boolean(activeInvoice) }
   );
 
   const { data: invoiceTxs = [] } = useFinanceTransactions(
@@ -38,13 +37,7 @@ export function QuoteFinancesTab({ doc }: Props) {
     { enabled: Boolean(activeInvoice) }
   );
 
-  const activeLink = useMemo(
-    () =>
-      activeInvoice
-        ? links.find((l) => l.invoice_id === activeInvoice.id && l.status === "active")
-        : undefined,
-    [links, activeInvoice]
-  );
+  const activeLink = links.find((l) => l.status === "active");
 
   const total = Number(doc.total_amount ?? 0);
   const paid = Number(doc.amount_paid ?? 0);

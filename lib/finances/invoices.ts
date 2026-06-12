@@ -12,6 +12,17 @@ export type InvoiceLineItem = {
   line_total: number;
 };
 
+export function isQuoteAcceptedForBilling(quote: {
+  status?: string;
+  accepted_at?: string | null;
+}): boolean {
+  return (
+    quote.status === "accepted" ||
+    quote.status === "signed" ||
+    !!quote.accepted_at
+  );
+}
+
 export async function assertQuoteAcceptedForInvoice(
   supabase: SupabaseClient,
   workspaceOwnerId: string,
@@ -111,17 +122,22 @@ export async function duplicateInvoice(
   return created;
 }
 
+export type NewlyOverdueInvoice = { id: string; invoice_number: string };
+
 export async function markOverdueInvoices(
   supabase: SupabaseClient,
   workspaceOwnerId: string
-) {
+): Promise<NewlyOverdueInvoice[]> {
   const today = new Date().toISOString().slice(0, 10);
-  await supabase
+  const { data } = await supabase
     .from("invoices")
     .update({ status: "overdue", updated_at: new Date().toISOString() })
     .eq("user_id", workspaceOwnerId)
     .in("status", ["sent", "viewed", "pending", "partially_paid"])
-    .lt("due_date", today);
+    .lt("due_date", today)
+    .select("id, invoice_number");
+
+  return (data ?? []) as NewlyOverdueInvoice[];
 }
 
 function mapInvoiceLines(lineItems: InvoiceLineItem[]): QuoteLineItem[] {

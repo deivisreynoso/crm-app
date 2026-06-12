@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Download } from "lucide-react";
 import {
   DataTable,
   DataTableBody,
@@ -31,7 +32,7 @@ type Props = {
 export function TransactionsTab({ filters, showAdd = true }: Props) {
   const { canManage } = useWorkspaceCapabilities();
   const { data: rows = [], isLoading } = useFinanceTransactions(filters);
-  const { data: invoices = [] } = useInvoices();
+  const { data: invoices = [] } = useInvoices({ summary: true });
   const voidTx = useVoidFinanceTransaction();
   const [addOpen, setAddOpen] = useState(false);
   const [incomeType, setIncomeType] = useState<"income" | "expense">("income");
@@ -44,18 +45,33 @@ export function TransactionsTab({ filters, showAdd = true }: Props) {
 
   const openInvoices = invoices.filter((i) => i.status !== "voided" && i.status !== "paid");
 
+  function exportCsv() {
+    const params = new URLSearchParams();
+    if (filters?.type) params.set("type", filters.type);
+    if (filters?.status) params.set("status", filters.status);
+    if (filters?.invoice_id) params.set("invoice_id", filters.invoice_id);
+    const qs = params.toString();
+    window.open(`/api/finances/transactions/export${qs ? `?${qs}` : ""}`, "_blank");
+  }
+
   return (
     <div className="space-y-4">
-      {showAdd && canManage && (
-        <div className="flex justify-end gap-2">
-          <Button type="button" size="sm" variant="outline" onClick={() => { setIncomeType("expense"); setAddOpen(true); }}>
-            Add expense
-          </Button>
-          <Button type="button" size="sm" onClick={() => { setIncomeType("income"); setAddOpen(true); }}>
-            Log income
-          </Button>
-        </div>
-      )}
+      <div className="flex justify-end gap-2">
+        <Button type="button" size="sm" variant="outline" onClick={exportCsv}>
+          <Download className="h-4 w-4 mr-1.5" />
+          Export CSV
+        </Button>
+        {showAdd && canManage && (
+          <>
+            <Button type="button" size="sm" variant="outline" onClick={() => { setIncomeType("expense"); setAddOpen(true); }}>
+              Add expense
+            </Button>
+            <Button type="button" size="sm" onClick={() => { setIncomeType("income"); setAddOpen(true); }}>
+              Log income
+            </Button>
+          </>
+        )}
+      </div>
 
       <DataTableShell
         isLoading={isLoading}

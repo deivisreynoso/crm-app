@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { notifyPaymentReceived } from "@/lib/finances/finance-notifications";
 import {
   sendInvoiceReceiptEmail,
   sendPartialPaymentEmail,
@@ -89,6 +90,19 @@ export async function recalculateInvoicePaymentStatus(
     notes: invoice.notes as string | null,
     footer_text: invoice.footer_text as string | null,
   };
+
+  if (options?.lastPaymentAmount && options.lastPaymentAmount > 0) {
+    try {
+      await notifyPaymentReceived(
+        supabase,
+        workspaceOwnerId,
+        invoiceId,
+        invoice.invoice_number as string
+      );
+    } catch (err) {
+      console.error("Finance payment notification failed:", err);
+    }
+  }
 
   if (contactEmail && options?.lastPaymentAmount && options.lastPaymentAmount > 0) {
     try {

@@ -95,6 +95,12 @@ export function CreateInvoiceWizard({
   const [collectionMethod, setCollectionMethod] = useState<"manual" | "payment_link">("manual");
   const [error, setError] = useState<string | null>(null);
   const [loadingQuote, setLoadingQuote] = useState(false);
+  const [submitResult, setSubmitResult] = useState<{
+    invoiceId: string;
+    email_sent?: boolean;
+    email_error?: string;
+    payment_link_url?: string | null;
+  } | null>(null);
 
   const isQuoteType = invoiceType === "quote";
   const stepIndex = STEPS.findIndex((s) => s.id === step);
@@ -115,6 +121,7 @@ export function CreateInvoiceWizard({
     setLines([{ key: "1", description: "Services", quantity: "1", unit_price: "0" }]);
     setCollectionMethod("manual");
     setError(null);
+    setSubmitResult(null);
     if (quotePreset) void loadQuote(quotePreset);
   }, [open, quotePreset, contactPreset]);
 
@@ -254,8 +261,12 @@ export function CreateInvoiceWizard({
         collection_method: collectionMethod,
       });
 
-      onClose();
-      router.push(`/finances/invoices/${result.invoice.id}`);
+      setSubmitResult({
+        invoiceId: result.invoice.id,
+        email_sent: result.email_sent,
+        email_error: result.email_error,
+        payment_link_url: result.payment_link_url,
+      });
     } catch (err) {
       setError(formatApiError(err, "Could not create invoice."));
     }
@@ -457,42 +468,116 @@ export function CreateInvoiceWizard({
           </div>
         )}
 
-        {step === "review" && (
-          <div className="rounded-lg border border-[var(--card-border)] divide-y divide-[var(--card-border)] text-sm">
-            <div className="px-4 py-3 flex justify-between gap-4">
-              <span className="text-body-muted">Type</span>
-              <span className="font-medium text-heading">
-                {INVOICE_TYPES.find((t) => t.id === invoiceType)?.label}
-              </span>
-            </div>
-            {isQuoteType && quoteId && (
+        {submitResult ? (
+          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-3 text-sm">
+            <p className="font-semibold text-heading">Invoice created</p>
+            {submitResult.email_sent === true && (
+              <p className="text-body-muted">Invoice email sent to the customer.</p>
+            )}
+            {submitResult.email_sent === false && submitResult.email_error && (
+              <p className="text-[var(--error)]">Email not sent: {submitResult.email_error}</p>
+            )}
+            {submitResult.payment_link_url && (
+              <p className="text-body-muted break-all">
+                Payment link:{" "}
+                <a
+                  href={submitResult.payment_link_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[var(--secondary)] hover:underline"
+                >
+                  {submitResult.payment_link_url}
+                </a>
+              </p>
+            )}
+            <Button
+              type="button"
+              onClick={() => {
+                onClose();
+                router.push(`/finances/invoices/${submitResult.invoiceId}`);
+              }}
+            >
+              Open invoice
+            </Button>
+          </div>
+        ) : null}
+
+        {step === "review" && !submitResult && (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-[var(--card-border)] divide-y divide-[var(--card-border)] text-sm">
               <div className="px-4 py-3 flex justify-between gap-4">
-                <span className="text-body-muted">Quote</span>
-                <span className="font-medium">Linked</span>
+                <span className="text-body-muted">Type</span>
+                <span className="font-medium text-heading">
+                  {INVOICE_TYPES.find((t) => t.id === invoiceType)?.label}
+                </span>
+              </div>
+              {isQuoteType && quoteId && (
+                <div className="px-4 py-3 flex justify-between gap-4">
+                  <span className="text-body-muted">Quote</span>
+                  <span className="font-medium">Linked</span>
+                </div>
+              )}
+              <div className="px-4 py-3 flex justify-between gap-4">
+                <span className="text-body-muted">Total</span>
+                <span className="font-semibold">{formatCurrency(totals.total, currency)}</span>
+              </div>
+              <div className="px-4 py-3 flex justify-between gap-4">
+                <span className="text-body-muted">Collection</span>
+                <span className="font-medium flex items-center gap-1.5">
+                  {collectionMethod === "manual" ? (
+                    <>
+                      <HandCoins className="h-4 w-4" /> Manual — pending until logged
+                    </>
+                  ) : (
+                    <>
+                      <Link2 className="h-4 w-4" /> Payment link — email with Pay now
+                    </>
+                  )}
+                </span>
+              </div>
+              <div className="px-4 py-3 flex justify-between gap-4">
+                <span className="text-body-muted">Initial status</span>
+                <span className="font-medium">Pending payment</span>
+              </div>
+            </div>
+
+            {(isQuoteType || lines.length > 0) && (
+              <div className="rounded-lg border border-[var(--card-border)] overflow-hidden text-sm">
+                <div className="px-4 py-2 bg-[var(--surface-subtle)] font-medium text-heading">
+                  Line items
+                </div>
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-xs text-body-muted border-b border-[var(--card-border)]">
+                      <th className="text-left px-4 py-2 font-medium">Description</th>
+                      <th className="text-right px-4 py-2 font-medium">Qty</th>
+                      <th className="text-right px-4 py-2 font-medium">Unit</th>
+                      <th className="text-right px-4 py-2 font-medium">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {totals.lines.map((line) => {
+                      const qty = Number(line.quantity) || 1;
+                      const unit = Number(line.unit_price) || 0;
+                      const lineTotal =
+                        Math.round(qty * unit * 100) / 100;
+                      return (
+                        <tr key={line.key} className="border-b border-[var(--card-border)] last:border-0">
+                          <td className="px-4 py-2">{line.description || "Line item"}</td>
+                          <td className="px-4 py-2 text-right">{qty}</td>
+                          <td className="px-4 py-2 text-right">
+                            {formatCurrency(unit, currency)}
+                          </td>
+                          <td className="px-4 py-2 text-right font-medium">
+                            {formatCurrency(lineTotal, currency)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
-            <div className="px-4 py-3 flex justify-between gap-4">
-              <span className="text-body-muted">Total</span>
-              <span className="font-semibold">{formatCurrency(totals.total, currency)}</span>
-            </div>
-            <div className="px-4 py-3 flex justify-between gap-4">
-              <span className="text-body-muted">Collection</span>
-              <span className="font-medium flex items-center gap-1.5">
-                {collectionMethod === "manual" ? (
-                  <>
-                    <HandCoins className="h-4 w-4" /> Manual — pending until logged
-                  </>
-                ) : (
-                  <>
-                    <Link2 className="h-4 w-4" /> Payment link — email with Pay now
-                  </>
-                )}
-              </span>
-            </div>
-            <div className="px-4 py-3 flex justify-between gap-4">
-              <span className="text-body-muted">Initial status</span>
-              <span className="font-medium">Pending payment</span>
-            </div>
           </div>
         )}
 
@@ -513,7 +598,7 @@ export function CreateInvoiceWizard({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            {step !== "review" ? (
+            {submitResult ? null : step !== "review" ? (
               <Button type="button" onClick={goNext} disabled={loadingQuote}>
                 Next
                 <ArrowRight className="h-4 w-4 ml-1.5" />

@@ -39,6 +39,7 @@ export async function GET(req: NextRequest) {
     const companyId = params.get("company_id");
     const opportunityId = params.get("opportunity_id");
     const kind = params.get("kind");
+    const billable = params.get("billable") === "1";
     const resolveFileUrls = params.get("resolve_file_urls") === "1";
     const page = Math.max(1, Number(params.get("page") || "1"));
     const limit = Math.min(200, Math.max(1, Number(params.get("limit") || "100")));
@@ -48,10 +49,14 @@ export async function GET(req: NextRequest) {
     if (contactId) query = query.eq("contact_id", contactId);
     if (companyId) query = query.eq("company_id", companyId);
     if (opportunityId) query = query.eq("opportunity_id", opportunityId);
-    if (kind === "quotes") {
+    if (kind === "quotes" || billable) {
       query = query.in("type", [...QUOTE_DOCUMENT_TYPES]);
     } else if (kind === "attachments") {
       query = query.eq("type", "attachment");
+    }
+
+    if (billable) {
+      query = query.or("status.eq.accepted,status.eq.signed,accepted_at.not.is.null");
     }
 
     const { data, error: dbError, count } = await query.range(from, to);
@@ -181,14 +186,18 @@ export async function POST(req: NextRequest) {
     let title = createPayload.title.trim();
     let quoteReference: string | null = null;
 
+    let quoteCurrency: "USD" | "MXN" | null = null;
+
     if (isQuoteDocument(createPayload.type)) {
       const { data: settings } = await supabase
         .from("user_settings")
-        .select("ui_locale")
+        .select("ui_locale, default_currency")
         .eq("user_id", workspaceOwnerId!)
         .maybeSingle();
 
       const uiLocale = (settings?.ui_locale as string | null) ?? null;
+      const defaultCurrency = (settings?.default_currency as string) === "MXN" ? "MXN" : "USD";
+      quoteCurrency = defaultCurrency;
       quoteReference = await allocateQuoteReference(supabase, workspaceOwnerId!);
       if (isGenericQuoteTitle(title)) {
         title = getDefaultQuoteTitle(uiLocale, quoteReference);
@@ -200,6 +209,7 @@ export async function POST(req: NextRequest) {
       id: docId,
       storage_path: fileMeta?.storage_path ?? null,
       quote_reference: quoteReference,
+      ...(quoteCurrency ? { currency: quoteCurrency } : {}),
     };
 
     let data = null as Record<string, unknown> | null;

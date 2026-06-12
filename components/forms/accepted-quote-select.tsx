@@ -39,7 +39,7 @@ export function AcceptedQuoteSelect({
 }: AcceptedQuoteSelectProps) {
   const [quotes, setQuotes] = useState<CrmDocument[]>([]);
   const [loading, setLoading] = useState(true);
-  const { data: invoices = [] } = useInvoices();
+  const { data: invoices = [] } = useInvoices({ summary: true });
   const { data: workspaceSettings } = useWorkspaceSettings();
   const defaultCurrency = workspaceSettings?.default_currency ?? "USD";
 
@@ -47,7 +47,7 @@ export function AcceptedQuoteSelect({
     let cancelled = false;
     void axios
       .get<{ data: CrmDocument[] }>("/api/documents", {
-        params: { kind: "quotes", limit: 200 },
+        params: { billable: "1", limit: 200 },
       })
       .then((res) => {
         if (!cancelled) setQuotes(res.data.data ?? []);
@@ -72,7 +72,6 @@ export function AcceptedQuoteSelect({
 
   const options: AcceptedQuoteOption[] = useMemo(() => {
     return quotes
-      .filter((q) => q.status === "accepted")
       .filter((q) => !invoicedQuoteIds.has(q.id) || q.id === value)
       .map((q) => ({
         id: q.id,

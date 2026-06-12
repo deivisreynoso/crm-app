@@ -13,6 +13,7 @@ const PUBLIC_API_PREFIXES = [
   "/api/webhooks/stripe",
   "/api/integrations/n8n/",
   "/api/public/support/",
+  "/api/cron/",
 ];
 
 /** Integration APIs authenticated by shared secret, not session role */
@@ -80,6 +81,8 @@ export function requiresWorkspaceOwnerOnly(pathname: string, method: string) {
   const m = method.toUpperCase();
   if (pathname === "/api/account" && m === "DELETE") return true;
   if (/^\/api\/team\/members\/[^/]+$/.test(pathname) && m === "DELETE") return true;
+  if (pathname === "/api/finances/invoices/bulk-delete" && m === "POST") return true;
+  if (/^\/api\/finances\/invoices\/[^/]+$/.test(pathname) && m === "DELETE") return true;
   return false;
 }
 

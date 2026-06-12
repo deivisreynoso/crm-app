@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, requireWorkspaceManage } from "@/lib/api/auth";
+import { recordAuditLog } from "@/lib/audit/record";
 import { createServerSideClient } from "@/lib/supabase";
 import { humanizeDbError } from "@/lib/validation-errors";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export async function POST(_req: NextRequest, context: RouteContext) {
+export async function POST(req: NextRequest, context: RouteContext) {
   try {
-    const { workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const manageError = requireWorkspaceManage(role!, isWorkspaceOwner);
@@ -32,6 +33,17 @@ export async function POST(_req: NextRequest, context: RouteContext) {
     if (!data) {
       return NextResponse.json({ error: "Invoice not found or cannot be voided." }, { status: 400 });
     }
+
+    await recordAuditLog({
+      workspaceOwnerId: workspaceOwnerId!,
+      actorUserId: userId!,
+      action: "invoice.voided",
+      entityType: "invoice",
+      entityId: id,
+      entityName: data.invoice_number as string,
+      changeSummary: `Voided invoice ${data.invoice_number}`,
+      req,
+    });
 
     return NextResponse.json({ data });
   } catch (err) {

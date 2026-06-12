@@ -191,14 +191,16 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 
 - **Finances** module (`/finances`) — overview dashboard, invoices, transactions (income/expenses), payment links
 - **Invoices** — list, detail editor, PDF, send via Gmail or Mailgun, void, duplicate; filter by `contact_id` / `quote_id`
-- **Invoice wizard** (`/finances/invoices/new`) — types (quote-linked, services, retainer, deposit, change order, milestone); collection method **manual** (log partial payments) or **payment link** (Stripe Checkout + email)
+- **Invoice wizard** (`/finances/invoices?create=1`) — types (quote-linked, services, retainer, deposit, change order, milestone); collection method **manual** (log partial payments) or **payment link** (Stripe Checkout + email); review step shows quote line items; post-create email/payment-link status
 - **Partial payments** — invoice status `partially_paid` until balance cleared; multiple payment links per invoice
 - **Transactions ledger** — income and expenses with categories, recurrence, void
 - **Payment links** — Stripe Checkout sessions tied to invoices; webhook at `POST /api/webhooks/stripe`
 - **Quote billing workflow** — Finances tab on quote editor; billing progress stepper; auto-invoice from accepted quote
 - **Contact related** — invoices section on contact detail with links to invoice records
 - **Finance settings** (owner/admin) — default currency, tax rate, invoice numbering, due days, footer; Stripe status in Settings → Integrations
-- Legacy **`/payments`** redirects to `/finances/transactions` (migrated from old `payments` table in migration 058)
+- **Overdue invoices** — daily cron `GET /api/cron/mark-overdue-invoices` (secured with `CRON_SECRET`); owner notifications when status changes to overdue
+- **CSV export** — invoices and transactions export endpoints; bulk owner delete on invoices table
+- **Quote currency** — `documents.currency` (migration 063); billable quotes API filter `?billable=1`
 
 ### Analytics
 
@@ -337,7 +339,7 @@ Historical phases map to git eras (not separate products):
 | **Note/task edit-delete** | Timeline and tasks panel (`37c8ae2`) |
 | **Pipeline stage reorder** | Settings drag-and-drop (`33b5e51`) |
 | **Migration 048** | DB orphan cleanup — run preflight (`scripts/db-preflight-audit.sql`) first |
-| **Finances sprint (current)** | Invoices, transactions, payment links, wizard, partial payments, quote billing workflow, Analytics finances tab, `/payments` → `/finances/transactions` (migrations **054–060**) |
+| **Finances sprint (current)** | Invoices, transactions, payment links, wizard, partial payments, quote billing workflow, Analytics finances tab, cron overdue marking, CSV export (migrations **054–063**) |
 
 ### Post–Phase 5 ops (do first)
 
@@ -387,9 +389,8 @@ Historical phases map to git eras (not separate products):
 | `/account` | My Account (profile, signature, password) |
 | `/attachments` | Files |
 | `/calendar` | Events |
-| `/finances`, `/finances/overview`, `/finances/invoices`, `/finances/invoices/new`, `/finances/invoices/[id]` | Finances hub, invoices, wizard |
+| `/finances`, `/finances/overview`, `/finances/invoices`, `/finances/invoices/[id]` | Finances hub, invoices, wizard (`?create=1`) |
 | `/finances/transactions`, `/finances/expenses`, `/finances/payment-links` | Ledger, expenses, Stripe payment links |
-| `/payments` | Redirects to `/finances/transactions` |
 | `/analytics`, `/analytics?tab=finances` | Charts; finances overview tab |
 | `/settings` | Workspace config |
 | `/quote/[token]` | Public quote accept/decline (disclaimer EN/ES) |

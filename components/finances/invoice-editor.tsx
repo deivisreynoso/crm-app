@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { Copy, FileDown, Mail, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, FileDown, Mail, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ContactSelect } from "@/components/forms/contact-select";
@@ -52,7 +52,7 @@ export function InvoiceEditor({ invoiceId }: Props) {
   const { ctx } = useWorkspace();
   const isOwner = ctx?.isWorkspaceOwner ?? false;
   const { data: invoice, isLoading, error, refetch } = useInvoice(invoiceId);
-  const { data: paymentLinks = [] } = usePaymentLinks();
+  const { data: paymentLinks = [] } = usePaymentLinks({ invoice_id: invoiceId });
   const { data: invoiceTxs = [] } = useFinanceTransactions({
     invoice_id: invoiceId,
     type: "income",
@@ -69,6 +69,9 @@ export function InvoiceEditor({ invoiceId }: Props) {
   const [lines, setLines] = useState<DraftLine[]>([]);
   const [toast, setToast] = useState<{ text: string; ok?: boolean } | null>(null);
   const [sendOpen, setSendOpen] = useState(false);
+  const [pdfPanelOpen, setPdfPanelOpen] = useState(true);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const loadedRef = useMemo(() => ({ id: "" }), []);
   useEffect(() => {
@@ -122,18 +125,43 @@ export function InvoiceEditor({ invoiceId }: Props) {
     }
   }
 
+  async function fetchPdfUrl() {
+    setPdfLoading(true);
+    try {
+      const { data } = await axios.get<{ file_url: string }>(
+        `/api/finances/invoices/${invoiceId}/pdf`
+      );
+      setPdfUrl(data.file_url ?? null);
+      return data.file_url ?? null;
+    } catch {
+      setPdfUrl(null);
+      return null;
+    } finally {
+      setPdfLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!pdfPanelOpen || !invoice) return;
+    void fetchPdfUrl();
+  }, [pdfPanelOpen, invoiceId, invoice?.updated_at]);
+
   async function downloadPdf() {
-    const { data } = await axios.get<{ file_url: string }>(
-      `/api/finances/invoices/${invoiceId}/pdf`
-    );
-    if (data.file_url) window.open(data.file_url, "_blank");
+    const url = pdfUrl ?? (await fetchPdfUrl());
+    if (url) window.open(url, "_blank");
+    else setToast({ text: "PDF is not available yet.", ok: false });
   }
 
   async function voidInvoice() {
     const ok = window.confirm("Void this invoice?");
     if (!ok) return;
-    await axios.post(`/api/finances/invoices/${invoiceId}/void`);
-    void refetch();
+    try {
+      await axios.post(`/api/finances/invoices/${invoiceId}/void`);
+      void refetch();
+      setToast({ text: "Invoice voided.", ok: true });
+    } catch {
+      setToast({ text: "Could not void invoice.", ok: false });
+    }
   }
 
   async function deletePermanently() {
@@ -261,7 +289,8 @@ export function InvoiceEditor({ invoiceId }: Props) {
         </div>
       </header>
 
-      <div className="flex-1 min-h-0 overflow-y-auto p-4 lg:p-6">
+      <div className="flex-1 min-h-0 flex overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 lg:p-6">
         <div className="max-w-3xl space-y-6">
           {invoice.status !== "voided" && (
             <BillingWorkflowPanel
@@ -391,6 +420,49 @@ export function InvoiceEditor({ invoiceId }: Props) {
             />
           </FormSection>
         </div>
+        </div>
+
+        <aside
+          className={`shrink-0 border-l border-[var(--card-border)] bg-[var(--card)] flex flex-col transition-[width] duration-200 ${
+            pdfPanelOpen ? "w-full sm:w-[min(42vw,520px)]" : "w-10"
+          }`}
+        >
+          <button
+            type="button"
+            className="flex items-center justify-center gap-1 px-2 py-2 text-xs font-medium text-body-muted border-b border-[var(--card-border)] hover:bg-[var(--sidebar-hover)]"
+            onClick={() => setPdfPanelOpen((v) => !v)}
+            aria-expanded={pdfPanelOpen}
+          >
+            {pdfPanelOpen ? (
+              <>
+                <ChevronRight className="h-4 w-4" />
+                Hide preview
+              </>
+            ) : (
+              <ChevronLeft className="h-4 w-4" aria-hidden />
+            )}
+          </button>
+          {pdfPanelOpen && (
+            <div className="flex-1 min-h-0 relative">
+              {pdfLoading && (
+                <p className="absolute inset-0 flex items-center justify-center text-sm text-body-muted bg-[var(--card)]/80 z-10">
+                  Loading PDF…
+                </p>
+              )}
+              {pdfUrl ? (
+                <iframe
+                  title="Invoice PDF preview"
+                  src={pdfUrl}
+                  className="w-full h-full min-h-[480px] border-0"
+                />
+              ) : (
+                !pdfLoading && (
+                  <p className="p-4 text-sm text-body-muted">PDF preview unavailable.</p>
+                )
+              )}
+            </div>
+          )}
+        </aside>
       </div>
 
       <SendInvoiceEmailModal

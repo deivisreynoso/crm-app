@@ -1,46 +1,13 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { CreateInvoiceWizard } from "@/components/finances/create-invoice-wizard";
+type Props = {
+  searchParams: Promise<{ quote_id?: string; contact_id?: string }>;
+};
 
-export default function NewInvoicePage() {
-  const searchParams = useSearchParams();
-  const presetQuoteId = searchParams.get("quote_id") ?? "";
-  const presetContactId = searchParams.get("contact_id") ?? "";
-  const [open, setOpen] = useState(true);
-
-  useEffect(() => {
-    setOpen(true);
-  }, [presetQuoteId, presetContactId]);
-
-  return (
-    <div className="max-w-2xl space-y-4">
-      <Link
-        href="/finances/invoices"
-        className="text-xs font-medium text-[var(--secondary)] hover:underline"
-      >
-        ← Invoices
-      </Link>
-      <CreateInvoiceWizard
-        open={open}
-        onClose={() => setOpen(false)}
-        presetQuoteId={presetQuoteId || undefined}
-        presetContactId={presetContactId || undefined}
-      />
-      {!open && (
-        <p className="text-sm text-body-muted">
-          Invoice creation closed.{" "}
-          <button
-            type="button"
-            className="text-[var(--secondary)] hover:underline"
-            onClick={() => setOpen(true)}
-          >
-            Open wizard again
-          </button>
-        </p>
-      )}
-    </div>
-  );
+export default async function NewInvoiceRedirectPage({ searchParams }: Props) {
+  const sp = await searchParams;
+  const params = new URLSearchParams({ create: "1" });
+  if (sp.quote_id) params.set("quote_id", sp.quote_id);
+  if (sp.contact_id) params.set("contact_id", sp.contact_id);
+  redirect(`/finances/invoices?${params.toString()}`);
 }

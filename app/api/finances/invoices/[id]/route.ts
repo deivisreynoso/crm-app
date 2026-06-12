@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireAuth, requireWorkspaceManage, requireWorkspaceOwner } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { ownerDeleteInvoice } from "@/lib/finances/delete-invoice";
-import { markOverdueInvoices } from "@/lib/finances/invoices";
+import { recordAuditLog } from "@/lib/audit/record";
 import { humanizeDbError } from "@/lib/validation-errors";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -34,7 +34,6 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
     const { id } = await context.params;
     const supabase = createServerSideClient();
-    await markOverdueInvoices(supabase, workspaceOwnerId!);
 
     const { data, error: dbError } = await supabase
       .from("invoices")
@@ -110,9 +109,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   }
 }
 
-export async function DELETE(_req: NextRequest, context: RouteContext) {
+export async function DELETE(req: NextRequest, context: RouteContext) {
   try {
-    const { workspaceOwnerId, isWorkspaceOwner, error } = await requireAuth();
+    const { userId, workspaceOwnerId, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const ownerError = requireWorkspaceOwner(isWorkspaceOwner);
@@ -121,6 +120,13 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
     const { id } = await context.params;
     const supabase = createServerSideClient();
 
+    const { data: existing } = await supabase
+      .from("invoices")
+      .select("invoice_number")
+      .eq("id", id)
+      .eq("user_id", workspaceOwnerId!)
+      .maybeSingle();
+
     try {
       await ownerDeleteInvoice(supabase, workspaceOwnerId!, id);
     } catch (err) {
@@ -128,6 +134,17 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
       const status = message === "Invoice not found" ? 404 : 400;
       return NextResponse.json({ error: message }, { status });
     }
+
+    await recordAuditLog({
+      workspaceOwnerId: workspaceOwnerId!,
+      actorUserId: userId!,
+      action: "invoice.deleted",
+      entityType: "invoice",
+      entityId: id,
+      entityName: (existing?.invoice_number as string) ?? id,
+      changeSummary: `Permanently deleted invoice ${existing?.invoice_number ?? id}`,
+      req,
+    });
 
     return NextResponse.json({ success: true });
   } catch (err) {

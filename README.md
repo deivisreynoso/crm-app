@@ -15,12 +15,13 @@ ClickIn 360 — marketing site + CRM (Next.js, Supabase, Docker on VPS).
 
 - `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` must match your live host (e.g. `https://www.clickin360.com`)
 - Supabase Auth → URL Configuration must allow `{APP_URL}/auth/callback` for forgot-password
-- Run migrations **049**–**060** in Supabase if not applied (`052` = calendar colors, CID, support widget; **054–060** = Finances module: invoices, transactions, payment links, partial payments)
+- Run migrations **049**–**063** in Supabase if not applied (`052` = calendar colors, CID, support widget; **054–063** = Finances module: invoices, transactions, payment links, partial payments, enhancements)
+- Supabase Auth → **Leaked password protection** — enable in the Supabase Dashboard (Authentication → Providers → Email); cannot be turned on via application code
 - Public customer support: enable in **Settings → Support widget**; page at `/support`
 - Set `WEBSITE_LEADS_USER_ID` to the workspace owner UUID; optional `OWNER_LOGIN_ALIASES` for owner dual-email login
 - Google Cloud OAuth: add `{APP_URL}/api/auth/callback/google` for Workspace sign-in
 - Optional: `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` (quote Pay Now and invoice payment links); `MAILGUN_*` for invoice email when Gmail is not used; `GA4_PROPERTY_ID` + GA service account vars (Analytics → Website tab)
-- **Finances** module at `/finances` — invoices, transactions ledger, Stripe payment links; `/payments` redirects to `/finances/transactions`
+- **Finances** module at `/finances` — invoices, transactions ledger, Stripe payment links; schedule `GET /api/cron/mark-overdue-invoices` daily with `CRON_SECRET` header
 
 ## Getting Started
 

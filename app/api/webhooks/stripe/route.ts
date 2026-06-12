@@ -124,7 +124,9 @@ export async function POST(req: Request) {
         .eq("id", paymentLinkId);
     }
 
-    await recalculateInvoicePaymentStatus(supabase, workspaceOwnerId, resolvedInvoiceId);
+    await recalculateInvoicePaymentStatus(supabase, workspaceOwnerId, resolvedInvoiceId, {
+      lastPaymentAmount: session.amount_total ? session.amount_total / 100 : 0,
+    });
   }
 
   if (event.type === "payment_intent.succeeded") {
@@ -189,7 +191,9 @@ export async function POST(req: Request) {
       description: "Stripe payment",
     });
 
-    await recalculateInvoicePaymentStatus(supabase, workspaceOwnerId, resolvedPiInvoiceId);
+    await recalculateInvoicePaymentStatus(supabase, workspaceOwnerId, resolvedPiInvoiceId, {
+      lastPaymentAmount: intent.amount ? intent.amount / 100 : 0,
+    });
   }
 
   return Response.json({ received: true });

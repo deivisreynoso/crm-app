@@ -7,8 +7,6 @@ import {
   resolveOverviewDateRange,
   type OverviewPeriod,
 } from "@/lib/finances/overview";
-import { markOverdueInvoices } from "@/lib/finances/invoices";
-
 export async function GET(req: NextRequest) {
   try {
     const { workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
@@ -21,7 +19,6 @@ export async function GET(req: NextRequest) {
     const range = resolveOverviewDateRange(period, from, to);
 
     const supabase = createServerSideClient();
-    await markOverdueInvoices(supabase, workspaceOwnerId!);
 
     const includeExpenses = canViewExpenseData(role!, isWorkspaceOwner);
     const data = await computeFinanceOverview(

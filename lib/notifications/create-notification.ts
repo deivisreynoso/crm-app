@@ -4,13 +4,17 @@ export type NotificationKind =
   | "task_reminder"
   | "opportunity_reminder"
   | "ticket_update"
-  | "email_received";
+  | "email_received"
+  | "finance_payment_received"
+  | "finance_invoice_overdue";
 
 const PREF_KEY: Record<NotificationKind, keyof NotificationPrefs> = {
   task_reminder: "task_reminders",
   opportunity_reminder: "opportunity_reminders",
   ticket_update: "ticket_notifications",
   email_received: "email_notifications",
+  finance_payment_received: "finance_notifications",
+  finance_invoice_overdue: "finance_notifications",
 };
 
 type NotificationPrefs = {
@@ -18,6 +22,7 @@ type NotificationPrefs = {
   opportunity_reminders: boolean;
   ticket_notifications: boolean;
   email_notifications: boolean;
+  finance_notifications: boolean;
 };
 
 export async function createNotification(
@@ -34,7 +39,7 @@ export async function createNotification(
   const { data: prefs } = await supabase
     .from("notification_preferences")
     .select(
-      "task_reminders, opportunity_reminders, ticket_notifications, email_notifications"
+      "task_reminders, opportunity_reminders, ticket_notifications, email_notifications, finance_notifications"
     )
     .eq("user_id", userId)
     .maybeSingle();

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAuth, requireWorkspaceManage } from "@/lib/api/auth";
+import { recordAuditLog } from "@/lib/audit/record";
 import { createServerSideClient } from "@/lib/supabase";
 import { createStripePaymentLink } from "@/lib/integrations/stripe/payment-link";
 import { isStripeConfigured } from "@/lib/integrations/stripe/client";
@@ -22,6 +23,7 @@ export async function GET(req: NextRequest) {
 
     const params = new URL(req.url).searchParams;
     const status = params.get("status");
+    const invoiceId = params.get("invoice_id");
     const limit = Math.min(200, Math.max(1, Number(params.get("limit") || "100")));
 
     const supabase = createServerSideClient();
@@ -31,7 +33,7 @@ export async function GET(req: NextRequest) {
         `
         *,
         contact:contacts(id, first_name, last_name),
-        invoice:invoices(id, invoice_number, total, quote_id, quote:documents(id, title, quote_reference))
+        invoice:invoices(id, invoice_number, total, quote_id)
       `
       )
       .eq("user_id", workspaceOwnerId!)
@@ -39,6 +41,7 @@ export async function GET(req: NextRequest) {
       .limit(limit);
 
     if (status) query = query.eq("status", status);
+    if (invoiceId) query = query.eq("invoice_id", invoiceId);
 
     const { data, error: dbError } = await query;
     if (dbError) {
@@ -161,7 +164,7 @@ export async function POST(req: NextRequest) {
         `
         *,
         contact:contacts(id, first_name, last_name),
-        invoice:invoices(id, invoice_number, quote_id, quote:documents(id, title, quote_reference))
+        invoice:invoices(id, invoice_number, quote_id)
       `
       )
       .single();
@@ -174,6 +177,17 @@ export async function POST(req: NextRequest) {
       .from("invoices")
       .update({ payment_link_id: linkRow.id, updated_at: new Date().toISOString() })
       .eq("id", body.invoice_id);
+
+    await recordAuditLog({
+      workspaceOwnerId: workspaceOwnerId!,
+      actorUserId: userId!,
+      action: "payment_link.created",
+      entityType: "payment_link",
+      entityId: linkRow.id as string,
+      entityName: title,
+      changeSummary: `Created payment link for ${title} (${body.amount} ${body.currency})`,
+      req,
+    });
 
     return NextResponse.json({ data: updated }, { status: 201 });
   } catch (err) {

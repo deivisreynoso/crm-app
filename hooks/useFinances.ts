@@ -28,6 +28,7 @@ export type InvoiceListFilters = {
   status?: string;
   contact_id?: string;
   quote_id?: string;
+  summary?: boolean;
 };
 
 export function useInvoices(filters?: InvoiceListFilters | string) {
@@ -41,6 +42,7 @@ export function useInvoices(filters?: InvoiceListFilters | string) {
       if (resolved.status) params.set("status", resolved.status);
       if (resolved.contact_id) params.set("contact_id", resolved.contact_id);
       if (resolved.quote_id) params.set("quote_id", resolved.quote_id);
+      if (resolved.summary) params.set("summary", "1");
       const qs = params.toString();
       const { data } = await axios.get<{ data: Invoice[] }>(
         `/api/finances/invoices${qs ? `?${qs}` : ""}`
@@ -50,13 +52,28 @@ export function useInvoices(filters?: InvoiceListFilters | string) {
   });
 }
 
-export function usePaymentLinks(status?: string) {
+export type PaymentLinkFilters = {
+  status?: string;
+  invoice_id?: string;
+};
+
+export function usePaymentLinks(
+  filters?: PaymentLinkFilters | string,
+  options?: { enabled?: boolean }
+) {
+  const resolved: PaymentLinkFilters =
+    typeof filters === "string" ? { status: filters } : (filters ?? {});
+
   return useQuery({
-    queryKey: ["finance-payment-links", status],
+    queryKey: ["finance-payment-links", resolved],
+    enabled: options?.enabled ?? true,
     queryFn: async () => {
-      const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+      const params = new URLSearchParams();
+      if (resolved.status) params.set("status", resolved.status);
+      if (resolved.invoice_id) params.set("invoice_id", resolved.invoice_id);
+      const qs = params.toString();
       const { data } = await axios.get<{ data: PaymentLink[] }>(
-        `/api/finances/payment-links${qs}`
+        `/api/finances/payment-links${qs ? `?${qs}` : ""}`
       );
       return data.data;
     },
@@ -159,17 +176,6 @@ export function useCreateInvoiceWizard() {
   });
 }
 
-export function useCreateInvoice() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (body: Record<string, unknown>) => {
-      const { data } = await axios.post<{ data: Invoice }>("/api/finances/invoices", body);
-      return data.data;
-    },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["finance-invoices"] }),
-  });
-}
-
 export function useInvoice(invoiceId: string | null) {
   return useQuery({
     queryKey: ["finance-invoice", invoiceId],
@@ -218,6 +224,25 @@ export function useDeleteInvoice() {
   return useMutation({
     mutationFn: async (invoiceId: string) => {
       await axios.delete(`/api/finances/invoices/${invoiceId}`);
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["finance-invoices"] });
+      void qc.invalidateQueries({ queryKey: ["finance-overview"] });
+      void qc.invalidateQueries({ queryKey: ["finance-payment-links"] });
+      void qc.invalidateQueries({ queryKey: ["finance-transactions"] });
+    },
+  });
+}
+
+export function useBulkDeleteInvoices() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { data } = await axios.post<{ deleted: string[]; failed: Array<{ id: string; error: string }> }>(
+        "/api/finances/invoices/bulk-delete",
+        { ids }
+      );
+      return data;
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["finance-invoices"] });

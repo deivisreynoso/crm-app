@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CreateInvoiceWizard } from "@/components/finances/create-invoice-wizard";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
-import { Ban, Copy, FileDown, Mail, Trash2 } from "lucide-react";
+import { Ban, Copy, Download, FileDown, Mail, Trash2 } from "lucide-react";
 import {
   DataTable,
   DataTableBody,
@@ -16,7 +16,13 @@ import {
   DataTableShell,
 } from "@/components/ui/page-shell";
 import { Badge } from "@/components/ui/badge";
-import { useDuplicateInvoice, useDeleteInvoice, useInvoices } from "@/hooks/useFinances";
+import { Button } from "@/components/ui/button";
+import {
+  useBulkDeleteInvoices,
+  useDuplicateInvoice,
+  useDeleteInvoice,
+  useInvoices,
+} from "@/hooks/useFinances";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
 import { useWorkspace } from "@/components/crm/workspace-provider";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -65,19 +71,60 @@ function IconAction({
 
 export function InvoicesTable() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [filter, setFilter] = useState<string>("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [presetQuoteId, setPresetQuoteId] = useState<string | undefined>();
+  const [presetContactId, setPresetContactId] = useState<string | undefined>();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { canManage } = useWorkspaceCapabilities();
   const { ctx } = useWorkspace();
   const isOwner = ctx?.isWorkspaceOwner ?? false;
   const { data: rows = [], isLoading, refetch } = useInvoices(filter || undefined);
   const duplicateInvoice = useDuplicateInvoice();
   const deleteInvoice = useDeleteInvoice();
+  const bulkDelete = useBulkDeleteInvoices();
+
+  useEffect(() => {
+    if (searchParams.get("create") === "1") {
+      setPresetQuoteId(searchParams.get("quote_id") ?? undefined);
+      setPresetContactId(searchParams.get("contact_id") ?? undefined);
+      setWizardOpen(true);
+      const next = new URLSearchParams(searchParams.toString());
+      next.delete("create");
+      const qs = next.toString();
+      router.replace(qs ? `/finances/invoices?${qs}` : "/finances/invoices", { scroll: false });
+    }
+  }, [searchParams, router]);
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === rows.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(rows.map((r) => r.id)));
+    }
+  }
 
   async function downloadPdf(id: string) {
     const { data } = await axios.get<{ file_url: string }>(`/api/finances/invoices/${id}/pdf`);
     if (data.file_url) window.open(data.file_url, "_blank");
+  }
+
+  async function exportCsv() {
+    const params = new URLSearchParams();
+    if (filter) params.set("status", filter);
+    const qs = params.toString();
+    window.open(`/api/finances/invoices/export${qs ? `?${qs}` : ""}`, "_blank");
   }
 
   async function sendInvoice(id: string) {
@@ -116,6 +163,23 @@ export function InvoicesTable() {
     }
   }
 
+  async function bulkDeleteSelected() {
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+    const ok = window.confirm(
+      `Permanently delete ${ids.length} invoice(s)? Related payment records will also be removed.`
+    );
+    if (!ok) return;
+    setBusyId("bulk");
+    try {
+      await bulkDelete.mutateAsync(ids);
+      setSelectedIds(new Set());
+      void refetch();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function duplicate(id: string) {
     setBusyId(id);
     try {
@@ -145,15 +209,38 @@ export function InvoicesTable() {
             </button>
           ))}
         </div>
-        {canManage && (
-          <button
-            type="button"
-            onClick={() => setWizardOpen(true)}
-            className="inline-flex h-9 items-center rounded-md bg-[var(--primary)] px-3 text-xs font-medium text-[var(--primary-foreground)] hover:opacity-90"
-          >
-            Create invoice
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={() => void exportCsv()}>
+            <Download className="h-4 w-4 mr-1.5" />
+            Export CSV
+          </Button>
+          {isOwner && selectedIds.size > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-[var(--error)] border-red-200"
+              disabled={busyId === "bulk" || bulkDelete.isPending}
+              onClick={() => void bulkDeleteSelected()}
+            >
+              <Trash2 className="h-4 w-4 mr-1.5" />
+              Delete ({selectedIds.size})
+            </Button>
+          )}
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => {
+                setPresetQuoteId(undefined);
+                setPresetContactId(undefined);
+                setWizardOpen(true);
+              }}
+              className="inline-flex h-9 items-center rounded-md bg-[var(--primary)] px-3 text-xs font-medium text-[var(--primary-foreground)] hover:opacity-90"
+            >
+              Create invoice
+            </button>
+          )}
+        </div>
       </div>
 
       <DataTableShell
@@ -164,6 +251,16 @@ export function InvoicesTable() {
           <DataTable>
             <DataTableHead>
               <tr>
+                {isOwner && (
+                  <DataTableHeadCell>
+                    <input
+                      type="checkbox"
+                      aria-label="Select all invoices"
+                      checked={selectedIds.size === rows.length && rows.length > 0}
+                      onChange={toggleSelectAll}
+                    />
+                  </DataTableHeadCell>
+                )}
                 <DataTableHeadCell>Invoice #</DataTableHeadCell>
                 <DataTableHeadCell>Contact</DataTableHeadCell>
                 <DataTableHeadCell>Status</DataTableHeadCell>
@@ -181,6 +278,16 @@ export function InvoicesTable() {
 
                 return (
                   <DataTableRow key={inv.id}>
+                    {isOwner && (
+                      <DataTableCell>
+                        <input
+                          type="checkbox"
+                          aria-label={`Select invoice ${inv.invoice_number}`}
+                          checked={selectedIds.has(inv.id)}
+                          onChange={() => toggleSelect(inv.id)}
+                        />
+                      </DataTableCell>
+                    )}
                     <DataTableCell>
                       <Link
                         href={`/finances/invoices/${inv.id}`}
@@ -252,7 +359,12 @@ export function InvoicesTable() {
         )}
       </DataTableShell>
 
-      <CreateInvoiceWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />
+      <CreateInvoiceWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        presetQuoteId={presetQuoteId}
+        presetContactId={presetContactId}
+      />
     </div>
   );
 }

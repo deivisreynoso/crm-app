@@ -141,6 +141,16 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     if (d.footer_html !== undefined) {
       updates.footer_html = d.footer_html?.trim() ? d.footer_html : null;
     }
+    if (d.currency !== undefined) {
+      updates.currency = d.currency;
+    } else if (isQuoteDocument(existing.type as string) && !existing.currency) {
+      const { data: settings } = await supabase
+        .from("user_settings")
+        .select("default_currency")
+        .eq("user_id", workspaceOwnerId!)
+        .maybeSingle();
+      updates.currency = (settings?.default_currency as string) === "MXN" ? "MXN" : "USD";
+    }
 
     const { data, error: dbError } = await supabase
       .from("documents")

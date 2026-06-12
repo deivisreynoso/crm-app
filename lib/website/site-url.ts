@@ -27,7 +27,7 @@ export const CRM_ROBOTS_DISALLOW = [
   "/pipelines",
   "/calendar",
   "/documents",
-  "/payments",
+  "/finances",
   "/analytics",
   "/account",
   "/settings",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import axios from "axios";
 import { Copy, Link2, Receipt } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,9 @@ type Props = {
 
 export function InvoicePaymentsPanel({ invoice, onUpdated }: Props) {
   const { canManage } = useWorkspaceCapabilities();
-  const { data: links = [], refetch: refetchLinks } = usePaymentLinks();
+  const { data: links = [], refetch: refetchLinks } = usePaymentLinks({
+    invoice_id: invoice.id,
+  });
   const { data: txs = [], refetch: refetchTxs } = useFinanceTransactions({
     invoice_id: invoice.id,
     type: "income",
@@ -36,10 +38,7 @@ export function InvoicePaymentsPanel({ invoice, onUpdated }: Props) {
   const [linkOpen, setLinkOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const invoiceLinks = useMemo(
-    () => links.filter((l) => l.invoice_id === invoice.id),
-    [links, invoice.id]
-  );
+  const invoiceLinks = links;
   const activeLink = invoiceLinks.find((l) => l.status === "active");
   const manualPayments = txs.filter((t) => t.source === "manual" && t.status === "completed");
   const onlinePayments = txs.filter(

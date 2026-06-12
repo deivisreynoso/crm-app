@@ -124,10 +124,9 @@ export function EntityRelatedPanel({
   }, [context.contactId, context.companyId]);
 
   const newInvoiceHref = useMemo(() => {
-    if (context.contactId) {
-      return `/finances/invoices/new?contact_id=${context.contactId}`;
-    }
-    return "/finances/invoices/new";
+    const params = new URLSearchParams({ create: "1" });
+    if (context.contactId) params.set("contact_id", context.contactId);
+    return `/finances/invoices?${params.toString()}`;
   }, [context.contactId]);
 
   return (

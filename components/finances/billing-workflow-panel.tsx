@@ -189,7 +189,7 @@ export function BillingWorkflowPanel({
           )}
           {showCreateInvoice && !onCreateInvoice && quoteId && (
             <Link
-              href={`/finances/invoices/new?quote_id=${quoteId}`}
+              href={`/finances/invoices?create=1&quote_id=${quoteId}`}
               className="inline-flex h-9 items-center rounded-md bg-[var(--primary)] px-3 text-xs font-medium text-[var(--primary-foreground)] hover:opacity-90"
             >
               Create invoice

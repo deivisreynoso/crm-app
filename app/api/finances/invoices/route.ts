@@ -5,7 +5,6 @@ import { createServerSideClient } from "@/lib/supabase";
 import {
   assertNoActiveInvoiceForQuote,
   assertQuoteAcceptedForInvoice,
-  markOverdueInvoices,
 } from "@/lib/finances/invoices";
 import { humanizeDbError } from "@/lib/validation-errors";
 
@@ -41,15 +40,17 @@ export async function GET(req: NextRequest) {
     const status = params.get("status");
     const quoteId = params.get("quote_id");
     const contactId = params.get("contact_id");
+    const summary = params.get("summary") === "1";
     const limit = Math.min(200, Math.max(1, Number(params.get("limit") || "100")));
 
     const supabase = createServerSideClient();
-    await markOverdueInvoices(supabase, workspaceOwnerId!);
 
     let query = supabase
       .from("invoices")
       .select(
-        `
+        summary
+          ? "id, quote_id, status, invoice_number, contact_id, total, currency"
+          : `
         *,
         contact:contacts(id, first_name, last_name, email),
         quote:documents(id, title, quote_reference)
