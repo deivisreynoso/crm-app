@@ -8,10 +8,11 @@ import {
 } from "@/lib/storage/profile-avatar";
 import { DOCUMENTS_BUCKET } from "@/lib/storage/documents";
 import { humanizeDbError } from "@/lib/validation-errors";
+import { ensureUserProfile } from "@/lib/users/ensure-user-profile";
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, error } = await requireAuth();
+    const { userId, session, error } = await requireAuth();
     if (error) return error;
 
     const formData = await req.formData();
@@ -21,16 +22,29 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServerSideClient();
+    const email = session!.user?.email?.trim();
+    if (!email) {
+      return NextResponse.json(
+        { error: "Your account email is required before uploading a photo." },
+        { status: 400 }
+      );
+    }
+
+    await ensureUserProfile(supabase, {
+      userId: userId!,
+      email,
+      displayName: session!.user?.name,
+    });
+
     const storagePath = await uploadProfileAvatar(supabase, userId!, file);
 
-    const { error: dbError } = await supabase.from("user_profiles").upsert(
-      {
-        id: userId!,
+    const { error: dbError } = await supabase
+      .from("user_profiles")
+      .update({
         avatar_storage_path: storagePath,
         updated_at: new Date().toISOString(),
-      },
-      { onConflict: "id" }
-    );
+      })
+      .eq("id", userId!);
 
     if (dbError) {
       return NextResponse.json(
@@ -69,14 +83,13 @@ export async function DELETE() {
         .remove([profile.avatar_storage_path]);
     }
 
-    await supabase.from("user_profiles").upsert(
-      {
-        id: userId!,
+    await supabase
+      .from("user_profiles")
+      .update({
         avatar_storage_path: null,
         updated_at: new Date().toISOString(),
-      },
-      { onConflict: "id" }
-    );
+      })
+      .eq("id", userId!);
 
     return NextResponse.json({ success: true });
   } catch (err) {
