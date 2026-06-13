@@ -2,10 +2,14 @@ import { cn } from "@/lib/utils";
 
 export function Avatar({
   initials,
+  src,
+  alt,
   size = "md",
   className,
 }: {
   initials: string;
+  src?: string | null;
+  alt?: string;
   size?: "sm" | "md" | "lg";
   className?: string;
 }) {
@@ -14,6 +18,21 @@ export function Avatar({
     md: "h-9 w-9 text-sm",
     lg: "h-11 w-11 text-base",
   };
+
+  if (src) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src}
+        alt={alt ?? initials}
+        className={cn(
+          "inline-block rounded-full object-cover shrink-0 ring-2 ring-[var(--card)]",
+          sizes[size],
+          className
+        )}
+      />
+    );
+  }
 
   return (
     <span

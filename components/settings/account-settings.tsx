@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,10 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CurrencySettings } from "@/components/settings/currency-settings";
 import { NotificationPreferencesSettings } from "@/components/settings/notification-preferences-settings";
 import { SettingsSection } from "@/components/settings/settings-section";
+import { Avatar } from "@/components/ui/avatar";
 import { formatApiError } from "@/lib/validation-errors";
+import { getUserInitials } from "@/lib/user-display";
+import { PROFILE_AVATAR_ACCEPT } from "@/lib/storage/profile-avatar";
 import axios from "axios";
 
 export function AccountSettings() {
@@ -27,11 +30,19 @@ export function AccountSettings() {
   const [deleting, setDeleting] = useState(false);
   const [signatureHtml, setSignatureHtml] = useState("");
   const [signatureMsg, setSignatureMsg] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     void axios
-      .get<{ email_signature_html?: string }>("/api/account/profile")
-      .then((res) => setSignatureHtml(res.data.email_signature_html ?? ""))
+      .get<{ email_signature_html?: string; avatar_url?: string | null }>(
+        "/api/account/profile"
+      )
+      .then((res) => {
+        setSignatureHtml(res.data.email_signature_html ?? "");
+        setAvatarUrl(res.data.avatar_url ?? null);
+      })
       .catch(() => undefined);
   }, []);
 
@@ -86,6 +97,38 @@ export function AccountSettings() {
     }
   }
 
+  async function handleAvatarUpload(file: File) {
+    setUploadingAvatar(true);
+    setError(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const { data } = await axios.post<{ avatar_url?: string | null }>(
+        "/api/account/avatar",
+        form
+      );
+      setAvatarUrl(data.avatar_url ?? null);
+      await update({ image: data.avatar_url ?? undefined });
+    } catch (err) {
+      setError(formatApiError(err, "Could not upload photo"));
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
+
+  async function handleRemoveAvatar() {
+    setError(null);
+    try {
+      await axios.delete("/api/account/avatar");
+      setAvatarUrl(null);
+      await update({ image: undefined });
+    } catch (err) {
+      setError(formatApiError(err, "Could not remove photo"));
+    }
+  }
+
+  const initials = getUserInitials({ name: fullName, email });
+
   return (
     <div className="space-y-6">
       {error && (
@@ -96,8 +139,46 @@ export function AccountSettings() {
 
       <SettingsSection
         title="Profile"
-        description="Name and email used to sign in."
+        description="Name, email, and profile photo."
       >
+        <div className="flex flex-wrap items-start gap-4 mb-4">
+          <Avatar initials={initials} src={avatarUrl} alt={fullName} size="lg" />
+          <div className="space-y-2">
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept={PROFILE_AVATAR_ACCEPT}
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleAvatarUpload(file);
+                e.target.value = "";
+              }}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={uploadingAvatar}
+                onClick={() => avatarInputRef.current?.click()}
+              >
+                {uploadingAvatar ? "Uploading…" : "Upload photo"}
+              </Button>
+              {avatarUrl && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void handleRemoveAvatar()}
+                >
+                  Remove
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-body-muted">PNG, JPEG, or WebP. Max 2 MB.</p>
+          </div>
+        </div>
         <form onSubmit={saveProfile} className="space-y-4 max-w-md">
           <div>
             <FormLabel>Full name</FormLabel>

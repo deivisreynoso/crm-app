@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { z } from "zod";
 import { isValidCalendarColor } from "@/lib/users/calendar-colors";
+import { resolveProfileAvatarUrl } from "@/lib/storage/profile-avatar";
 import { humanizeDbError } from "@/lib/validation-errors";
 
 const patchSchema = z.object({
@@ -26,15 +27,21 @@ export async function GET() {
   const supabase = createServerSideClient();
   const { data } = await supabase
     .from("user_profiles")
-    .select("email, display_name, email_signature_html, calendar_color")
+    .select("email, display_name, email_signature_html, calendar_color, avatar_storage_path")
     .eq("id", userId!)
     .maybeSingle();
+
+  const avatar_url = await resolveProfileAvatarUrl(
+    supabase,
+    data?.avatar_storage_path as string | null | undefined
+  );
 
   return NextResponse.json({
     full_name: data?.display_name ?? "",
     email: data?.email ?? "",
     email_signature_html: data?.email_signature_html ?? "",
     calendar_color: data?.calendar_color ?? "",
+    avatar_url,
   });
 }
 

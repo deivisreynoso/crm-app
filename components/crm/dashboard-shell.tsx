@@ -9,7 +9,7 @@ import { AppHeader } from "@/components/dashboard/app-header";
 
 type Props = {
   initialLocale?: string | null;
-  user: { name?: string | null; email?: string | null };
+  user: { name?: string | null; email?: string | null; image?: string | null };
   children: React.ReactNode;
 };
 

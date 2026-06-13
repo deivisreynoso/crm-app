@@ -103,8 +103,8 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const notifyUserId = assignee !== userId ? assignee : userId!;
     await createNotification(supabase, notifyUserId, {
       kind: "task_reminder",
-      title: "Task assigned",
-      message: parsed.data.title,
+      title: "New task",
+      message: parsed.data.title.trim(),
       related_entity_type: "contact",
       related_entity_id: contactId,
     });

@@ -9,6 +9,7 @@ import {
   useNotifications,
 } from "@/hooks/useNotifications";
 import { getNotificationHref } from "@/lib/notifications/notification-link";
+import { formatNotificationMessage } from "@/lib/notifications/format-message";
 
 export function NotificationBell() {
   const router = useRouter();
@@ -71,6 +72,7 @@ export function NotificationBell() {
               <ul className="divide-y divide-[var(--card-border)]">
                 {items.map((n) => {
                   const href = getNotificationHref(n);
+                  const message = formatNotificationMessage(n.message);
                   return (
                   <li key={n.id}>
                     <button
@@ -85,9 +87,9 @@ export function NotificationBell() {
                       )}
                     >
                       <p className="text-sm font-medium text-heading">{n.title}</p>
-                      {n.message && (
+                      {message && (
                         <p className="text-xs text-body-muted mt-0.5 line-clamp-2">
-                          {n.message}
+                          {message}
                         </p>
                       )}
                     </button>

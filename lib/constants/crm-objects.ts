@@ -22,11 +22,11 @@ export interface CrmObjectDef {
 export const CRM_OBJECTS: CrmObjectDef[] = [
   {
     id: "home",
-    label: "Home",
+    label: "Dashboard",
     href: "/dashboard",
     iconBg: "bg-pink-500",
     glyph: "⌂",
-    description: "Dashboard overview",
+    description: "Dashboard overview and business analytics",
   },
   {
     id: "contacts",

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/crm/dashboard-shell";
 import { createServerSideClient } from "@/lib/supabase";
 import { resolveWorkspaceContext } from "@/lib/team/workspace";
+import { resolveProfileAvatarUrl } from "@/lib/storage/profile-avatar";
 
 export const metadata: Metadata = {
   title: "ClickIn 360 CRM",
@@ -23,6 +24,7 @@ export default async function DashboardLayout({
 
   const userId = (session.user as { id?: string })?.id;
   let uiLocale: string | null = null;
+  let avatarUrl: string | null = null;
   if (userId) {
     const workspace = await resolveWorkspaceContext(userId);
     const supabase = createServerSideClient();
@@ -32,12 +34,27 @@ export default async function DashboardLayout({
       .eq("user_id", workspace.workspaceOwnerId)
       .maybeSingle();
     uiLocale = (data?.ui_locale as string | null) ?? null;
+
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("avatar_storage_path")
+      .eq("id", userId)
+      .maybeSingle();
+    avatarUrl = await resolveProfileAvatarUrl(
+      supabase,
+      profile?.avatar_storage_path as string | null | undefined
+    );
   }
+
+  const shellUser = {
+    ...session.user,
+    image: avatarUrl ?? session.user?.image ?? null,
+  };
 
   return (
     <DashboardShell
       initialLocale={uiLocale}
-      user={session.user ?? {}}
+      user={shellUser}
     >
       {children}
     </DashboardShell>

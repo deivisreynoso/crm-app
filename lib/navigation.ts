@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  BarChart3,
   Calendar,
   CreditCard,
   FileText,
@@ -27,11 +26,11 @@ export interface NavItem {
 export const MAIN_NAV: NavItem[] = [
   {
     href: "/dashboard",
-    label: "Home",
+    label: "Dashboard",
     labelKey: "home",
     icon: LayoutDashboard,
     iconAccent: "navy",
-    description: "Dashboard overview",
+    description: "Dashboard overview and business analytics",
   },
   {
     href: "/contacts",
@@ -56,14 +55,6 @@ export const MAIN_NAV: NavItem[] = [
     icon: Ticket,
     iconAccent: "magenta",
     description: "Customer support",
-  },
-  {
-    href: "/analytics",
-    label: "Analytics",
-    labelKey: "analytics",
-    icon: BarChart3,
-    iconAccent: "sky",
-    description: "Pipeline metrics and charts",
   },
   {
     href: "/finances",

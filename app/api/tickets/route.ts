@@ -7,6 +7,7 @@ import { enrichTicket, listTicketsEnriched } from "@/lib/ticket-queries";
 import {
   generateServiceTicketNumber,
   isTicketNumberConflict,
+  formatTicketNotificationMessage,
   ticketDisplayLabel,
 } from "@/lib/service-ticket-number";
 import { createNotification } from "@/lib/notifications/create-notification";
@@ -126,16 +127,17 @@ export async function POST(req: NextRequest) {
       console.error("POST ticket enrich:", e);
     }
 
-    const label = ticketDisplayLabel({
-      subject: parsed.data.subject,
-      title: parsed.data.title,
+    const label = ticketDisplayLabel(data);
+    const notifyMessage = formatTicketNotificationMessage({
+      subject: data.subject as string | null,
+      title: data.title as string | null,
       ticket_number: ticketNumber,
     });
 
     await createNotification(supabase, userId!, {
       kind: "ticket_update",
       title: "New service ticket",
-      message: ticketNumber ? `${ticketNumber}: ${label}` : label,
+      message: notifyMessage,
       related_entity_type: "ticket",
       related_entity_id: data.id as string,
     });

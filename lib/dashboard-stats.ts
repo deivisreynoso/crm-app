@@ -1,7 +1,18 @@
 import { createServerSideClient } from "@/lib/supabase";
 
 /** Aggregate CRM counts for the workspace tenant (owner's data). */
-export async function getDashboardStats(workspaceOwnerId: string) {
+export type DashboardStats = {
+  contacts: number;
+  opportunities: number;
+  openTickets: number;
+  pendingTasks: number;
+  leads: number;
+  prospects: number;
+  activeContacts: number;
+  upcomingAppointments: number;
+};
+
+export async function getDashboardStats(workspaceOwnerId: string): Promise<DashboardStats> {
   const supabase = createServerSideClient();
 
   const now = new Date();

@@ -25,7 +25,11 @@ const INTEGRATION_API_PREFIXES = [
 ];
 
 /** Viewer may update only their own account credentials */
-const VIEWER_WRITE_ALLOWLIST = ["/api/account/profile", "/api/account/password"];
+const VIEWER_WRITE_ALLOWLIST = [
+  "/api/account/profile",
+  "/api/account/password",
+  "/api/account/avatar",
+];
 
 export function isApiWriteMethod(method: string) {
   return WRITE_METHODS.has(method.toUpperCase());

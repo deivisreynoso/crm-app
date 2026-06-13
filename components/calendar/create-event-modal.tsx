@@ -76,7 +76,7 @@ export function CreateEventModal({
       setDescription(initial.description ?? "");
       setContactId(initial.contact_id ?? "");
       setOpportunityId(initial.opportunity_id ?? "");
-      setAssignedTo(initial.assigned_to ?? actorId);
+      setAssignedTo(initial.assigned_to ?? "");
       setStart(toLocalInput(initial.start_time));
       setEnd(toLocalInput(initial.end_time));
       setIsVirtual(initial.location_type === "google_meet");
@@ -92,12 +92,19 @@ export function CreateEventModal({
     setDescription("");
     setContactId(defaultContactId ?? "");
     setOpportunityId("");
-    setAssignedTo(actorId);
+    setAssignedTo("");
     setStart(toLocalInput(startDt.toISOString()));
     setEnd(toLocalInput(endDt.toISOString()));
     setIsVirtual(true);
     setLocation("");
-  }, [open, initial, initialDate, defaultContactId, actorId]);
+  }, [open, initial, initialDate, defaultContactId]);
+
+  useEffect(() => {
+    if (!open || initial) return;
+    if (actorId) {
+      setAssignedTo((prev) => prev || actorId);
+    }
+  }, [open, initial, actorId]);
 
   function validate(): boolean {
     const next: Record<string, string> = {};

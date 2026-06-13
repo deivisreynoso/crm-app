@@ -10,7 +10,7 @@ import {
 } from "@/lib/api/assert-workspace-parents";
 import { enrichCompanyIdFromContact } from "@/lib/contacts/enrich-company-from-contact";
 import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
-import { ticketDisplayLabel } from "@/lib/service-ticket-number";
+import { formatTicketNotificationMessage } from "@/lib/service-ticket-number";
 import { createNotification } from "@/lib/notifications/create-notification";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -95,11 +95,11 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     if (parsed.data.status) {
-      const label = ticketDisplayLabel(data);
+      const statusLabel = parsed.data.status.replace(/_/g, " ");
       await createNotification(supabase, userId!, {
         kind: "ticket_update",
         title: "Ticket status updated",
-        message: `${data.ticket_number ? `${data.ticket_number}: ` : ""}${label} — ${parsed.data.status.replace("_", " ")}`,
+        message: `${formatTicketNotificationMessage(data)} — ${statusLabel}`,
         related_entity_type: "ticket",
         related_entity_id: id,
       });

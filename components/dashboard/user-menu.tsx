@@ -12,6 +12,7 @@ interface UserMenuProps {
   user: {
     name?: string | null;
     email?: string | null;
+    image?: string | null;
   };
 }
 
@@ -46,7 +47,7 @@ export function UserMenu({ user }: UserMenuProps) {
         aria-haspopup="menu"
         aria-label="Account menu"
       >
-        <Avatar initials={initials} size="sm" />
+        <Avatar initials={initials} src={user.image} alt={displayName} size="sm" />
         <ChevronDown
           className={cn(
             "h-4 w-4 text-[var(--muted)] transition-transform duration-150",

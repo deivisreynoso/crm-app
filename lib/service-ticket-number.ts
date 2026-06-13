@@ -43,6 +43,20 @@ export function ticketDisplayLabel(ticket: {
   );
 }
 
+/** Notification line for a ticket — never includes literal "undefined". */
+export function formatTicketNotificationMessage(ticket: {
+  subject?: string | null;
+  title?: string | null;
+  ticket_number?: string | null;
+}): string {
+  const subject =
+    ticket.subject?.trim() ||
+    ticket.title?.trim() ||
+    "Service ticket";
+  const ref = ticket.ticket_number?.trim();
+  return ref ? `${ref}: ${subject}` : subject;
+}
+
 export function formatServiceTicketLabel(ticketNumber?: string | null) {
   return ticketNumber ? `Service Ticket # ${ticketNumber}` : "Service Ticket";
 }

@@ -36,13 +36,13 @@ export function StatCard({
       </div>
       <div className="min-w-0">
         <p className="text-body-muted text-sm">{label}</p>
-        <p className="text-heading text-3xl font-bold mt-1 tabular-nums">{value}</p>
+        <p className="text-heading text-2xl font-bold mt-0.5 tabular-nums">{value}</p>
       </div>
     </>
   );
 
   const className =
-    "surface-card p-6 flex items-start gap-4 hover:shadow-[var(--shadow-md)] transition-all duration-200";
+    "surface-card p-5 flex items-start gap-3 hover:shadow-[var(--shadow-md)] transition-all duration-200";
 
   if (href) {
     return (
