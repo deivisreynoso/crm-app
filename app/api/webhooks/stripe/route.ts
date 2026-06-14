@@ -131,6 +131,7 @@ export async function POST(req: Request) {
 
     await recalculateInvoicePaymentStatus(supabase, workspaceOwnerId, resolvedInvoiceId, {
       lastPaymentAmount: session.amount_total ? session.amount_total / 100 : 0,
+      paymentSource: paymentLinkId ? "stripe_payment_link" : "stripe_checkout",
     });
 
     if (paymentLinkId) {
@@ -234,6 +235,7 @@ export async function POST(req: Request) {
 
     await recalculateInvoicePaymentStatus(supabase, workspaceOwnerId, resolvedPiInvoiceId, {
       lastPaymentAmount: intent.amount ? intent.amount / 100 : 0,
+      paymentSource: "stripe_checkout",
     });
   }
 

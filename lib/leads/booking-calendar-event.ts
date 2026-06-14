@@ -4,6 +4,7 @@ import {
   slotToDate,
   type BookingAvailabilityConfig,
 } from "@/lib/website/booking-availability";
+import { notifyAppointmentEvent } from "@/lib/webhooks/notify-events";
 
 export type WebsiteCalendarSelection = {
   date: string;
@@ -70,6 +71,11 @@ export async function createBookingCalendarEvent(
     throw new Error(error?.message ?? "Failed to create calendar event");
   }
 
+  void notifyAppointmentEvent(supabase, workspaceOwnerId, "appointment.created", {
+    ...row,
+    id: created.id,
+  });
+
   return created.id;
 }
 
@@ -119,6 +125,22 @@ export async function updateBookingCalendarEvent(
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  const { data: updated } = await supabase
+    .from("calendar_events")
+    .select("*")
+    .eq("id", eventId)
+    .eq("user_id", workspaceOwnerId)
+    .maybeSingle();
+
+  if (updated) {
+    void notifyAppointmentEvent(
+      supabase,
+      workspaceOwnerId,
+      "appointment.updated",
+      updated as Record<string, unknown>
+    );
   }
 
   return eventId;

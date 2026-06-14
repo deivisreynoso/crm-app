@@ -16,7 +16,7 @@ ClickIn 360 — marketing site + CRM (Next.js, Supabase, Docker on VPS).
 
 - `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` must match your live host (e.g. `https://www.clickin360.com`)
 - Supabase Auth → URL Configuration must allow `{APP_URL}/auth/callback` for forgot-password
-- Run migrations **049**–**070** in Supabase if not applied (`052` = calendar colors, CID, support widget; **054–063** = Finances; **066–068** = conversations inbox; **069** = Google Drive OAuth + document external links; **070** = sales/support group emails + notification prefs)
+- Run migrations **049**–**073** in Supabase if not applied (`052` = calendar colors, CID, support widget; **054–063** = Finances; **066–068** = conversations inbox; **069** = Google Drive OAuth + document external links; **070** = sales/support group emails + notification prefs; **071–073** = onboarding automation, quote expiry/versioning, invoice recurrence)
 - Supabase Auth → **Leaked password protection** — enable in the Supabase Dashboard (Authentication → Providers → Email); cannot be turned on via application code
 - Public customer support: enable in **Settings → Support widget**; page at `/support`
 - Set `WEBSITE_LEADS_USER_ID` to the workspace owner UUID; optional `OWNER_LOGIN_ALIASES` for owner dual-email login
@@ -26,7 +26,7 @@ ClickIn 360 — marketing site + CRM (Next.js, Supabase, Docker on VPS).
   - `{APP_URL}/api/auth/google-calendar/callback` — per-user Calendar
   - `{APP_URL}/api/auth/google-drive/callback` — workspace Drive (owner/admin connect in Settings → Integrations or `/media`)
 - After adding Drive scopes or migration **069**, reconnect Google Drive once in Settings
-- Optional: `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` (invoice payment links; quote Pay Now when `payments_enabled` on quote); `MAILGUN_*` for invoice email, team invites, password reset; `GA4_PROPERTY_ID` + GA service account vars (Analytics → Website tab)
+- Optional: `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` (invoice payment links; quote Pay Now when `payments_enabled` on quote); `MAILGUN_*` for invoice email, team invites, password reset; `GA4_PROPERTY_ID` + GA service account vars (Analytics → Website tab); `CRM_OUTBOUND_WEBHOOK_SECRET` (or per-workspace secret in Settings → Automations) for N8N outbound webhooks
 - Conversations inbox: deploy code + migration **066** before wiring N8N `POST /api/integrations/conversations/*` nodes (`x-website-secret`)
 - **Finances** module at `/finances` — invoices, transactions ledger, Stripe payment links; schedule `GET /api/cron/mark-overdue-invoices` daily with `CRON_SECRET` header
 

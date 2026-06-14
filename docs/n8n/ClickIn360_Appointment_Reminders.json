@@ -1,0 +1,79 @@
+{
+  "name": "ClickIn360 Appointment Reminders",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "a9b459bc-7c58-4474-b6e2-82bb13172a89",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a7a8889b-dcee-4aca-80ea-5307a6bfa38f",
+      "name": "CRM Appointment Webhook",
+      "webhookId": "a9b459bc-7c58-4474-b6e2-82bb13172a89"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.CRM_BASE_URL }}/api/calendar/events/{{ $json.payload.calendar_event_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": false,
+        "jsonBody": null,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        400,
+        0
+      ],
+      "id": "60fdf4be-0b1d-4b80-b5bc-66d7958c35bf",
+      "name": "CRM: Load Event",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "avN9SN9QlpkztmyC",
+          "name": "CRM API"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "fromEmail": "no-reply@clickin360.com",
+        "toEmail": "={{ $json.payload.contact.email }}",
+        "subject": "Welcome to ClickIn 360",
+        "text": "Your onboarding has started.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mailgun",
+      "typeVersion": 1,
+      "position": [
+        800,
+        0
+      ],
+      "id": "3f2de7f5-32be-42dd-9b37-8b8e17cec8b0",
+      "name": "Mailgun: Appointment Reminder",
+      "credentials": {
+        "mailgunApi": {
+          "id": "d22dd50a-d3ab-482b-be52-c7b443b2d0c3",
+          "name": "Mailgun"
+        }
+      },
+      "continueOnFail": true
+    }
+  ],
+  "connections": {},
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

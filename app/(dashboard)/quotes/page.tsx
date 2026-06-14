@@ -136,7 +136,11 @@ function QuotesPageInner() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <DocumentStatusBadge status={d.status} />
+                        <DocumentStatusBadge
+                          status={d.status}
+                          expiresAt={(d as { expires_at?: string | null }).expires_at}
+                          validUntil={d.valid_until}
+                        />
                       </td>
                       <td className="px-4 py-3 text-right text-heading">
                         {d.total_amount != null && Number(d.total_amount) > 0

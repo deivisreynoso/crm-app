@@ -10,6 +10,8 @@ const PUBLIC_API_PREFIXES = [
   "/api/website/",
   "/api/team/invites/",
   "/api/quotes/public/",
+  "/api/public/onboarding/",
+  "/api/public/feedback/",
   "/api/webhooks/stripe",
   "/api/integrations/n8n/",
   "/api/integrations/conversations/",
@@ -58,7 +60,7 @@ const WORKSPACE_MANAGE_WRITE_PREFIXES = [
 ];
 
 /** GET routes that require manage role even though they are reads */
-const WORKSPACE_MANAGE_READ_PREFIXES = ["/api/audit-logs", "/api/settings/integrations"];
+const WORKSPACE_MANAGE_READ_PREFIXES = ["/api/audit-logs", "/api/settings/integrations", "/api/settings/automations"];
 
 export function requiresWorkspaceManage(pathname: string, method: string) {
   const m = method.toUpperCase();
@@ -68,6 +70,7 @@ export function requiresWorkspaceManage(pathname: string, method: string) {
   if (pathname.startsWith("/api/settings/member")) return false;
   if (pathname.startsWith("/api/settings/quote-logo")) return true;
   if (pathname === "/api/settings" && m === "PATCH") return true;
+  if (pathname === "/api/settings/automations" && m === "PATCH") return true;
   if (pathname === "/api/team/members" && m === "POST") return true;
   if (/^\/api\/team\/members\/[^/]+$/.test(pathname) && m === "PATCH") return true;
   if (pathname === "/api/pipelines/seed" && m === "POST") return false;

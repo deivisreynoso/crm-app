@@ -40,6 +40,7 @@ import { QuickActionBar } from "@/components/quick-actions/quick-action-bar";
 import { SendEmailModal } from "@/components/contact/send-email-modal";
 import { RequestReviewModal } from "@/components/contact/request-review-modal";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
+import { StartOnboardingButton } from "@/components/contact/start-onboarding-button";
 import { getInitials } from "@/lib/utils";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -58,7 +59,7 @@ export default function ContactDetailPage({ params }: PageProps) {
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [replyToEmail, setReplyToEmail] = useState<ContactEmailMessage | null>(null);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
-  const { canWrite } = useWorkspaceCapabilities();
+  const { canWrite, canManage } = useWorkspaceCapabilities();
   const { dict } = useCrmLocale();
   const c = dict.contacts;
   const act = dict.actions;
@@ -369,14 +370,16 @@ export default function ContactDetailPage({ params }: PageProps) {
             />
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="shrink-0 self-start"
-          onClick={() => setIsEditing((v) => !v)}
-        >
-          {isEditing ? act.cancel : act.edit}
-        </Button>
+        <div className="flex flex-col gap-2 shrink-0 self-start">
+          {canManage ? <StartOnboardingButton contactId={id} /> : null}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsEditing((v) => !v)}
+          >
+            {isEditing ? act.cancel : act.edit}
+          </Button>
+        </div>
       </header>
 
       {isEditing ? (

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, requireWorkspaceWrite } from "@/lib/api/auth";
+import { recordAuditLog } from "@/lib/audit/record";
 import { createServerSideClient } from "@/lib/supabase";
 import { documentSendViaGmailSchema } from "@/lib/validators";
 import { formatValidationDetails } from "@/lib/validation-errors";
@@ -16,6 +17,7 @@ import { logEmailContactActivity } from "@/lib/activities/log-email-activity";
 import { uploadToDocumentsBucket } from "@/lib/storage/documents";
 import { syncContactEmailsFromGmail } from "@/lib/google/gmail-sync";
 import { triggerN8NWebhook } from "@/lib/n8n";
+import { computeQuoteExpiresAt } from "@/lib/quotes/expiry";
 import { getQuoteEmailDefaults } from "@/lib/crm/quote-pdf-labels";
 import { ensureAcceptLinkInEmailBody } from "@/lib/quotes/quote-email-body";
 import { ensureAcceptToken, quoteAcceptPublicUrl } from "@/lib/quotes/accept-token";
@@ -321,11 +323,20 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const fromEmail = await getGoogleGmailConnectedEmail(userId!);
     const sentAt = new Date().toISOString();
 
+    const { data: wsSettings } = await supabase
+      .from("user_settings")
+      .select("quote_default_expiry_days")
+      .eq("user_id", workspaceOwnerId!)
+      .maybeSingle();
+    const expiryDays = Number(wsSettings?.quote_default_expiry_days) || 30;
+    const expiresAt = computeQuoteExpiresAt(new Date(sentAt), expiryDays);
+
     await supabase
       .from("documents")
       .update({
         status: "sent",
         sent_at: (doc.sent_at as string | null) ?? sentAt,
+        expires_at: expiresAt,
         accept_token: acceptToken,
         storage_path: uploaded.storagePath,
         file_url: uploaded.fileUrl,
@@ -386,6 +397,17 @@ export async function POST(req: NextRequest, context: RouteContext) {
         console.error("post-send quote email sync:", syncErr);
       });
     }
+
+    await recordAuditLog({
+      workspaceOwnerId: workspaceOwnerId!,
+      actorUserId: userId!,
+      action: isQuoteDocument(doc.type as string) ? "quote.sent" : "document.sent",
+      entityType: "document",
+      entityId: id,
+      entityName: (doc.title as string) ?? undefined,
+      changeSummary: "Document sent via Gmail",
+      req,
+    });
 
     return NextResponse.json({
       success: true,

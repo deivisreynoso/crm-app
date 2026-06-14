@@ -1,0 +1,102 @@
+{
+  "name": "ClickIn360 Onboarding A — Kickoff",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ad82f928-4a37-4c77-8384-0613a10f86e8",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "c30614ca-1ab7-47b2-9fc9-77663a4a7f5e",
+      "name": "CRM Event Webhook",
+      "webhookId": "ad82f928-4a37-4c77-8384-0613a10f86e8"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.CRM_BASE_URL }}/api/contacts/{{ $json.payload.document.contact_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": false,
+        "jsonBody": null,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        400,
+        0
+      ],
+      "id": "caa64591-5ff3-40da-a5ef-bf9ceeb714f6",
+      "name": "CRM: Fetch Contact",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "avN9SN9QlpkztmyC",
+          "name": "CRM API"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "fromEmail": "no-reply@clickin360.com",
+        "toEmail": "={{ $json.payload.contact.email }}",
+        "subject": "Welcome to ClickIn 360",
+        "text": "Your onboarding has started.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mailgun",
+      "typeVersion": 1,
+      "position": [
+        800,
+        0
+      ],
+      "id": "c8528904-074b-4530-8210-0bd246e5ec6d",
+      "name": "Mailgun: Welcome Email",
+      "credentials": {
+        "mailgunApi": {
+          "id": "686871dc-7fb6-4452-8499-05cb780996e0",
+          "name": "Mailgun"
+        }
+      },
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "CRM Event Webhook": {
+      "main": [
+        [
+          {
+            "node": "CRM: Fetch Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM: Fetch Contact": {
+      "main": [
+        [
+          {
+            "node": "Mailgun: Welcome Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

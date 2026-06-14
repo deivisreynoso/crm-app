@@ -29,6 +29,7 @@ git log -1 --format='%h %s (%cs)'
 
 | Date | Commit | Type | Summary |
 |------|--------|------|---------|
+| 2026-06-14 | *(pending)* | feature | **Sprint 5:** onboarding automation, outbound webhooks, quote expiry/versioning, invoice recurrence, loss reasons, session timeout, appointment reminder webhooks (migrations **071–073**) |
 | 2026-06-14 | *(pending)* | feature | **Group notifications:** sales/support group emails + in-app prefs (migration **070**); Google Drive attach in email composer; onboarding workflow proposal |
 | 2026-06-14 | `ee5093d` | feature | Google Drive **Shared drives** browse; docs pass (CRM-FEATURES, API, AUTH-ROADMAP, audit tracker, inbox proposal) |
 | 2026-06-14 | `cd30229` | fix | **Google Drive Media:** upload, folders, shared-drive browse; Media page hook fix |
@@ -353,6 +354,9 @@ Production should run migrations **001–069** in order. Notable groups:
 | 068 | `conversation_notifications` on `notification_preferences` |
 | 069 | `google_drive_tokens`; `documents.source` / `external_id` / `external_url` |
 | 070 | `sales_group_email`, `support_group_email` on `user_settings`; `sales_notifications`, `support_notifications` on `notification_preferences` |
+| 071 | Onboarding tokens on `contacts`; outbound webhook settings; `webhook_deliveries`; `session_timeout_hours` |
+| 072 | Quote `expires_at`, `version`, `parent_document_id`; loss reasons; `quote_default_expiry_days` |
+| 073 | Invoice recurrence (`recurrence_rule`, `recurrence_parent_id`, `is_recurring_parent`) |
 
 ---
 
@@ -411,7 +415,7 @@ Historical phases map to git eras (not separate products):
 | # | Item | Notes |
 |---|------|--------|
 | 1 | **VPS deploy** | Pull `main`; run migrations **044–069** if not applied; set `OWNER_LOGIN_ALIASES`, Stripe, Mailgun, GA4, Google OAuth (login + Gmail + Calendar + **Drive** redirect URIs); reconnect Drive after **069**; `./scripts/deploy-vps.sh` |
-| 2 | **GA4 conversions** | Mark `generate_lead`, `booking_completed` in GA4 Admin |
+| 2 | **GA4 conversions** | Mark `generate_lead`, `booking_completed`, `form_submission`, `cta_click` as conversion events in GA4 Admin (marketing site fires these via `lib/analytics/ga4-events.ts`; CRM Website tab reads aggregated traffic only) |
 | 3 | **GSC follow-up** | Fix remaining 404s / canonical issues after sitemap deploy |
 | 4 | **AUDIT-FIX-TRACKER F1–F2, F5–F6** | Async contact combobox; batch signed URLs; storage cleanup; remove unused dashboard stats API |
 | 5 | **Audit log coverage** | Expand beyond settings / delete / team (quotes, imports, merge, catalog CRUD) |
@@ -462,7 +466,22 @@ Historical phases map to git eras (not separate products):
 | `/analytics`, `/analytics?tab=finances` | Charts; finances overview tab |
 | `/settings` | Workspace config |
 | `/quote/[token]` | Public quote accept/decline (disclaimer EN/ES) |
+| `/onboarding/[token]` | Public onboarding questionnaire |
+| `/feedback/[token]` | Post-delivery customer feedback |
+
+### GA4 conversion events (marketing site)
+
+Configure in GA4 Admin → Events → Mark as conversion:
+
+| Event | Source | When fired |
+|-------|--------|------------|
+| `generate_lead` | `lib/analytics/ga4-events.ts` | Lead form / qualification complete |
+| `booking_completed` | same | Discovery call booked |
+| `form_submission` | same | Generic form submit |
+| `cta_click` | same | Primary CTA interactions |
+
+The CRM **Analytics → Website** tab uses the GA4 Data API for traffic metrics only; conversion marking is done in GA4 Admin, not in CRM code.
 
 ---
 
-*Last updated: 2026-06-14 — Google Drive Media, conversations inbox, list filters (migrations 064–069).*
+*Last updated: 2026-06-14 — Sprint 5 automation, quote expiry, invoice recurrence (migrations 071–073).*

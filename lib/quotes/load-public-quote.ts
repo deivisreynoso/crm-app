@@ -3,6 +3,7 @@ import { isQuoteDocument } from "@/lib/documents/kinds";
 import { resolveCrmLocale } from "@/lib/crm/i18n";
 import { resolveQuoteLogoUrl } from "@/lib/storage/quote-logo";
 import { isStripeConfigured } from "@/lib/integrations/stripe/client";
+import { isQuoteExpired } from "@/lib/quotes/expiry";
 import type { QuoteLineItem } from "@/types";
 
 export type PublicQuoteView = {
@@ -11,6 +12,8 @@ export type PublicQuoteView = {
   quote_reference: string | null;
   status: string;
   valid_until: string | null;
+  expires_at: string | null;
+  is_expired: boolean;
   content: string | null;
   subtotal: number;
   tax_rate: number;
@@ -91,6 +94,11 @@ export async function loadPublicQuoteByToken(
     quote_reference: (doc.quote_reference as string | null) ?? null,
     status: doc.status as string,
     valid_until: (doc.valid_until as string | null) ?? null,
+    expires_at: (doc.expires_at as string | null) ?? null,
+    is_expired: isQuoteExpired(
+      doc.expires_at as string | null | undefined,
+      doc.valid_until as string | null | undefined
+    ),
     content: (doc.content as string | null) ?? null,
     subtotal,
     tax_rate: taxRate,

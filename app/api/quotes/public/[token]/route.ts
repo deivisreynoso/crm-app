@@ -8,6 +8,8 @@ import {
   notifySalesGroupInApp,
   salesQuoteResponseGroupEmail,
 } from "@/lib/notifications/workspace-groups";
+import { fireWebhook } from "@/lib/webhooks/outbound";
+import { isQuoteExpired } from "@/lib/quotes/expiry";
 import { z } from "zod";
 
 type RouteContext = { params: Promise<{ token: string }> };
@@ -18,6 +20,8 @@ const respondSchema = z
     name: z.string().max(200).optional(),
     email: z.string().email().optional().or(z.literal("")),
     disclaimer_acknowledged: z.boolean().optional(),
+    loss_reason: z.string().max(100).optional(),
+    loss_reason_notes: z.string().max(2000).optional(),
   })
   .superRefine((data, ctx) => {
     if (data.action === "accept") {
@@ -79,6 +83,18 @@ export async function POST(req: NextRequest, context: RouteContext) {
       );
     }
 
+    if (
+      isQuoteExpired(
+        doc.expires_at as string | null | undefined,
+        doc.valid_until as string | null | undefined
+      )
+    ) {
+      return NextResponse.json(
+        { error: "This quote has expired and can no longer be accepted.", status: "expired" },
+        { status: 410 }
+      );
+    }
+
     const now = new Date().toISOString();
     const isAccept = parsed.data.action === "accept";
     const responseName = parsed.data.name?.trim() || null;
@@ -102,6 +118,8 @@ export async function POST(req: NextRequest, context: RouteContext) {
           signed_at: null,
           response_name: responseName,
           response_email: responseEmail,
+          loss_reason: parsed.data.loss_reason?.trim() || null,
+          loss_reason_notes: parsed.data.loss_reason_notes?.trim() || null,
           updated_at: now,
         };
 
@@ -141,6 +159,16 @@ export async function POST(req: NextRequest, context: RouteContext) {
     });
 
     const workspaceOwnerId = doc.user_id as string;
+
+    if (isAccept) {
+      void fireWebhook(supabase, workspaceOwnerId, "quote.accepted", {
+        document_id: doc.id,
+        document: updated,
+        response_name: responseName,
+        response_email: responseEmail,
+      });
+    }
+
     const quoteRef = (doc.quote_reference as string) || (doc.title as string);
     const kind = isAccept ? "sales_quote_accepted" : "sales_quote_declined";
     const verb = isAccept ? "accepted" : "declined";

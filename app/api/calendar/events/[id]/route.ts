@@ -15,6 +15,7 @@ import {
 } from "@/lib/google/calendar";
 import { assertCalendarAssigneePermission } from "@/lib/calendar/assert-assignee";
 import { resolveGoogleSyncUserId } from "@/lib/calendar/resolve-sync-user";
+import { notifyAppointmentEvent } from "@/lib/webhooks/notify-events";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -176,6 +177,13 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
     }
 
+    void notifyAppointmentEvent(
+      supabase,
+      workspaceOwnerId!,
+      "appointment.updated",
+      eventRow
+    );
+
     return NextResponse.json(data);
   } catch (err) {
     console.error("PATCH /api/calendar/events/[id]:", err);
@@ -193,7 +201,7 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
 
     const { data: existing } = await supabase
       .from("calendar_events")
-      .select("google_event_id, assigned_to, google_sync_user_id")
+      .select("*")
       .eq("id", id)
       .eq("user_id", workspaceOwnerId!)
       .maybeSingle();
@@ -226,6 +234,15 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
       return NextResponse.json(
         { error: humanizeDbError(dbError.message) },
         { status: 500 }
+      );
+    }
+
+    if (existing) {
+      void notifyAppointmentEvent(
+        supabase,
+        workspaceOwnerId!,
+        "appointment.cancelled",
+        existing as Record<string, unknown>
       );
     }
 

@@ -6,6 +6,7 @@ import { WorkspaceProvider } from "@/components/crm/workspace-provider";
 import { SidebarBrand, SidebarNav } from "@/components/dashboard/sidebar-nav";
 import { SidebarFooter } from "@/components/dashboard/sidebar-footer";
 import { AppHeader } from "@/components/dashboard/app-header";
+import { SessionTimeoutGuard } from "@/components/auth/session-timeout-guard";
 
 type Props = {
   initialLocale?: string | null;
@@ -40,6 +41,7 @@ export function DashboardShell({ initialLocale, user, children }: Props) {
           </main>
         </div>
       </div>
+      <SessionTimeoutGuard />
       </WorkspaceProvider>
     </CrmLocaleProvider>
   );

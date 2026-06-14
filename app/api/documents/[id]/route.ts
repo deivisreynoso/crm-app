@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
+import { recordAuditLog } from "@/lib/audit/record";
 import { createServerSideClient } from "@/lib/supabase";
 import { documentPatchSchema } from "@/lib/validators";
 import { formatValidationDetails } from "@/lib/validation-errors";
 import { resolveDocumentFileUrl } from "@/lib/storage/documents";
 import { snapshotDocumentVersion } from "@/lib/documents/versioning";
+import { forkQuoteRevisionIfNeeded } from "@/lib/quotes/version-on-edit";
 import {
   assertParentsInWorkspace,
   workspaceParentForbidden,
@@ -93,6 +95,28 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Document not found" }, { status: 404 });
     }
 
+    let targetId = id;
+    let workingDoc = existing;
+    const hasContentChange =
+      parsed.data.content !== undefined && parsed.data.content !== existing.content;
+    if (hasContentChange && isQuoteDocument(existing.type as string)) {
+      const fork = await forkQuoteRevisionIfNeeded(
+        supabase,
+        workspaceOwnerId!,
+        existing as Record<string, unknown>
+      );
+      if (fork.forked) {
+        targetId = fork.documentId;
+        const { data: forkedDoc } = await supabase
+          .from("documents")
+          .select("*")
+          .eq("id", targetId)
+          .eq("user_id", workspaceOwnerId!)
+          .single();
+        if (forkedDoc) workingDoc = forkedDoc;
+      }
+    }
+
     const parentCheck = await assertParentsInWorkspace(supabase, workspaceOwnerId!, {
       contact_id: parsed.data.contact_id,
       company_id: parsed.data.company_id,
@@ -101,9 +125,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const parentError = workspaceParentForbidden(parentCheck);
     if (parentError) return parentError;
 
-    if (parsed.data.content !== undefined && parsed.data.content !== existing.content) {
+    if (parsed.data.content !== undefined && parsed.data.content !== workingDoc.content) {
       try {
-        await snapshotDocumentVersion(supabase, workspaceOwnerId!, existing);
+        await snapshotDocumentVersion(supabase, workspaceOwnerId!, workingDoc);
       } catch (versionErr) {
         console.warn("Document version snapshot skipped:", versionErr);
       }
@@ -155,7 +179,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const { data, error: dbError } = await supabase
       .from("documents")
       .update(updates)
-      .eq("id", id)
+      .eq("id", targetId)
       .eq("user_id", workspaceOwnerId!)
       .select()
       .single();
@@ -164,7 +188,22 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: dbError.message }, { status: 500 });
     }
 
-    return NextResponse.json(data);
+    await recordAuditLog({
+      workspaceOwnerId: workspaceOwnerId!,
+      actorUserId: userId!,
+      action: targetId !== id ? "quote.revision_created" : "document.updated",
+      entityType: "document",
+      entityId: targetId,
+      entityName: (data?.title as string) ?? undefined,
+      changeSummary:
+        targetId !== id ? "New quote revision created from sent/accepted quote" : "Document updated",
+      req,
+    });
+
+    return NextResponse.json({
+      ...data,
+      forked_from_id: targetId !== id ? id : undefined,
+    });
   } catch (err) {
     console.error("PATCH /api/documents/[id]:", err);
     return NextResponse.json({ error: "Failed to update document" }, { status: 500 });

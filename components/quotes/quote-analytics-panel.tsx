@@ -1,5 +1,7 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { useQuoteAnalytics } from "@/hooks/useQuoteAnalytics";
 import { formatCurrency } from "@/lib/utils";
@@ -9,6 +11,15 @@ export function QuoteAnalyticsPanel() {
   const { dict, locale } = useCrmLocale();
   const q = dict.quotes;
   const { data, isLoading } = useQuoteAnalytics();
+  const { data: lossReasons } = useQuery({
+    queryKey: ["loss-reasons-analytics"],
+    queryFn: async () => {
+      const { data: res } = await axios.get<{ data: { reason: string; count: number }[] }>(
+        "/api/analytics/loss-reasons"
+      );
+      return res.data;
+    },
+  });
 
   if (isLoading) {
     return (
@@ -75,6 +86,20 @@ export function QuoteAnalyticsPanel() {
           {q?.statusRejected ?? "Declined"}: {data.rejected}
         </span>
       </div>
+
+      {lossReasons && lossReasons.length > 0 ? (
+        <div className="surface-card p-4 border border-[var(--card-border)]">
+          <h3 className="text-sm font-semibold text-heading mb-3">Loss reasons</h3>
+          <ul className="space-y-2 text-sm">
+            {lossReasons.map((row) => (
+              <li key={row.reason} className="flex justify-between gap-2">
+                <span className="capitalize text-heading">{row.reason.replace(/_/g, " ")}</span>
+                <span className="font-medium">{row.count}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {data.recentAccepted.length > 0 && (
         <div className="surface-card p-4 border border-[var(--card-border)]">

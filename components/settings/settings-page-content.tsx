@@ -10,6 +10,7 @@ import { WorkspaceLeadsSettings } from "@/components/settings/workspace-leads-se
 import { BookingAvailabilitySettings } from "@/components/settings/booking-availability-settings";
 import { GoogleReviewRequestSettings } from "@/components/settings/google-review-request-settings";
 import { AuditLogsPanel } from "@/components/settings/audit-logs-panel";
+import { AutomationsSettingsSection } from "@/components/settings/automations-settings";
 import { AdminIntegrationsPanel } from "@/components/settings/admin-integrations-panel";
 import { FinanceSettingsPanel } from "@/components/settings/finance-settings-panel";
 import { SupportWidgetSettings } from "@/components/settings/support-widget-settings";
@@ -106,6 +107,13 @@ export function SettingsPageContent() {
 
           <SettingsSection title={s?.team ?? "Team"}>
             <TeamSettings />
+          </SettingsSection>
+
+          <SettingsSection
+            title="Automations"
+            description="Outbound webhooks, onboarding, appointment reminders, quote expiry, and session timeout."
+          >
+            <AutomationsSettingsSection />
           </SettingsSection>
 
           <SettingsSection title={s?.auditLogs ?? "Audit log"}>

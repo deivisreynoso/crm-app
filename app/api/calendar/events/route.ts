@@ -12,6 +12,7 @@ import { enrichCompanyIdFromContact } from "@/lib/contacts/enrich-company-from-c
 import { createGoogleCalendarEvent } from "@/lib/google/calendar";
 import { assertCalendarAssigneePermission } from "@/lib/calendar/assert-assignee";
 import { enrichCalendarEventsWithOwners } from "@/lib/calendar/enrich-events";
+import { notifyAppointmentEvent } from "@/lib/webhooks/notify-events";
 
 function emptyToNull(value: string | undefined): string | null {
   return value?.trim() ? value.trim() : null;
@@ -183,8 +184,24 @@ export async function POST(req: NextRequest) {
         .select()
         .single();
 
+      const eventPayload = (synced ?? data) as Record<string, unknown>;
+      void notifyAppointmentEvent(
+        supabase,
+        workspaceOwnerId!,
+        "appointment.created",
+        eventPayload
+      );
+
       return NextResponse.json(synced ?? data, { status: 201 });
     }
+
+    const createdEvent = (data ?? {}) as Record<string, unknown>;
+    void notifyAppointmentEvent(
+      supabase,
+      workspaceOwnerId!,
+      "appointment.created",
+      createdEvent
+    );
 
     return NextResponse.json(data, { status: 201 });
   } catch (err) {

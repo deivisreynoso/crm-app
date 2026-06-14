@@ -19,7 +19,7 @@ export async function recalculateInvoicePaymentStatus(
   supabase: SupabaseClient,
   workspaceOwnerId: string,
   invoiceId: string,
-  options?: { lastPaymentAmount?: number }
+  options?: { lastPaymentAmount?: number; paymentSource?: string }
 ): Promise<{ amount_paid: number; status: string; balance_due: number }> {
   const { data: invoice } = await supabase
     .from("invoices")
@@ -73,6 +73,15 @@ export async function recalculateInvoicePaymentStatus(
 
   if (Object.keys(patch).length > 1) {
     await supabase.from("invoices").update(patch).eq("id", invoiceId);
+  }
+
+  if (becamePaid) {
+    const { notifyInvoicePaid } = await import("@/lib/webhooks/notify-events");
+    void notifyInvoicePaid(supabase, workspaceOwnerId, invoiceId, {
+      amount_paid: amountPaid,
+      payment_source: options?.paymentSource ?? "unknown",
+      last_payment_amount: options?.lastPaymentAmount ?? null,
+    });
   }
 
   const contactEmail = (invoice.contact as { email?: string | null } | null)?.email?.trim();

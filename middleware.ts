@@ -9,6 +9,7 @@ import {
   workspaceWriteForbidden,
 } from "@/lib/api/workspace-guards";
 import { setTrustedWorkspaceHeaders } from "@/lib/api/workspace-headers";
+import { createServerSideClient } from "@/lib/supabase";
 import { resolveWorkspaceContext } from "@/lib/team/workspace";
 import { isLocale } from "@/lib/website/i18n";
 import {
@@ -123,6 +124,35 @@ export async function middleware(req: NextRequest) {
       const signIn = new URL("/login", req.url);
       signIn.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(signIn);
+    }
+
+    const userId =
+      (token as { id?: string; sub?: string } | null)?.id ??
+      (token as { sub?: string } | null)?.sub;
+    const tokenIat = (token as { iat?: number } | null)?.iat;
+
+    if (userId && tokenIat) {
+      try {
+        const workspace = await resolveWorkspaceContext(userId);
+        const supabase = createServerSideClient();
+        const { data: settings } = await supabase
+          .from("user_settings")
+          .select("session_timeout_hours")
+          .eq("user_id", workspace.workspaceOwnerId)
+          .maybeSingle();
+        const hours = settings?.session_timeout_hours as number | null | undefined;
+        if (hours && hours > 0) {
+          const maxAgeSec = hours * 3600;
+          const ageSec = Math.floor(Date.now() / 1000) - tokenIat;
+          if (ageSec > maxAgeSec) {
+            const signIn = new URL("/login", req.url);
+            signIn.searchParams.set("error", "session_expired");
+            return NextResponse.redirect(signIn);
+          }
+        }
+      } catch {
+        // Non-blocking — allow request if settings lookup fails
+      }
     }
   }
 

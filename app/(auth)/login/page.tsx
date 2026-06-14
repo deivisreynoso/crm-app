@@ -26,6 +26,8 @@ function LoginForm() {
       setNotice(
         "CRM registration is invite-only. Use the link from your team admin, or sign in if you already have access."
       );
+    } else if (searchParams.get("error") === "session_expired") {
+      setNotice("Your session expired due to workspace inactivity. Please sign in again.");
     } else if (searchParams.get("error") === "reset_link_invalid") {
       setError("Your password reset link is invalid or has expired. Request a new one below.");
     } else if (searchParams.get("error") === "OAuthSignin" || searchParams.get("error") === "OAuthCallback") {

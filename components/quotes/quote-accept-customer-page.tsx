@@ -18,6 +18,8 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [disclaimerAck, setDisclaimerAck] = useState(false);
+  const [lossReason, setLossReason] = useState("");
+  const [lossNotes, setLossNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState<"accept" | "reject" | null>(null);
 
@@ -73,6 +75,8 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
         name: name.trim(),
         email: email.trim(),
         disclaimer_acknowledged: action === "accept" ? true : undefined,
+        loss_reason: action === "reject" ? lossReason || undefined : undefined,
+        loss_reason_notes: action === "reject" ? lossNotes || undefined : undefined,
       });
       setDone(action);
       setQuote((q) =>
@@ -127,6 +131,7 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
     Boolean(quote.rejected_at);
 
   const alreadyResponded = isAccepted || isRejected;
+  const isExpired = quote.is_expired && !alreadyResponded;
 
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4">
@@ -200,6 +205,14 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
               />
             )}
           </div>
+        ) : isExpired ? (
+          <div className="mt-8 p-4 rounded-lg bg-amber-50 border border-amber-200 text-center">
+            <p className="font-semibold text-amber-900">
+              {quote.locale === "es"
+                ? "Esta cotización expiró y ya no puede aceptarse."
+                : "This quote has expired and can no longer be accepted."}
+            </p>
+          </div>
         ) : (
           <div className="mt-8 space-y-4">
             <div>
@@ -238,6 +251,31 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
               </label>
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
+            <details className="text-sm">
+              <summary className="cursor-pointer text-slate-600">
+                {quote.locale === "es" ? "¿Declinar? Cuéntanos por qué (opcional)" : "Declining? Tell us why (optional)"}
+              </summary>
+              <div className="mt-2 space-y-2">
+                <select
+                  className="input-field w-full"
+                  value={lossReason}
+                  onChange={(e) => setLossReason(e.target.value)}
+                >
+                  <option value="">{quote.locale === "es" ? "Selecciona un motivo" : "Select a reason"}</option>
+                  <option value="price">{quote.locale === "es" ? "Precio" : "Price"}</option>
+                  <option value="timing">{quote.locale === "es" ? "Timing" : "Timing"}</option>
+                  <option value="competitor">{quote.locale === "es" ? "Competidor" : "Competitor"}</option>
+                  <option value="other">{quote.locale === "es" ? "Otro" : "Other"}</option>
+                </select>
+                <textarea
+                  className="input-field w-full"
+                  rows={2}
+                  placeholder={quote.locale === "es" ? "Notas adicionales" : "Additional notes"}
+                  value={lossNotes}
+                  onChange={(e) => setLossNotes(e.target.value)}
+                />
+              </div>
+            </details>
             <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 type="button"

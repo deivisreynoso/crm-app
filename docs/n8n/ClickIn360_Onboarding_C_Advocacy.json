@@ -1,0 +1,56 @@
+{
+  "name": "ClickIn360 Onboarding C — Advocacy",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ae1e67a5-a991-40e2-ae74-9ab817f73d57",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4ee3de39-479b-4dc0-96f8-949f1be44933",
+      "name": "CRM Event Webhook",
+      "webhookId": "ae1e67a5-a991-40e2-ae74-9ab817f73d57"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CRM_BASE_URL }}/api/contacts/{{ $json.payload.contact_id }}/review-request",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        400,
+        0
+      ],
+      "id": "a307d1f0-39bd-4cce-a15e-88ec0af1480a",
+      "name": "CRM: Send Review Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "avN9SN9QlpkztmyC",
+          "name": "CRM API"
+        }
+      },
+      "continueOnFail": true
+    }
+  ],
+  "connections": {},
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

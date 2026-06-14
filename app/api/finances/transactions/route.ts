@@ -210,6 +210,7 @@ export async function POST(req: NextRequest) {
     if (body.type === "income" && body.invoice_id) {
       await recalculateInvoicePaymentStatus(supabase, workspaceOwnerId!, body.invoice_id, {
         lastPaymentAmount: body.amount,
+        paymentSource: "manual",
       });
     }
 

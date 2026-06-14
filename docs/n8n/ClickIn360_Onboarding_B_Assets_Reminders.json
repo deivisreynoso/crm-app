@@ -1,0 +1,79 @@
+{
+  "name": "ClickIn360 Onboarding B — Assets Reminders",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "74d2a3eb-0e44-4595-9fe5-01faa0ebc66b",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "c30ec6fa-b7b0-45ae-8bd4-eeb3466655c7",
+      "name": "CRM Event Webhook",
+      "webhookId": "74d2a3eb-0e44-4595-9fe5-01faa0ebc66b"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.CRM_BASE_URL }}/api/contacts/{{ $json.payload.contact_id }}/tasks",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": false,
+        "jsonBody": null,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        400,
+        0
+      ],
+      "id": "a9f34e3b-2f69-4a00-884b-5efd892be9ab",
+      "name": "CRM: List Tasks",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "avN9SN9QlpkztmyC",
+          "name": "CRM API"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "fromEmail": "no-reply@clickin360.com",
+        "toEmail": "={{ $json.payload.contact.email }}",
+        "subject": "Welcome to ClickIn 360",
+        "text": "Your onboarding has started.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mailgun",
+      "typeVersion": 1,
+      "position": [
+        800,
+        0
+      ],
+      "id": "964f3441-a86c-4278-819c-34760f1a715f",
+      "name": "Mailgun: Reminder",
+      "credentials": {
+        "mailgunApi": {
+          "id": "7a45d008-f0ae-4f40-835b-c5ff6bfa730a",
+          "name": "Mailgun"
+        }
+      },
+      "continueOnFail": true
+    }
+  ],
+  "connections": {},
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -36,14 +36,16 @@ export async function GET(req: NextRequest) {
     const { workspaceOwnerId, error } = await requireAuth();
     if (error) return error;
 
+    const supabase = createServerSideClient();
+    const { processDueRecurringInvoices } = await import("@/lib/finances/invoice-recurrence");
+    await processDueRecurringInvoices(supabase, workspaceOwnerId!);
+
     const params = new URL(req.url).searchParams;
     const status = params.get("status");
     const quoteId = params.get("quote_id");
     const contactId = params.get("contact_id");
     const summary = params.get("summary") === "1";
     const limit = Math.min(200, Math.max(1, Number(params.get("limit") || "100")));
-
-    const supabase = createServerSideClient();
 
     let query = supabase
       .from("invoices")
