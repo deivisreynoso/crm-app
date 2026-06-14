@@ -14,6 +14,12 @@ const N8N_DIR = path.join(ROOT, "docs/n8n");
 const CRM_CRED = { httpHeaderAuth: { id: "avN9SN9QlpkztmyC", name: "CRM API" } };
 const uuid = () => crypto.randomUUID();
 
+/** Stable IDs so re-running the patch script does not churn N8N node UUIDs. */
+function stableUuid(scope, name) {
+  const hash = crypto.createHash("sha256").update(`${scope}:${name}`).digest("hex");
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-4${hash.slice(13, 16)}-a${hash.slice(17, 20)}-${hash.slice(20, 32)}`;
+}
+
 function load(name) {
   return JSON.parse(fs.readFileSync(path.join(N8N_DIR, name), "utf8"));
 }
@@ -99,13 +105,13 @@ function fixSessionExistsCheck(workflow) {
 function patchWebchat() {
   const wf = load("ClickIn360 Web Chat Qualification Flow.json");
   const ids = {
-    check: uuid(),
-    branch: uuid(),
-    branchCond: uuid(),
-    passSession: uuid(),
-    syncInbound: uuid(),
-    respondHuman: uuid(),
-    syncTurn: uuid(),
+    check: stableUuid("webchat", "CRM: Check Session State"),
+    branch: stableUuid("webchat", "CRM: Human Handler Branch"),
+    branchCond: stableUuid("webchat", "CRM: Human Handler Branch cond"),
+    passSession: stableUuid("webchat", "Pass Session Context"),
+    syncInbound: stableUuid("webchat", "CRM: Sync Inbound Only"),
+    respondHuman: stableUuid("webchat", "Respond: Human Handler"),
+    syncTurn: stableUuid("webchat", "CRM: Sync Turn"),
   };
 
   const check = httpNode(
@@ -222,15 +228,16 @@ function crmFormatSlotsJs() {
 function patchWhatsapp() {
   const wf = load("ClickIn360 Whatsapp Flow .json");
   const ids = {
-    check: uuid(),
-    branch: uuid(),
-    branchCond: uuid(),
-    passSession: uuid(),
-    syncInbound: uuid(),
-    syncTurn: uuid(),
-    bookingOffers: uuid(),
-    bookAppt: uuid(),
-    syncReview: uuid(),
+    check: stableUuid("whatsapp", "CRM: Check Session State"),
+    branch: stableUuid("whatsapp", "CRM: Human Handler Branch"),
+    branchCond: stableUuid("whatsapp", "CRM: Human Handler Branch cond"),
+    passSession: stableUuid("whatsapp", "Pass Session Context"),
+    syncInbound: stableUuid("whatsapp", "CRM: Sync Inbound Only"),
+    syncTurn: stableUuid("whatsapp", "CRM: Sync Turn"),
+    bookingOffers: stableUuid("whatsapp", "CRM: Get Booking Offers"),
+    bookAppt: stableUuid("whatsapp", "CRM: Book Appointment"),
+    syncReview: stableUuid("whatsapp", "CRM: Sync Human Review"),
+    sendHumanReview: stableUuid("whatsapp", "Send: Human Review Reply"),
   };
 
   const ghlRemove = [
@@ -329,7 +336,7 @@ function patchWhatsapp() {
   );
 
   const sendHumanReview = {
-    id: uuid(),
+    id: ids.sendHumanReview,
     name: "Send: Human Review Reply",
     type: "n8n-nodes-base.whatsApp",
     typeVersion: 1.1,
@@ -349,7 +356,7 @@ function patchWhatsapp() {
   wf.nodes.push(
     check,
     branch,
-    passSessionNode(ids.passSession, [544, 544], "Normalize WABA Payload"),
+    passSessionNode(ids.passSession, [448, 544], "Normalize WABA Payload"),
     syncInbound,
     syncTurn,
     bookingOffers,
