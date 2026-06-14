@@ -185,7 +185,16 @@ WEBSITE_LEADS_USER_ID=<workspace owner Supabase UUID>
 OWNER_LOGIN_ALIASES=owner@clickin360.com,personal@gmail.com
 ```
 
-**Google OAuth redirect (login):** `{APP_URL}/api/auth/callback/google` must be in Google Cloud authorized redirect URIs.
+**Google OAuth redirect URIs (must match Google Cloud Console exactly):**
+
+| Flow | Default path |
+|------|----------------|
+| Login | `{APP_URL}/api/auth/callback/google` |
+| Gmail | `{APP_URL}/api/auth/google-gmail/callback` |
+| Calendar | `{APP_URL}/api/auth/google-calendar/callback` |
+| Drive (workspace) | `{APP_URL}/api/auth/google-drive/callback` |
+
+Override per integration with `GOOGLE_GMAIL_REDIRECT_URI`, `GOOGLE_CALENDAR_REDIRECT_URI`, or `GOOGLE_DRIVE_REDIRECT_URI`.
 
 **Programmatic CRM access:** Not officially supported without session cookies. Use Lead API for automation.
 
@@ -796,7 +805,15 @@ Account summary for logged-in user.
 
 #### `GET /api/account/profile`
 
-Profile fields including `email_signature_html`.
+Profile fields including `email_signature_html`, `avatar_storage_path`, resolved `avatar_url`.
+
+#### `POST /api/account/avatar`
+
+Upload profile photo (multipart). Stores in `crm_documents` bucket; sets `user_profiles.avatar_storage_path`.
+
+#### `DELETE /api/account/avatar`
+
+Remove profile photo.
 
 #### `PATCH /api/account/profile`
 
@@ -892,6 +909,8 @@ Single contact.
 #### `PATCH /api/contacts/[id]`
 
 Partial update (`contactPatchSchema`). Triggers `contact.updated`.
+
+**`website` field:** plain text (e.g. `example.com`); no `https://` prefix required. When `company` is sent on PATCH, stale `company_id` is cleared; when `company_id` is sent, `company` text is synced from the linked account name.
 
 #### `DELETE /api/contacts/[id]`
 
@@ -1170,26 +1189,56 @@ Admin integration status (owner/admin): N8N, WhatsApp, Stripe, Mailgun, GA4 Data
 
 ### 9.10 Integrations
 
-Google OAuth uses `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (or legacy `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`). Redirect URIs default to `{NEXT_PUBLIC_APP_URL}/api/auth/google-gmail/callback` and `…/google-calendar/callback` unless overridden by env.
+Google OAuth uses `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (or legacy `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`). Redirect URIs default to `{NEXT_PUBLIC_APP_URL}/api/auth/google-gmail/callback`, `…/google-calendar/callback`, and `…/google-drive/callback` unless overridden by env.
 
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/api/integrations/google-calendar/status` | Calendar connected for signed-in user |
 | `POST` | `/api/integrations/google-calendar/disconnect` | Disconnect signed-in user's Calendar |
 | `GET` | `/api/auth/google-calendar` | Start Calendar OAuth |
-| `GET` | `/api/integrations/google-workspace/setup` | OAuth checklist + per-user Gmail/Calendar status |
+| `GET` | `/api/integrations/google-workspace/setup` | OAuth checklist + per-user Gmail/Calendar + workspace Drive status |
 | `GET` | `/api/integrations/gmail/status` | Gmail status (signed-in user) |
 | `DELETE` | `/api/integrations/gmail/disconnect` | Disconnect signed-in user's Gmail |
 | `GET` | `/api/auth/google-gmail` | Start Gmail OAuth |
 | `GET` | `/api/auth/google-gmail/reconnect` | Re-consent (send + read scopes) |
+| `GET` | `/api/integrations/google-drive/status` | Workspace Drive connected (all roles read; owner/admin connect) |
+| `DELETE` | `/api/integrations/google-drive/disconnect` | Disconnect workspace Drive (owner/admin) |
+| `GET` | `/api/auth/google-drive` | Start Drive OAuth (owner/admin only) |
+| `GET` | `/api/integrations/google-drive/drives` | List Shared drives |
+| `GET` | `/api/integrations/google-drive/files` | List folder contents (`folder_id`, optional `drive_id` for shared drive) |
+| `POST` | `/api/integrations/google-drive/folders` | Create folder (`name`, `parent_id`, optional `drive_id`) |
+| `POST` | `/api/integrations/google-drive/upload` | Upload file (multipart: `file`, optional `parent_id`, `drive_id`) |
+| `POST` | `/api/integrations/google-drive/link` | Link Drive file to contact (`file_id`, `contact_id`, optional `name`, `web_view_link`) |
 | `POST` | `/api/integrations/n8n/inbound` | Inbound N8N callbacks (`x-n8n-secret`) |
+| `POST` | `/api/integrations/conversations/session-state` | N8N — read/update handler (`ai`/`human`), `human_review_requested` (`x-website-secret`) |
+| `POST` | `/api/integrations/conversations/sync` | N8N — append messages + qualification; creates/updates `conversations` row |
 | `POST` | `/api/public/support/validate-cid` | Public — validate CID; returns short-lived session token (rate limited) |
 | `POST` | `/api/public/support/tickets` | Public — submit support ticket (requires session token from validate step) |
 | `GET`, `PATCH` | `/api/settings/support-widget` | Admin/owner — enable `/support`, embed code, default assignee, email notifications |
-| `POST` | `/api/webhooks/stripe` | Stripe webhooks (`STRIPE_WEBHOOK_SECRET`): `checkout.session.completed`, `payment_intent.succeeded`, `invoice.paid` — records `payments` row, quote payment notes |
-| `POST` | `/api/quotes/public/[token]/checkout` | Public — create Stripe Checkout session for accepted quote (no session auth) |
+| `POST` | `/api/webhooks/stripe` | Stripe webhooks (`STRIPE_WEBHOOK_SECRET`): `checkout.session.completed`, `payment_intent.succeeded`, `invoice.paid` — records payment, quote payment notes |
+| `POST` | `/api/quotes/public/[token]/checkout` | Public — create Stripe Checkout session for accepted quote when `payments_enabled` (no session auth) |
+
+**Google Drive setup:** Run migration **069**; add `{APP_URL}/api/auth/google-drive/callback` to Google Cloud redirect URIs; owner/admin connects in Settings → Integrations. Scopes: `https://www.googleapis.com/auth/drive` + `userinfo.email`. Reconnect after migration or scope changes.
 
 Calendar events sync to the **logged-in user's** connected Google Calendar on create/update (`google_sync_user_id` stores the sync account for legacy rows). If the actor has not connected Calendar, the form shows a non-blocking warning.
+
+---
+
+### 9.10b Conversations (session)
+
+Requires login. Data scoped to `workspaceOwnerId`.
+
+| Method | Path | Notes |
+|--------|------|--------|
+| `GET` | `/api/conversations` | List threads; query `channel`, `status`, `human_review`, `search`, `page`, `limit` |
+| `GET` | `/api/conversations/[id]` | Thread detail + qualification |
+| `GET` | `/api/conversations/[id]/messages` | Messages; optional `after` timestamp for polling |
+| `POST` | `/api/conversations/[id]/messages` | Send human reply (`body`) |
+| `POST` | `/api/conversations/[id]/takeover` | Assign handler to signed-in user |
+| `POST` | `/api/conversations/[id]/release` | Return thread to AI handler |
+| `DELETE` | `/api/conversations/[id]` | Delete thread (owner/admin; messages cascade) |
+
+N8N automation uses **§9.10** conversation integration routes (not session cookies). See [n8n/conversations-inbox-flow-updates.md](./n8n/conversations-inbox-flow-updates.md).
 
 ---
 
@@ -1241,7 +1290,7 @@ Legacy `GET /api/payments` may still exist for compatibility; UI uses `/api/fina
 | **Custom fields** | `GET|POST /api/custom-fields`, `GET|PATCH|DELETE /api/custom-fields/[id]` |
 | **Tags** | `GET|POST /api/contact-tags`, `GET|PATCH|DELETE /api/contact-tags/[id]` |
 | **Notifications** | `GET|POST /api/notifications`, `PATCH /api/notifications/[id]` |
-| **Notification prefs** | `GET|PATCH /api/notification-preferences` — includes `email_notifications` (inbound email), `task_reminders`, `opportunity_reminders`, `ticket_notifications`, `email_frequency`, `timezone` |
+| **Notification prefs** | `GET|PATCH /api/notification-preferences` — includes `email_notifications` (inbound email), `conversation_notifications`, `finance_notifications`, `task_reminders`, `opportunity_reminders`, `ticket_notifications`, `email_frequency`, `timezone` |
 | **Saved filters** | `GET|POST /api/saved-filters`, `GET|PATCH|DELETE /api/saved-filters/[id]` |
 | **Quotes (documents)** | `/api/documents`, line-items, pdf, send-via-gmail, `/api/quote-services` |
 | **Templates** | `/api/document-templates`, `/api/email-templates` (list excludes `automation` and `review_request` categories; use `GET /api/email-templates/[id]` for any template by id) |

@@ -27,6 +27,7 @@ function MediaPageContent() {
         queryKey: ["integration-google-drive-status"],
       });
       void queryClient.invalidateQueries({ queryKey: ["google-drive-files"] });
+      void queryClient.invalidateQueries({ queryKey: ["google-drive-shared-drives"] });
       return;
     }
 

@@ -28,7 +28,16 @@ git log -1 --format='%h %s (%cs)'
 
 | Date | Commit | Type | Summary |
 |------|--------|------|---------|
-| 2026-06-12 | `da37544` | feature | **CRM enhancement sprint — iteration 3:** calendar ownership + per-user colors + My/All calendar views; Google Calendar sync uses logged-in user OAuth; meeting type removed; WhatsApp integration code removed (proposal on hold); public `/support` CID widget + tickets; audit backlog (contact combobox, batch signed URLs, storage cleanup); migration 052 |
+| 2026-06-14 | `cd30229` | fix | **Google Drive Media:** upload, folders, shared-drive browse; Media page hook fix |
+| 2026-06-14 | `c0966ba` | fix | Google Drive connected status + OAuth redirect URI docs in Integrations UI |
+| 2026-06-14 | `1dbe485` | feature | **Google Drive Media** (`/media`), flat sidebar nav (Attachments + Media), modern `ListFiltersPanel` on contacts/tickets; migration **069** |
+| 2026-06-14 | `f6b6ece` | fix | Contact **company** display enrichment + PATCH sync (`resolve-company-display`); booking validation; confirm dialogs |
+| 2026-06-13 | `cd49754` | feature | Conversation **notifications** (migration 068), inbox takeover/release/delete, contact delete fixes |
+| 2026-06-13 | `b0d0329` | feature | **Unified conversations inbox** — WhatsApp + webchat threads, N8N sync/session-state APIs; migration **066** |
+| 2026-06-12 | `3e6f7bc` | enhancement | Dashboard UX, notification fixes, **profile photos** (migration 065) |
+| 2026-06-12 | `1ae3c18` | feature | **Website lead email notify** for assignee (migration 064); bilingual appointment confirmations |
+| 2026-06-12 | `8fd5abd` | enhancement | Finances cron overdue marking, CSV exports, invoice wizard UX |
+| 2026-06-12 | `da37544` | feature | **CRM enhancement sprint — iteration 3:** calendar ownership + per-user colors + My/All calendar views; Google Calendar sync uses logged-in user OAuth; meeting type removed; public `/support` CID widget + tickets; audit backlog (contact combobox, batch signed URLs, storage cleanup); migration 052 |
 | 2026-06-10 | `90c7522` | feature | **CRM enhancement sprint — iteration 2:** unified email composer (TipTap rich text, merge fields, templates, attachments, preview) on contacts/tickets/quotes; product catalog edit/delete with quote-reference guard; Stripe quote Pay Now + webhooks; GA4 Website analytics tab; MFA scaffolding removed (migration 051); WhatsApp/Webchat + CID tickets remain proposal-only |
 | 2026-06-10 | `c12c4d9` | feature | **CRM enhancement sprint (iteration 1):** settings redesign (member vs admin sections), quote branding + product catalog tabs on Quotes, email signatures, calendar location types (physical / Google Meet / other) + assignee, public quote acceptance disclaimer (EN/ES), N8N/WhatsApp/Stripe inbound scaffolding, admin integrations status panel |
 | 2026-06-10 | `bd31186` | feature + fix | **Dual-email owner login:** canonical session maps personal + workspace emails to same CRM profile (`OWNER_LOGIN_ALIASES`, `team_members` lookup); `authUserId` for password/profile updates |
@@ -74,7 +83,7 @@ git log -1 --format='%h %s (%cs)'
 | Auth | NextAuth (credentials + Google Workspace SSO → Supabase Auth); canonical owner session mapping |
 | Database | Supabase Postgres + RLS on tenant tables |
 | Server data access | Service role in API routes (not browser Supabase for CRM entities) |
-| Files | Supabase Storage (documents, quote logos) |
+| Files | Supabase Storage (documents, quote logos, profile avatars) + **Google Drive** (workspace Media library) |
 | Email (sales) | Gmail API (per connected user; read + send scopes) |
 | Email (automated) | Mailgun HTTP API (`no-reply@…`); team invites today |
 | Calendar | Google Calendar OAuth (per connected user; assignee → actor → owner fallback) |
@@ -108,7 +117,7 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 - **Login:** email/password (all roles) or **Google Workspace** (`@clickin360.com`; owner/admin/sales only — viewers use password)
 - **Dual-email owner:** personal Gmail + workspace email resolve to same CRM profile via `OWNER_LOGIN_ALIASES` / `team_members` (see [AUTH-ROADMAP.md](./AUTH-ROADMAP.md))
 - Forgot password / reset password (`/forgot-password`, `/reset-password`, `/auth/callback`) — reset email via `POST /api/auth/forgot-password`; production requires Supabase redirect URL `https://www.clickin360.com/auth/callback` and `NEXT_PUBLIC_APP_URL` on the server
-- **My Account** (`/account`): profile, password, **HTML email signature** (appended on Gmail compose), notification prefs, currency
+- **My Account** (`/account`): profile, **profile photo** upload, password, **HTML email signature** (appended on Gmail compose), notification prefs, currency
 - Workspace owner can delete own account (guarded)
 
 ### Home (dashboard)
@@ -118,8 +127,11 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 
 ### Contacts
 
+- **List filters:** modern `ListFiltersPanel` — search, status, created date range, saved filters, clear-all, result count
 - **Detail layout:** 2 columns — contact details (5/12) + work panel tabs (7/12: Log activity, Related, Tasks)
 - **Company** as text field on contact (Accounts object removed from nav; `/accounts` redirects to contacts)
+- **Company display:** list/detail APIs enrich `company` from linked `companies` row when `company_id` is set; PATCH clears stale `company_id` when free-text `company` is edited (`lib/contacts/resolve-company-display.ts`)
+- **Website** — plain text field (`example.com`); no `https://` required in validators (unlike Settings review URL fields)
 - **Contact-centric links:** tickets, opportunities, calendar events, and attachments require a linked contact (not account-only); legacy `company_id` is derived from the contact when present
 - Full contact profile (About/notes, website, source, insights, address, assignment, etc.)
 - Inline editing on detail view
@@ -148,6 +160,7 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 
 ### Service tickets
 
+- **List filters:** `ListFiltersPanel` — status, created date range, saved filters (same pattern as contacts)
 - List/detail with subject, tags, custom fields, service ticket numbers
 - **Requires linked contact** on create (legacy `company_id` synced from contact when present)
 - **Gmail threads** on ticket (sync/send APIs)
@@ -163,7 +176,7 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 - Line items from **Product Catalog** (`quote_services` + `quote_line_items`)
 - Sequential reference numbers (`Q-YYYY-#####`)
 - PDF generation and **send via Gmail** (connected user; signature appended when set)
-- **Public quote page** (`/quote/[token]`) — accept / decline with **binding disclaimer** checkbox (EN/ES); records `acceptance_disclaimer_acknowledged_at`; **Pay Now** via Stripe Checkout when configured (test mode locally)
+- **Public quote page** (`/quote/[token]`) — accept / decline with **binding disclaimer** checkbox (EN/ES); records `acceptance_disclaimer_acknowledged_at`; optional **Pay Now** via Stripe Checkout when quote has `payments_enabled` and Stripe is configured
 - **Quote payment status** visible on quote record in CRM (all roles); Stripe config owner/admin only
 - Quote analytics API
 - Legacy **Documents** routes still present (`/documents`) alongside quotes
@@ -215,14 +228,35 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 
 ### Notifications
 
-- In-app notifications (tickets, tasks, opportunities, inbound email, etc.)
-- Per-user notification preferences (`email_notifications`, task/opportunity/ticket toggles, timezone)
+- In-app notifications (tickets, tasks, opportunities, inbound email, **conversations needing review**, finance events, etc.)
+- Per-user notification preferences (`email_notifications`, `conversation_notifications`, `finance_notifications`, task/opportunity/ticket toggles, timezone)
+
+### Conversations (WhatsApp + webchat inbox)
+
+- **Conversations** module (`/conversations`) — unified inbox for WhatsApp and webchat threads synced from N8N
+- Filter tabs: all, needs review, WhatsApp, webchat, closed
+- **Human takeover / release** — assign handler to signed-in user; return thread to AI
+- **Reply** as human agent; **delete** conversation (owner/admin; messages cascade)
+- N8N integration: `POST /api/integrations/conversations/session-state`, `POST /api/integrations/conversations/sync` (`x-website-secret`)
+- Live webchat polling: `GET /api/website/chat/messages` for open webchat sessions
+- Migrations **066** (tables), **067** (delete policy), **068** (`conversation_notifications` pref)
+- Meta WhatsApp webhook remains in **N8N** (not a CRM route); see [n8n/conversations-inbox-flow-updates.md](./n8n/conversations-inbox-flow-updates.md)
+
+### Media & attachments
+
+- **Attachments** (`/attachments`) — Supabase-uploaded files linked to contacts (`documents` with batch signed URLs)
+- **Media** (`/media`) — workspace **Google Drive** browser (owner/admin connects once per workspace)
+  - Browse **Shared drives** and **My Drive**; upload files; create folders
+  - **Link** Drive files to contacts (`documents.source = google_drive`, `external_id`, `external_url`)
+  - OAuth scopes: full Drive + email; callback `{APP_URL}/api/auth/google-drive/callback`
+  - Migration **069** (`google_drive_tokens`, document external columns)
+  - Reconnect Drive after migration or scope changes (Settings → Integrations or `/media`)
 
 ### Settings (owner / admin)
 
 - Platform language (EN/ES)
 - **Admin integrations** — status panel for N8N, **Stripe** (checkout + webhook path), Mailgun, **GA4 Data API**, Google OAuth, **Support widget** (`GET /api/settings/integrations`)
-- Website leads (default assignee)
+- Website leads (default assignee; optional **email notify** on new leads — migration 064)
 - Duplicate contacts panel
 - Team invites and roles (`sales`, `admin`, `viewer`)
 - **Audit log** (read-only; owner/admin)
@@ -233,7 +267,8 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 - **Email templates** — create, edit, delete (excludes automation and review templates from general list)
 - **Google review invitations** — URL + review email template (category `review_request`)
 - **Booking availability** — days, hours, duration (`PATCH /api/settings/member`)
-- **Integrations** — connect own Gmail and Google Calendar for send/sync and calendar events (Google Drive placeholder)
+- **Integrations** — connect own **Gmail** and **Google Calendar** for send/sync and calendar events
+- **Google Drive** connect/disconnect shown in Integrations panel; only owner/admin can authorize workspace Drive
 
 ### Integrations (external)
 
@@ -243,7 +278,8 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 | Website chat | Public + optional secret | Marketing chat widget |
 | PATCH integrations | Integration secret | Server-to-server updates |
 | N8N webhooks | Outbound from CRM | `contact.*`, `website.lead`, etc. |
-| N8N inbound | `x-n8n-secret` | `POST /api/integrations/n8n/inbound` — workflow callbacks (webchat live) |
+| N8N inbound | `x-website-secret` or `x-n8n-secret` | `POST /api/integrations/n8n/inbound`; conversation **session-state** + **sync** for inbox |
+| Google Drive | Per-workspace OAuth (owner/admin) | Media library browse/link; `google_drive_tokens` keyed by workspace owner |
 | Public support | Session token | `POST /api/public/support/validate-cid`, `POST /api/public/support/tickets` — CID-gated ticket widget |
 | Stripe Checkout | `STRIPE_SECRET_KEY` | Public quote **Pay Now** after acceptance; invoice **payment links**; `POST /api/quotes/public/[token]/checkout` |
 | Stripe webhooks | `STRIPE_WEBHOOK_SECRET` | `POST /api/webhooks/stripe` — `checkout.session.completed`, `payment_intent.succeeded`, `invoice.paid` |
@@ -269,7 +305,7 @@ See [CLICKIN360-CRM-API.md](./CLICKIN360-CRM-API.md) for endpoints.
 
 ## Database migrations
 
-Production should run migrations **001–060** in order. Notable groups:
+Production should run migrations **001–069** in order. Notable groups:
 
 | Range | Theme |
 |-------|--------|
@@ -299,6 +335,15 @@ Production should run migrations **001–060** in order. Notable groups:
 | 058 | Backfill legacy `payments` into `finance_transactions`; drop `payments` table |
 | 059 | Invoice wizard fields (`invoice_type`, `collection_method`, `pending` status) |
 | 060 | Invoice `partially_paid` status for partial payment workflow |
+| 061 | Owner-only invoice purge function for test cleanup |
+| 062 | Finance function `SECURITY DEFINER` hardening |
+| 063 | Quote `currency`, `finance_notifications` pref, RLS hardening |
+| 064 | `website_leads_email_notify` on `user_settings` |
+| 065 | `avatar_storage_path` on `user_profiles` |
+| 066 | Conversations + `conversation_messages` tables |
+| 067 | Conversations delete policy for workspace members |
+| 068 | `conversation_notifications` on `notification_preferences` |
+| 069 | `google_drive_tokens`; `documents.source` / `external_id` / `external_url` |
 
 ---
 
@@ -314,7 +359,12 @@ Historical phases map to git eras (not separate products):
 | **4 — Operations** | Contact merge, in-app notifications, payments, ticket improvements | ✅ Shipped |
 | **5 — Production platform** | Website↔CRM, team/roles, quotes, contact UX, security, audit log | ✅ **Shipped** on `main` (`8fc9cee`) — migrations **035–037** applied in Supabase |
 
-**Phase 5 is complete.** **Phase 6 iteration 1–2** shipped (`c12c4d9`, `90c7522`). **Iteration 3** (`da37544`): calendar ownership/colors/views, CID support widget, WhatsApp code removed. **On hold (proposal only):** [WhatsApp/Webchat unified inbox](./WHATSAPP-WEBCHAT-INBOX-PROPOSAL.md). **Implemented:** [service ticket CID widget](./SERVICE-TICKET-CID-PROPOSAL.md) (Sprint 3).
+**Phase 5 is complete.** **Phase 6 iteration 1–3** shipped (`c12c4d9`, `90c7522`, `da37544`). **Post–Sprint 3:** Finances module, **conversations inbox** (`b0d0329`), **Google Drive Media** (`1dbe485`), list-filter UX, contact company fixes. **Partially shipped:** [WhatsApp/Webchat unified inbox](./WHATSAPP-WEBCHAT-INBOX-PROPOSAL.md) — CRM UI + N8N sync live; Meta WABA webhook stays in N8N. **Implemented:** [service ticket CID widget](./SERVICE-TICKET-CID-PROPOSAL.md) (Sprint 3).
+
+### Navigation
+
+- **Flat sidebar** — single `MAIN_NAV` list (no secondary section): Dashboard, Conversations, Calendars, Pipelines, Contacts, Quotes, Finances, Service Tickets, **Attachments**, **Media**
+- Legacy `/accounts` redirects to contacts; `/services` redirects to quotes products tab
 
 ---
 
@@ -340,12 +390,18 @@ Historical phases map to git eras (not separate products):
 | **Pipeline stage reorder** | Settings drag-and-drop (`33b5e51`) |
 | **Migration 048** | DB orphan cleanup — run preflight (`scripts/db-preflight-audit.sql`) first |
 | **Finances sprint (current)** | Invoices, transactions, payment links, wizard, partial payments, quote billing workflow, Analytics finances tab, cron overdue marking, CSV export (migrations **054–063**) |
+| **Conversations inbox** | CRM UI + N8N sync/session-state APIs (migrations **066–068**); flow patches in `docs/n8n/` |
+| **Google Drive Media** | Workspace Drive OAuth, shared drives browse, link to contacts (migration **069**) |
+| **List filter UX** | `ListFiltersPanel` + saved filters on contacts and tickets |
+| **Contact company sync** | Display enrichment + PATCH clears stale `company_id` |
+| **Profile photos** | Avatar upload on My Account (migration **065**) |
+| **Website lead email** | Assignee email on new leads (migration **064**) |
 
 ### Post–Phase 5 ops (do first)
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | **VPS deploy** | Pull `main`; run migrations **044–060** if not applied; set `OWNER_LOGIN_ALIASES`, Stripe (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`), Mailgun, and GA4 env as needed; `./scripts/deploy-vps.sh` (cached build). Use `--no-cache` only when `package.json` or `Dockerfile` changes |
+| 1 | **VPS deploy** | Pull `main`; run migrations **044–069** if not applied; set `OWNER_LOGIN_ALIASES`, Stripe, Mailgun, GA4, Google OAuth (login + Gmail + Calendar + **Drive** redirect URIs); reconnect Drive after **069**; `./scripts/deploy-vps.sh` |
 | 2 | **GA4 conversions** | Mark `generate_lead`, `booking_completed` in GA4 Admin |
 | 3 | **GSC follow-up** | Fix remaining 404s / canonical issues after sitemap deploy |
 | 4 | **AUDIT-FIX-TRACKER F1–F2, F5–F6** | Async contact combobox; batch signed URLs; storage cleanup; remove unused dashboard stats API |
@@ -356,7 +412,7 @@ Historical phases map to git eras (not separate products):
 | # | Area | Idea |
 |---|------|------|
 | 6 | **Quote UX** | Consolidate `/documents` vs `/quotes` flows |
-| 6b | **Unified inbox** | WhatsApp + webchat — see proposal; not implemented |
+| 6b | **Unified inbox (remaining)** | Meta WABA webhook in CRM (optional); outbound WhatsApp send from CRM UI — N8N + CRM sync shipped |
 | 6c | **Service tickets (public)** | CID-gated `/support` widget — implemented Sprint 3 |
 | 7 | **Reporting** | Deeper dashboards, CSV exports, scheduled reports |
 | 8 | **Automation** | In-app workflows beyond N8N webhooks |
@@ -369,6 +425,7 @@ Historical phases map to git eras (not separate products):
 
 - CRM does not use Supabase Auth session for data reads; all tenant access is API + service role.
 - Gmail and Google Calendar are **per-user** — each teammate connects their own account in Settings → Integrations.
+- **Google Drive** is **per-workspace** (one connection keyed to workspace owner UUID); owner/admin connects; all members browse/link on `/media`.
 - Customer email replies sync only when the **mailbox that sent** (or owns the thread) is connected with read scope.
 - Viewer role is intentionally read-only demo mode.
 - `audit_logs` table existed for a long time before writes; historical rows may be empty.
@@ -380,14 +437,16 @@ Historical phases map to git eras (not separate products):
 | UI path | Purpose |
 |---------|---------|
 | `/dashboard` | Home stats |
+| `/conversations` | WhatsApp + webchat inbox |
 | `/accounts`, `/accounts/[id]` | Redirect to `/contacts` (legacy URLs) |
 | `/contacts`, `/contacts/[id]` | People |
 | `/opportunities` | Pipeline board |
 | `/tickets`, `/tickets/[id]` | Support |
 | `/quotes`, `/quotes/new`, `/quotes/[id]` | Quotes (tabs: all, templates, branding, products) |
 | `/services` | Redirects to `/quotes?tab=products` |
-| `/account` | My Account (profile, signature, password) |
-| `/attachments` | Files |
+| `/account` | My Account (profile, avatar, signature, password) |
+| `/attachments` | Supabase files linked to contacts |
+| `/media` | Workspace Google Drive browser |
 | `/calendar` | Events |
 | `/finances`, `/finances/overview`, `/finances/invoices`, `/finances/invoices/[id]` | Finances hub, invoices, wizard (`?create=1`) |
 | `/finances/transactions`, `/finances/expenses`, `/finances/payment-links` | Ledger, expenses, Stripe payment links |
@@ -397,4 +456,4 @@ Historical phases map to git eras (not separate products):
 
 ---
 
-*Last updated: 2026-06-12 — Finances module (migrations 054–060).*
+*Last updated: 2026-06-14 — Google Drive Media, conversations inbox, list filters (migrations 064–069).*

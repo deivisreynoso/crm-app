@@ -13,6 +13,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get("file");
     const folderId = formData.get("folder_id");
+    const driveId = formData.get("drive_id");
 
     if (!(file instanceof File) || file.size <= 0) {
       return NextResponse.json({ error: "File is required" }, { status: 400 });
@@ -24,6 +25,7 @@ export async function POST(req: NextRequest) {
       mimeType: file.type || "application/octet-stream",
       buffer,
       folderId: typeof folderId === "string" ? folderId : null,
+      driveId: typeof driveId === "string" ? driveId : null,
     });
 
     return NextResponse.json(uploaded, { status: 201 });

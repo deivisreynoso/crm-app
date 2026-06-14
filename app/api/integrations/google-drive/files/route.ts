@@ -7,11 +7,14 @@ export async function GET(req: NextRequest) {
     const { workspaceOwnerId, error } = await requireAuth();
     if (error) return error;
 
-    const folderId = new URL(req.url).searchParams.get("folder_id");
+    const params = new URL(req.url).searchParams;
+    const folderId = params.get("folder_id");
+    const driveId = params.get("drive_id");
 
     const { files, parentId } = await listGoogleDriveFiles(
       workspaceOwnerId!,
-      folderId
+      folderId,
+      driveId
     );
 
     return NextResponse.json({ files, parent_id: parentId });

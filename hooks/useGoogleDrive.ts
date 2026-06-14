@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import type { DriveFileItem } from "@/lib/google/drive";
+import type { DriveFileItem, DriveSharedDrive } from "@/lib/google/drive";
 
 export type GoogleDriveStatus = {
   connected: boolean;
@@ -26,20 +26,37 @@ export function useGoogleDriveStatus() {
   });
 }
 
-export function useGoogleDriveFiles(
-  folderId?: string | null,
-  options?: { enabled?: boolean }
-) {
+export function useGoogleSharedDrives(options?: { enabled?: boolean }) {
   const enabled = options?.enabled ?? true;
   return useQuery({
-    queryKey: ["google-drive-files", folderId ?? "root"],
+    queryKey: ["google-drive-shared-drives"],
     queryFn: async () => {
+      const { data } = await axios.get<{ drives: DriveSharedDrive[] }>(
+        "/api/integrations/google-drive/drives"
+      );
+      return data;
+    },
+    enabled,
+    retry: false,
+  });
+}
+
+export function useGoogleDriveFiles(
+  folderId?: string | null,
+  options?: { enabled?: boolean; driveId?: string | null }
+) {
+  const enabled = options?.enabled ?? true;
+  const driveId = options?.driveId ?? null;
+  return useQuery({
+    queryKey: ["google-drive-files", driveId ?? "my", folderId ?? "root"],
+    queryFn: async () => {
+      const params: Record<string, string> = {};
+      if (folderId) params.folder_id = folderId;
+      if (driveId) params.drive_id = driveId;
       const { data } = await axios.get<{
         files: DriveFileItem[];
         parent_id: string;
-      }>("/api/integrations/google-drive/files", {
-        params: folderId ? { folder_id: folderId } : {},
-      });
+      }>("/api/integrations/google-drive/files", { params });
       return data;
     },
     enabled,
@@ -69,6 +86,7 @@ export function useDisconnectGoogleDrive() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["integration-google-drive-status"] });
       queryClient.invalidateQueries({ queryKey: ["google-drive-files"] });
+      queryClient.invalidateQueries({ queryKey: ["google-drive-shared-drives"] });
     },
   });
 }
@@ -76,8 +94,11 @@ export function useDisconnectGoogleDrive() {
 export function useCreateGoogleDriveFolder() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { name: string; folder_id?: string | null }) =>
-      axios.post("/api/integrations/google-drive/folders", input),
+    mutationFn: (input: {
+      name: string;
+      folder_id?: string | null;
+      drive_id?: string | null;
+    }) => axios.post("/api/integrations/google-drive/folders", input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["google-drive-files"] });
     },
@@ -87,10 +108,15 @@ export function useCreateGoogleDriveFolder() {
 export function useUploadGoogleDriveFile() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { file: File; folder_id?: string | null }) => {
+    mutationFn: (input: {
+      file: File;
+      folder_id?: string | null;
+      drive_id?: string | null;
+    }) => {
       const form = new FormData();
       form.append("file", input.file);
       if (input.folder_id) form.append("folder_id", input.folder_id);
+      if (input.drive_id) form.append("drive_id", input.drive_id);
       return axios.post("/api/integrations/google-drive/upload", form);
     },
     onSuccess: () => {

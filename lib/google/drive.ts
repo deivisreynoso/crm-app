@@ -33,6 +33,11 @@ export type DriveFileItem = {
   isFolder: boolean;
 };
 
+export type DriveSharedDrive = {
+  id: string;
+  name: string;
+};
+
 export async function getGoogleDriveAccessToken(
   workspaceOwnerId: string
 ): Promise<string | null> {
@@ -134,9 +139,44 @@ function folderMimeType(mimeType: string) {
   return mimeType === "application/vnd.google-apps.folder";
 }
 
+export async function listGoogleSharedDrives(
+  workspaceOwnerId: string
+): Promise<DriveSharedDrive[]> {
+  const accessToken = await getGoogleDriveAccessToken(workspaceOwnerId);
+  if (!accessToken) {
+    throw new Error("Google Drive is not connected for this workspace");
+  }
+
+  const params = new URLSearchParams({
+    pageSize: "100",
+    fields: "drives(id,name),nextPageToken",
+  });
+
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/drives?${params.toString()}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("Drive list shared drives failed:", text);
+    throw new Error("Could not load shared drives");
+  }
+
+  const body = (await res.json()) as {
+    drives?: Array<{ id: string; name: string }>;
+  };
+
+  return (body.drives ?? []).map((drive) => ({
+    id: drive.id,
+    name: drive.name,
+  }));
+}
+
 export async function listGoogleDriveFiles(
   workspaceOwnerId: string,
-  folderId?: string | null
+  folderId?: string | null,
+  driveId?: string | null
 ): Promise<{ files: DriveFileItem[]; parentId: string }> {
   const accessToken = await getGoogleDriveAccessToken(workspaceOwnerId);
   if (!accessToken) {
@@ -144,7 +184,12 @@ export async function listGoogleDriveFiles(
   }
 
   const connection = await getGoogleDriveConnection(workspaceOwnerId);
-  const parentId = folderId?.trim() || connection.root_folder_id || "root";
+  const sharedDriveId = driveId?.trim() || null;
+  const parentId =
+    folderId?.trim() ||
+    sharedDriveId ||
+    connection.root_folder_id ||
+    "root";
 
   const q = `'${parentId.replace(/'/g, "\\'")}' in parents and trashed=false`;
   const params = new URLSearchParams({
@@ -156,6 +201,11 @@ export async function listGoogleDriveFiles(
     supportsAllDrives: "true",
     includeItemsFromAllDrives: "true",
   });
+
+  if (sharedDriveId) {
+    params.set("corpora", "drive");
+    params.set("driveId", sharedDriveId);
+  }
 
   const res = await fetch(
     `https://www.googleapis.com/drive/v3/files?${params.toString()}`,
@@ -237,10 +287,13 @@ export async function getGoogleDriveFileMeta(
 
 async function resolveParentFolderId(
   workspaceOwnerId: string,
-  folderId?: string | null
+  folderId?: string | null,
+  driveId?: string | null
 ): Promise<string> {
+  if (folderId?.trim()) return folderId.trim();
+  if (driveId?.trim()) return driveId.trim();
   const connection = await getGoogleDriveConnection(workspaceOwnerId);
-  return folderId?.trim() || connection.root_folder_id || "root";
+  return connection.root_folder_id || "root";
 }
 
 function mapDriveFile(file: {
@@ -267,14 +320,19 @@ function mapDriveFile(file: {
 export async function createGoogleDriveFolder(
   workspaceOwnerId: string,
   name: string,
-  folderId?: string | null
+  folderId?: string | null,
+  driveId?: string | null
 ): Promise<DriveFileItem> {
   const accessToken = await getGoogleDriveAccessToken(workspaceOwnerId);
   if (!accessToken) {
     throw new Error("Google Drive is not connected for this workspace");
   }
 
-  const parentId = await resolveParentFolderId(workspaceOwnerId, folderId);
+  const parentId = await resolveParentFolderId(
+    workspaceOwnerId,
+    folderId,
+    driveId
+  );
   const params = new URLSearchParams({
     fields: "id,name,mimeType,modifiedTime,webViewLink,iconLink,size",
     supportsAllDrives: "true",
@@ -322,6 +380,7 @@ export async function uploadGoogleDriveFile(
     mimeType: string;
     buffer: Buffer;
     folderId?: string | null;
+    driveId?: string | null;
   }
 ): Promise<DriveFileItem> {
   const accessToken = await getGoogleDriveAccessToken(workspaceOwnerId);
@@ -329,7 +388,11 @@ export async function uploadGoogleDriveFile(
     throw new Error("Google Drive is not connected for this workspace");
   }
 
-  const parentId = await resolveParentFolderId(workspaceOwnerId, input.folderId);
+  const parentId = await resolveParentFolderId(
+    workspaceOwnerId,
+    input.folderId,
+    input.driveId
+  );
   const metadata = JSON.stringify({
     name: input.name.trim(),
     parents: [parentId],

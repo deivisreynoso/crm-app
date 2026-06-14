@@ -6,6 +6,7 @@ import { createGoogleDriveFolder } from "@/lib/google/drive";
 const bodySchema = z.object({
   name: z.string().min(1).max(255),
   folder_id: z.string().optional().nullable(),
+  drive_id: z.string().optional().nullable(),
 });
 
 export async function POST(req: NextRequest) {
@@ -24,7 +25,8 @@ export async function POST(req: NextRequest) {
     const folder = await createGoogleDriveFolder(
       workspaceOwnerId!,
       parsed.data.name,
-      parsed.data.folder_id
+      parsed.data.folder_id,
+      parsed.data.drive_id
     );
 
     return NextResponse.json(folder, { status: 201 });

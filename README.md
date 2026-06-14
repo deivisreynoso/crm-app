@@ -6,7 +6,8 @@ ClickIn 360 — marketing site + CRM (Next.js, Supabase, Docker on VPS).
 - [CRM API guide](./docs/CLICKIN360-CRM-API.md) — Lead API, integrations, session CRM routes
 - [Auth roadmap](./docs/AUTH-ROADMAP.md) — login methods, Google SSO, dual-email owner mapping
 - [Audit / hardening tracker](./docs/AUDIT-FIX-TRACKER.md)
-- [WhatsApp + Webchat inbox proposal](./docs/WHATSAPP-WEBCHAT-INBOX-PROPOSAL.md) (on hold — WhatsApp code removed Sprint 3)
+- [WhatsApp + Webchat inbox](./docs/WHATSAPP-WEBCHAT-INBOX-PROPOSAL.md) — CRM inbox shipped; Meta webhook stays in N8N
+- [N8N conversation flow updates](./docs/n8n/conversations-inbox-flow-updates.md) — session-state and sync nodes
 - [Service ticket CID proposal](./docs/SERVICE-TICKET-CID-PROPOSAL.md) (implemented Sprint 3)
 
 **Deploy (VPS):** pull `main`, then run `./scripts/deploy-vps.sh` (uses Docker layer cache; ~2–8 min for code-only changes). Use `./scripts/deploy-vps.sh --no-cache` only when dependencies or Dockerfile change (~15–25 min on a small VPS).
@@ -15,12 +16,18 @@ ClickIn 360 — marketing site + CRM (Next.js, Supabase, Docker on VPS).
 
 - `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` must match your live host (e.g. `https://www.clickin360.com`)
 - Supabase Auth → URL Configuration must allow `{APP_URL}/auth/callback` for forgot-password
-- Run migrations **049**–**063** in Supabase if not applied (`052` = calendar colors, CID, support widget; **054–063** = Finances module: invoices, transactions, payment links, partial payments, enhancements)
+- Run migrations **049**–**069** in Supabase if not applied (`052` = calendar colors, CID, support widget; **054–063** = Finances; **066–068** = conversations inbox; **069** = Google Drive OAuth + document external links)
 - Supabase Auth → **Leaked password protection** — enable in the Supabase Dashboard (Authentication → Providers → Email); cannot be turned on via application code
 - Public customer support: enable in **Settings → Support widget**; page at `/support`
 - Set `WEBSITE_LEADS_USER_ID` to the workspace owner UUID; optional `OWNER_LOGIN_ALIASES` for owner dual-email login
-- Google Cloud OAuth: add `{APP_URL}/api/auth/callback/google` for Workspace sign-in
-- Optional: `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` (quote Pay Now and invoice payment links); `MAILGUN_*` for invoice email when Gmail is not used; `GA4_PROPERTY_ID` + GA service account vars (Analytics → Website tab)
+- Google Cloud OAuth redirect URIs (must match env / `NEXT_PUBLIC_APP_URL` exactly):
+  - `{APP_URL}/api/auth/callback/google` — Workspace login
+  - `{APP_URL}/api/auth/google-gmail/callback` — per-user Gmail
+  - `{APP_URL}/api/auth/google-calendar/callback` — per-user Calendar
+  - `{APP_URL}/api/auth/google-drive/callback` — workspace Drive (owner/admin connect in Settings → Integrations or `/media`)
+- After adding Drive scopes or migration **069**, reconnect Google Drive once in Settings
+- Optional: `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` (invoice payment links; quote Pay Now when `payments_enabled` on quote); `MAILGUN_*` for invoice email, team invites, password reset; `GA4_PROPERTY_ID` + GA service account vars (Analytics → Website tab)
+- Conversations inbox: deploy code + migration **066** before wiring N8N `POST /api/integrations/conversations/*` nodes (`x-website-secret`)
 - **Finances** module at `/finances` — invoices, transactions ledger, Stripe payment links; schedule `GET /api/cron/mark-overdue-invoices` daily with `CRON_SECRET` header
 
 ## Getting Started

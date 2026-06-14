@@ -13,6 +13,7 @@ import {
   Loader2,
   RefreshCw,
   Upload,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -21,6 +22,7 @@ import {
   useCreateGoogleDriveFolder,
   useGoogleDriveFiles,
   useGoogleDriveStatus,
+  useGoogleSharedDrives,
   useLinkGoogleDriveFile,
   useUploadGoogleDriveFile,
 } from "@/hooks/useGoogleDrive";
@@ -43,18 +45,41 @@ export function GoogleDriveBrowser() {
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const { data: status, isLoading: statusLoading, refetch: refetchStatus } =
     useGoogleDriveStatus();
+  const [browseSection, setBrowseSection] = useState<"shared" | "my">("shared");
   const [folderStack, setFolderStack] = useState<{ id: string; name: string }[]>(
     []
   );
-  const currentFolderId = folderStack[folderStack.length - 1]?.id ?? null;
+
+  const isSharedSection = browseSection === "shared";
+  const atSharedDriveList = isSharedSection && folderStack.length === 0;
+  const activeDriveId = isSharedSection && folderStack.length > 0 ? folderStack[0].id : null;
+  const currentFolderId =
+    folderStack.length > 0
+      ? folderStack[folderStack.length - 1]!.id
+      : null;
+  const listFolderId =
+    isSharedSection && folderStack.length === 1 ? null : currentFolderId;
+
+  const {
+    data: sharedDrivesData,
+    isLoading: sharedDrivesLoading,
+    error: sharedDrivesError,
+    refetch: refetchSharedDrives,
+    isFetching: sharedDrivesFetching,
+  } = useGoogleSharedDrives({
+    enabled: !!status?.connected && atSharedDriveList,
+  });
 
   const {
     data,
     isLoading: filesLoading,
     error: filesError,
     refetch: refetchFiles,
-    isFetching,
-  } = useGoogleDriveFiles(currentFolderId, { enabled: !!status?.connected });
+    isFetching: filesFetching,
+  } = useGoogleDriveFiles(listFolderId, {
+    enabled: !!status?.connected && !atSharedDriveList,
+    driveId: activeDriveId,
+  });
 
   const linkFile = useLinkGoogleDriveFile();
   const createFolder = useCreateGoogleDriveFolder();
@@ -67,10 +92,17 @@ export function GoogleDriveBrowser() {
   const [folderError, setFolderError] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  const breadcrumbs = useMemo(
-    () => [{ id: "root", name: "My Drive" }, ...folderStack],
-    [folderStack]
-  );
+  const breadcrumbs = useMemo(() => {
+    const root = isSharedSection
+      ? { id: "shared-root", name: "Shared drives" }
+      : { id: "my-root", name: "My Drive" };
+    return [root, ...folderStack];
+  }, [folderStack, isSharedSection]);
+
+  const switchSection = (section: "shared" | "my") => {
+    setBrowseSection(section);
+    setFolderStack([]);
+  };
 
   if (statusLoading) {
     return <p className="text-sm text-body-muted p-6">Loading Google Drive…</p>;
@@ -128,12 +160,49 @@ export function GoogleDriveBrowser() {
   }
 
   const files = data?.files ?? [];
-  const loadError = filesError
-    ? formatApiError(filesError, "Could not load Drive files")
-    : null;
+  const sharedDrives = sharedDrivesData?.drives ?? [];
+  const isFetching = atSharedDriveList ? sharedDrivesFetching : filesFetching;
+  const loadError = atSharedDriveList
+    ? sharedDrivesError
+      ? formatApiError(sharedDrivesError, "Could not load shared drives")
+      : null
+    : filesError
+      ? formatApiError(filesError, "Could not load Drive files")
+      : null;
+
+  const uploadTarget = {
+    folder_id: listFolderId,
+    drive_id: activeDriveId,
+  };
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2 px-4 pt-4 border-b border-[var(--card-border)] pb-3">
+        <button
+          type="button"
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            isSharedSection
+              ? "bg-[var(--primary)] text-white"
+              : "text-body-muted hover:bg-[var(--sidebar-hover)]"
+          }`}
+          onClick={() => switchSection("shared")}
+        >
+          <Users className="h-4 w-4" />
+          Shared drives
+        </button>
+        <button
+          type="button"
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            !isSharedSection
+              ? "bg-[var(--primary)] text-white"
+              : "text-body-muted hover:bg-[var(--sidebar-hover)]"
+          }`}
+          onClick={() => switchSection("my")}
+        >
+          <HardDrive className="h-4 w-4" />
+          My Drive
+        </button>
+      </div>
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-4">
         <div className="min-w-0">
           <p className="text-sm text-body-muted">
@@ -168,7 +237,7 @@ export function GoogleDriveBrowser() {
           </nav>
         </div>
         <div className="flex items-center gap-2">
-          {canWrite && (
+          {canWrite && !atSharedDriveList && (
             <>
               <Button
                 type="button"
@@ -206,7 +275,7 @@ export function GoogleDriveBrowser() {
                     for (const file of selected) {
                       await uploadFile.mutateAsync({
                         file,
-                        folder_id: currentFolderId,
+                        ...uploadTarget,
                       });
                     }
                     void refetchFiles();
@@ -225,7 +294,11 @@ export function GoogleDriveBrowser() {
             variant="outline"
             disabled={isFetching}
             onClick={() => {
-              void refetchFiles();
+              if (atSharedDriveList) {
+                void refetchSharedDrives();
+              } else {
+                void refetchFiles();
+              }
               void refetchStatus();
             }}
           >
@@ -258,15 +331,55 @@ export function GoogleDriveBrowser() {
           {uploadError}
         </p>
       )}
-      {canWrite && (
+      {canWrite && !atSharedDriveList && (
         <p className="mx-4 text-xs text-body-muted">
-          Upload and create folders in the current directory. If actions fail, disconnect
-          and reconnect Google Drive to grant full Drive access.
+          Upload and create folders in the current directory.
+          {isSharedSection
+            ? " Files are saved to this shared drive, not your personal My Drive."
+            : " Switch to Shared drives to save files to a team folder instead."}
         </p>
       )}
 
       <div className="border-t border-[var(--card-border)]">
-        {filesLoading ? (
+        {atSharedDriveList ? (
+          sharedDrivesLoading ? (
+            <div className="flex items-center justify-center gap-2 p-10 text-body-muted">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Loading shared drives…
+            </div>
+          ) : sharedDrives.length === 0 ? (
+            <p className="p-10 text-center text-body-muted text-sm">
+              No shared drives found. Ask your Google Workspace admin to add you to a
+              shared drive, or switch to My Drive.
+            </p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-[var(--surface-subtle)] border-b border-[var(--card-border)]">
+                <tr>
+                  <th className="text-left px-4 py-3 font-medium text-heading">Name</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--card-border)]">
+                {sharedDrives.map((drive) => (
+                  <tr key={drive.id} className="hover:bg-[var(--sidebar-hover)]">
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        className="flex items-center gap-2 text-left font-medium text-heading hover:text-[var(--primary)]"
+                        onClick={() =>
+                          setFolderStack([{ id: drive.id, name: drive.name }])
+                        }
+                      >
+                        <Users className="h-4 w-4 text-[var(--secondary)] shrink-0" />
+                        <span className="truncate">{drive.name}</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )
+        ) : filesLoading ? (
           <div className="flex items-center justify-center gap-2 p-10 text-body-muted">
             <Loader2 className="h-5 w-5 animate-spin" />
             Loading files…
@@ -426,7 +539,7 @@ export function GoogleDriveBrowser() {
             try {
               await createFolder.mutateAsync({
                 name,
-                folder_id: currentFolderId,
+                ...uploadTarget,
               });
               setFolderModalOpen(false);
               setNewFolderName("");
