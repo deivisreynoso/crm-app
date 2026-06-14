@@ -1,6 +1,22 @@
 {
-  "name": "ClickIn360 Onboarding B — Assets Reminders",
+  "name": "ClickIn360 Onboarding B \u2014 Assets Reminders",
   "nodes": [
+    {
+      "parameters": {
+        "content": "## Workflow B \u2014 Assets & Reminders\n\n**Trigger:** questionnaire.submitted\n\n**STEP 1** Sends confirmation email to customer.\n\n**STEP 2 (extend)** Add Wait nodes for Day 1 and Day 3 if questionnaire incomplete \u2014 query CRM tasks via future integration endpoint or Supabase.\n\n**STEP 3** Optional WhatsApp reminder using **WhatsApp account** credential.\n\n**STEP 4** Notify account owner via Mailgun to sales@clickin360.com.",
+        "height": 300,
+        "width": 500,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -600,
+        0
+      ],
+      "id": "3b0fef22-fa14-48e9-96dd-5a67dff82a3c",
+      "name": "INSTRUCTIONS: Onboarding B"
+    },
     {
       "parameters": {
         "httpMethod": "POST",
@@ -13,32 +29,56 @@
         0,
         0
       ],
-      "id": "c30ec6fa-b7b0-45ae-8bd4-eeb3466655c7",
-      "name": "CRM Event Webhook",
+      "id": "b5d833e5-bb9f-47eb-a6a8-92a3f3c0056c",
+      "name": "Onboarding B Webhook",
       "webhookId": "74d2a3eb-0e44-4595-9fe5-01faa0ebc66b"
     },
     {
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.CRM_BASE_URL }}/api/contacts/{{ $json.payload.contact_id }}/tasks",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": false,
-        "jsonBody": null,
-        "options": {}
+        "jsCode": "const root = $input.first().json;\nconst payload = root.payload || {};\nconst contact = payload.contact || {};\nconst locale = payload.locale === 'en' ? 'en' : 'es';\nconst crmBase = ($env.CRM_BASE_URL || 'https://www.clickin360.com').replace(/\\/$/, '');\nreturn [{ json: { ...root, contact, locale, contactEmail: contact.email, firstName: contact.first_name || 'there', feedbackUrl: contact.feedback_token ? `${crmBase}/feedback/${contact.feedback_token}` : null } }];"
       },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        400,
+        280,
         0
       ],
-      "id": "a9f34e3b-2f69-4a00-884b-5efd892be9ab",
-      "name": "CRM: List Tasks",
+      "id": "d4a1a1f7-9212-4dc6-9f4e-9c50e9f60b92",
+      "name": "Parse Payload"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst isEn = d.locale === 'en';\nreturn [{ json: {\n  toEmail: d.contactEmail,\n  subject: isEn ? 'We received your onboarding questionnaire' : 'Recibimos tu cuestionario de incorporaci\u00f3n',\n  text: isEn\n    ? `Hi ${d.firstName}, thank you for completing the onboarding questionnaire. Our team will review your answers and follow up shortly.`\n    : `Hola ${d.firstName}, gracias por completar el cuestionario de incorporaci\u00f3n. Nuestro equipo revisar\u00e1 tus respuestas y te contactar\u00e1 pronto.`,\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        0
+      ],
+      "id": "d6d133ae-00f7-4498-a2a0-c221ca0fc3ee",
+      "name": "Build Confirmation Email"
+    },
+    {
+      "parameters": {
+        "fromEmail": "no-reply@clickin360.com",
+        "toEmail": "={{ $json.toEmail }}",
+        "subject": "={{ $json.subject }}",
+        "text": "={{ $json.text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mailgun",
+      "typeVersion": 1,
+      "position": [
+        840,
+        0
+      ],
+      "id": "6ede849f-a787-4714-8017-da13ebca7b85",
+      "name": "Mailgun: Questionnaire Confirmation",
       "credentials": {
-        "httpHeaderAuth": {
-          "id": "avN9SN9QlpkztmyC",
-          "name": "CRM API"
+        "mailgunApi": {
+          "id": "686871dc-7fb6-4452-8499-05cb780996e0",
+          "name": "Mailgun"
         }
       },
       "continueOnFail": true
@@ -46,29 +86,74 @@
     {
       "parameters": {
         "fromEmail": "no-reply@clickin360.com",
-        "toEmail": "={{ $json.payload.contact.email }}",
-        "subject": "Welcome to ClickIn 360",
-        "text": "Your onboarding has started.",
+        "toEmail": "sales@clickin360.com",
+        "subject": "Onboarding questionnaire received",
+        "text": "={{ 'Contact ' + $('Parse Payload').item.json.contactEmail + ' submitted the onboarding questionnaire.' }}",
         "options": {}
       },
       "type": "n8n-nodes-base.mailgun",
       "typeVersion": 1,
       "position": [
-        800,
+        1120,
         0
       ],
-      "id": "964f3441-a86c-4278-819c-34760f1a715f",
-      "name": "Mailgun: Reminder",
+      "id": "f91010a7-3a26-4c5e-b16d-043dfd66109e",
+      "name": "Mailgun: Notify Owner",
       "credentials": {
         "mailgunApi": {
-          "id": "7a45d008-f0ae-4f40-835b-c5ff6bfa730a",
+          "id": "686871dc-7fb6-4452-8499-05cb780996e0",
           "name": "Mailgun"
         }
       },
       "continueOnFail": true
     }
   ],
-  "connections": {},
+  "connections": {
+    "Onboarding B Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Payload": {
+      "main": [
+        [
+          {
+            "node": "Build Confirmation Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Confirmation Email": {
+      "main": [
+        [
+          {
+            "node": "Mailgun: Questionnaire Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mailgun: Questionnaire Confirmation": {
+      "main": [
+        [
+          {
+            "node": "Mailgun: Notify Owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
   "pinData": {},
   "meta": {
     "templateCredsSetupCompleted": true

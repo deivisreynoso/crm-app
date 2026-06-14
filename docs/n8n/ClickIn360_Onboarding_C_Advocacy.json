@@ -1,6 +1,22 @@
 {
-  "name": "ClickIn360 Onboarding C — Advocacy",
+  "name": "ClickIn360 Onboarding C \u2014 Advocacy",
   "nodes": [
+    {
+      "parameters": {
+        "content": "## Workflow C \u2014 Advocacy\n\n**Trigger:** onboarding.complete\n\n**NOT the same as CRM 'Request review' button:**\n- CRM button = manual, uses Gmail/template, logs activity\n- This workflow = automatic after onboarding, uses Mailgun + GOOGLE_REVIEWS_URL env\n\n**STEP 1** Set GOOGLE_REVIEWS_URL in N8N = same link as CRM Settings \u2192 Google review invitations.\n\n**STEP 2** IF contact opted out (review_request_opt_out) \u2192 stop.\n\n**STEP 3** Send bilingual Google review email.\n\n**STEP 4** Include /feedback/{token} link if token exists.\n\n**STEP 5** PATCH contact tag 'onboarded' via CRM integration API.",
+        "height": 380,
+        "width": 540,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        -80
+      ],
+      "id": "8ea5f535-b840-4162-a699-59bc563bc857",
+      "name": "INSTRUCTIONS: Advocacy vs CRM Review"
+    },
     {
       "parameters": {
         "httpMethod": "POST",
@@ -13,39 +29,179 @@
         0,
         0
       ],
-      "id": "4ee3de39-479b-4dc0-96f8-949f1be44933",
-      "name": "CRM Event Webhook",
+      "id": "3399adb7-c72d-45f5-a9d4-19ba76cf53a3",
+      "name": "Onboarding C Webhook",
       "webhookId": "ae1e67a5-a991-40e2-ae74-9ab817f73d57"
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.CRM_BASE_URL }}/api/contacts/{{ $json.payload.contact_id }}/review-request",
+        "jsCode": "const root = $input.first().json;\nconst payload = root.payload || {};\nconst contact = payload.contact || {};\nconst locale = contact.preferred_language === 'en' ? 'en' : 'es';\nconst reviewUrl = $env.GOOGLE_REVIEWS_URL || 'https://share.google/CZL2ZHAKEqVgdIEuJ';\nconst crmBase = ($env.CRM_BASE_URL || 'https://www.clickin360.com').replace(/\\/$/, '');\nconst feedbackUrl = contact.feedback_token ? `${crmBase}/feedback/${contact.feedback_token}` : null;\nreturn [{ json: { contact, locale, reviewUrl, feedbackUrl, contactEmail: contact.email, firstName: contact.first_name || 'there', contactId: contact.id, optOut: contact.review_request_opt_out === true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        0
+      ],
+      "id": "9ed10704-214b-4fac-90ae-df345eef142b",
+      "name": "Parse Advocacy Payload"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e595fe70-f9a2-466e-a19f-3d276441ebba",
+              "leftValue": "={{ $json.optOut }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        560,
+        0
+      ],
+      "id": "4bfcea25-565f-4474-a1e3-3d49d55a976a",
+      "name": "IF Opted Out?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst isEn = d.locale === 'en';\nconst subject = isEn ? `Would you leave us a Google review, ${d.firstName}?` : `\u00bfNos dejas una rese\u00f1a en Google, ${d.firstName}?`;\nconst text = isEn\n  ? `Hi ${d.firstName},\\n\\nThank you for completing onboarding with ClickIn 360. If you had a good experience, a quick Google review would mean a lot:\\n\\n${d.reviewUrl}\\n\\nIt only takes a minute. Thank you!${d.feedbackUrl ? `\\n\\nYou can also share private feedback here: ${d.feedbackUrl}` : ''}`\n  : `Hola ${d.firstName},\\n\\nGracias por completar la incorporaci\u00f3n con ClickIn 360. Si tuviste una buena experiencia, nos ayudar\u00eda mucho una rese\u00f1a breve en Google:\\n\\n${d.reviewUrl}\\n\\nSolo toma un minuto. \u00a1Gracias!${d.feedbackUrl ? `\\n\\nTambi\u00e9n puedes compartir comentarios privados aqu\u00ed: ${d.feedbackUrl}` : ''}`;\nreturn [{ json: { ...d, subject, text, toEmail: d.contactEmail } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        0
+      ],
+      "id": "36ba1135-9a3e-4206-86e0-49ba62175736",
+      "name": "Build Google Review Email"
+    },
+    {
+      "parameters": {
+        "fromEmail": "no-reply@clickin360.com",
+        "toEmail": "={{ $json.toEmail }}",
+        "subject": "={{ $json.subject }}",
+        "text": "={{ $json.text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mailgun",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        -40
+      ],
+      "id": "b15a5ef6-8eb0-483c-986c-5bc7a97268ae",
+      "name": "Mailgun: Google Review Request",
+      "credentials": {
+        "mailgunApi": {
+          "id": "686871dc-7fb6-4452-8499-05cb780996e0",
+          "name": "Mailgun"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.CRM_BASE_URL }}/api/integrations/contacts/{{ $json.contactId }}",
+        "options": {},
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({}) }}",
-        "options": {}
+        "jsonBody": "={{ JSON.stringify({ tags: 'onboarded' }) }}"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        400,
+        1120,
         0
       ],
-      "id": "a307d1f0-39bd-4cce-a15e-88ec0af1480a",
-      "name": "CRM: Send Review Request",
+      "id": "7a93324e-8089-4c19-b2cb-8258741d2524",
+      "name": "CRM: Tag Contact Onboarded",
+      "continueOnFail": true,
       "credentials": {
         "httpHeaderAuth": {
           "id": "avN9SN9QlpkztmyC",
           "name": "CRM API"
         }
-      },
-      "continueOnFail": true
+      }
     }
   ],
-  "connections": {},
+  "connections": {
+    "Onboarding C Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Advocacy Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Advocacy Payload": {
+      "main": [
+        [
+          {
+            "node": "IF Opted Out?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Opted Out?": {
+      "main": [
+        [
+          {
+            "node": "Build Google Review Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Build Google Review Email": {
+      "main": [
+        [
+          {
+            "node": "Mailgun: Google Review Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mailgun: Google Review Request": {
+      "main": [
+        [
+          {
+            "node": "CRM: Tag Contact Onboarded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
   "pinData": {},
   "meta": {
     "templateCredsSetupCompleted": true

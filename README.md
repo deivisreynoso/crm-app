@@ -8,6 +8,7 @@ ClickIn 360 — marketing site + CRM (Next.js, Supabase, Docker on VPS).
 - [Audit / hardening tracker](./docs/AUDIT-FIX-TRACKER.md)
 - [WhatsApp + Webchat inbox](./docs/WHATSAPP-WEBCHAT-INBOX-PROPOSAL.md) — CRM inbox shipped; Meta webhook stays in N8N
 - [N8N conversation flow updates](./docs/n8n/conversations-inbox-flow-updates.md) — session-state and sync nodes
+- [Automations setup guide](./docs/n8n/automations-setup-guide.md) — CRM outbound webhooks, router, onboarding & appointment workflows
 - [Service ticket CID proposal](./docs/SERVICE-TICKET-CID-PROPOSAL.md) (implemented Sprint 3)
 
 **Deploy (VPS):** pull `main`, then run `./scripts/deploy-vps.sh` (uses Docker layer cache; ~2–8 min for code-only changes). Use `./scripts/deploy-vps.sh --no-cache` only when dependencies or Dockerfile change (~15–25 min on a small VPS).

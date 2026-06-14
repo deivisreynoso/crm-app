@@ -3,6 +3,22 @@
   "nodes": [
     {
       "parameters": {
+        "content": "## Appointment Reminders\n\n**Triggers:** appointment.created, appointment.updated, appointment.cancelled\n\n**STEP 1** cancelled \u2192 mark schedule row cancelled (Wait nodes check status).\n\n**STEP 2** created/updated \u2192 upsert appointment_reminder_schedules in Supabase.\n\n**STEP 3** Use **Wait** nodes until 24h and 1h before start (NOT Sleep).\n\n**STEP 4** Skip reminders already in the past.\n\n**STEP 5** On update: cancel old schedule before creating new (extend with Supabase update node).\n\n**STEP 6** WhatsApp: add node after email using WhatsApp account credential.",
+        "height": 360,
+        "width": 540,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        -120
+      ],
+      "id": "f42fa3c6-9f79-4256-9067-180b2307284b",
+      "name": "INSTRUCTIONS: Appointment Reminders"
+    },
+    {
+      "parameters": {
         "httpMethod": "POST",
         "path": "a9b459bc-7c58-4474-b6e2-82bb13172a89",
         "options": {}
@@ -13,62 +29,388 @@
         0,
         0
       ],
-      "id": "a7a8889b-dcee-4aca-80ea-5307a6bfa38f",
-      "name": "CRM Appointment Webhook",
+      "id": "d80eb283-08eb-4c56-a65a-61d3ffe3ef22",
+      "name": "Appointment Webhook",
       "webhookId": "a9b459bc-7c58-4474-b6e2-82bb13172a89"
     },
     {
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.CRM_BASE_URL }}/api/calendar/events/{{ $json.payload.calendar_event_id }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": false,
-        "jsonBody": null,
-        "options": {}
+        "jsCode": "const root = $input.first().json;\nconst event = root.event;\nconst payload = root.payload || {};\nconst ev = payload.calendar_event || {};\nconst start = ev.start_time || ev.start_at;\nconst contact = ev.contact || {};\nconst locale = contact.preferred_language === 'en' ? 'en' : 'es';\nreturn [{ json: {\n  event, workspace_owner_id: root.workspace_owner_id,\n  event_id: String(ev.id || payload.calendar_event_id),\n  contact_id: String(ev.contact_id || contact.id || ''),\n  start_time: start,\n  meet_link: ev.meet_link || ev.google_meet_link || null,\n  location_type: ev.location_type || 'other',\n  location_details: ev.location || ev.location_details || null,\n  contact_email: contact.email || ev.contact_email,\n  contact_phone: contact.phone || ev.contact_phone,\n  contact_name: [contact.first_name, contact.last_name].filter(Boolean).join(' ') || ev.contact_name || 'there',\n  locale,\n}}];"
       },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        400,
+        280,
         0
       ],
-      "id": "60fdf4be-0b1d-4b80-b5bc-66d7958c35bf",
-      "name": "CRM: Load Event",
+      "id": "0c66c7a5-d86d-46cf-a1ea-ef0b72689400",
+      "name": "Parse Appointment Event"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "852b1a45-e326-41e4-be3f-c05a1adc9350",
+              "leftValue": "={{ $json.event }}",
+              "rightValue": "appointment.cancelled",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        560,
+        0
+      ],
+      "id": "965552d1-7d97-4d81-b787-0e9f631f0f90",
+      "name": "IF Cancelled?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nreturn [{ json: { event_id: d.event_id, status: 'cancelled', updated_at: new Date().toISOString() } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        120
+      ],
+      "id": "51646bfd-67e2-4211-8d67-58d2e4f3d2ef",
+      "name": "Mark Reminders Cancelled"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst start = new Date(d.start_time);\nconst now = new Date();\nconst h24 = new Date(start.getTime() - 24*60*60*1000);\nconst h1 = new Date(start.getTime() - 60*60*1000);\nconst skip24 = h24 <= now;\nconst skip1 = h1 <= now;\nreturn [{ json: { ...d, reminder_24h_at: h24.toISOString(), reminder_1h_at: h1.toISOString(), skip24, skip1, status: (skip24 && skip1) ? 'skipped' : 'scheduled' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        -80
+      ],
+      "id": "558e3c8f-fc88-4351-b964-3e7b358d9a36",
+      "name": "Calculate Reminder Times"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "tableId": "appointment_reminder_schedules",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "event_id",
+              "fieldValue": "={{ $json.event_id }}"
+            },
+            {
+              "fieldId": "contact_id",
+              "fieldValue": "={{ $json.contact_id }}"
+            },
+            {
+              "fieldId": "workspace_owner_id",
+              "fieldValue": "={{ String($json.workspace_owner_id) }}"
+            },
+            {
+              "fieldId": "start_time",
+              "fieldValue": "={{ $json.start_time }}"
+            },
+            {
+              "fieldId": "reminder_24h_at",
+              "fieldValue": "={{ $json.reminder_24h_at }}"
+            },
+            {
+              "fieldId": "reminder_1h_at",
+              "fieldValue": "={{ $json.reminder_1h_at }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.status }}"
+            },
+            {
+              "fieldId": "locale",
+              "fieldValue": "={{ $json.locale }}"
+            },
+            {
+              "fieldId": "meet_link",
+              "fieldValue": "={{ $json.meet_link }}"
+            },
+            {
+              "fieldId": "location_type",
+              "fieldValue": "={{ $json.location_type }}"
+            },
+            {
+              "fieldId": "location_details",
+              "fieldValue": "={{ $json.location_details }}"
+            },
+            {
+              "fieldId": "contact_email",
+              "fieldValue": "={{ $json.contact_email }}"
+            },
+            {
+              "fieldId": "contact_phone",
+              "fieldValue": "={{ $json.contact_phone }}"
+            },
+            {
+              "fieldId": "contact_name",
+              "fieldValue": "={{ $json.contact_name }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        -80
+      ],
+      "id": "f7ec2637-d1eb-4c9f-9f90-e4d7cc046b15",
+      "name": "Supabase: Upsert Schedule",
       "credentials": {
-        "httpHeaderAuth": {
-          "id": "avN9SN9QlpkztmyC",
-          "name": "CRM API"
+        "supabaseApi": {
+          "id": "RMU1A9mNhAl6E751",
+          "name": "Supabase account"
         }
       },
       "continueOnFail": true
     },
     {
       "parameters": {
+        "resume": "specificTime",
+        "dateTime": "={{ $('Calculate Reminder Times').item.json.reminder_24h_at }}"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1400,
+        -80
+      ],
+      "id": "eea3bfc3-8e04-407f-ab00-16b003bc42d6",
+      "name": "Wait Until 24h Before",
+      "webhookId": "4c503ae6-0adc-4a3f-9415-46f326aa41e7"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst isEn = d.locale === 'en';\nconst subject = isEn ? 'Your appointment tomorrow with ClickIn360' : 'Tu cita de ma\u00f1ana con ClickIn360';\nlet text = isEn ? `Hi ${d.contact_name}, reminder: appointment tomorrow with ClickIn360.` : `Hola ${d.contact_name}, recordatorio: cita ma\u00f1ana con ClickIn360.`;\nif (d.location_type === 'google_meet' && d.meet_link) text += `\\n\\nJoin: ${d.meet_link}`;\nelse if (d.location_details) text += `\\n\\nLocation: ${d.location_details}`;\nreturn [{ json: { toEmail: d.contact_email, subject, text } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        -120
+      ],
+      "id": "e293d296-a060-44a2-84f1-ff92f07b6945",
+      "name": "Build 24h Reminder"
+    },
+    {
+      "parameters": {
         "fromEmail": "no-reply@clickin360.com",
-        "toEmail": "={{ $json.payload.contact.email }}",
-        "subject": "Welcome to ClickIn 360",
-        "text": "Your onboarding has started.",
+        "toEmail": "={{ $json.toEmail }}",
+        "subject": "={{ $json.subject }}",
+        "text": "={{ $json.text }}",
         "options": {}
       },
       "type": "n8n-nodes-base.mailgun",
       "typeVersion": 1,
       "position": [
-        800,
-        0
+        1680,
+        -80
       ],
-      "id": "3f2de7f5-32be-42dd-9b37-8b8e17cec8b0",
-      "name": "Mailgun: Appointment Reminder",
+      "id": "d03ad944-1f5f-471e-8d94-a0dd940ffd9a",
+      "name": "Mailgun: 24h Reminder",
       "credentials": {
         "mailgunApi": {
-          "id": "d22dd50a-d3ab-482b-be52-c7b443b2d0c3",
+          "id": "686871dc-7fb6-4452-8499-05cb780996e0",
+          "name": "Mailgun"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "resume": "specificTime",
+        "dateTime": "={{ $('Calculate Reminder Times').item.json.reminder_1h_at }}"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1960,
+        -80
+      ],
+      "id": "07e1f6de-2c78-4f22-be49-cef6fbcca9b5",
+      "name": "Wait Until 1h Before",
+      "webhookId": "fd06a505-e5ea-441e-90de-db703cb853c2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Calculate Reminder Times').first().json;\nconst isEn = d.locale === 'en';\nconst subject = isEn ? 'Your ClickIn360 call is in 1 hour' : 'Tu llamada con ClickIn360 es en 1 hora';\nlet text = isEn ? `Hi ${d.contact_name}, your call with ClickIn360 is in 1 hour.` : `Hola ${d.contact_name}, tu llamada con ClickIn360 es en 1 hora.`;\nif (d.meet_link) text += ` ${d.meet_link}`;\nreturn [{ json: { toEmail: d.contact_email, subject, text } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        -80
+      ],
+      "id": "b1f5d536-1d82-422e-bdf2-22794ab13192",
+      "name": "Build 1h Reminder"
+    },
+    {
+      "parameters": {
+        "fromEmail": "no-reply@clickin360.com",
+        "toEmail": "={{ $json.toEmail }}",
+        "subject": "={{ $json.subject }}",
+        "text": "={{ $json.text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mailgun",
+      "typeVersion": 1,
+      "position": [
+        2520,
+        -80
+      ],
+      "id": "7c33d22a-9130-4aa8-941c-ba192c27e29e",
+      "name": "Mailgun: 1h Reminder",
+      "credentials": {
+        "mailgunApi": {
+          "id": "686871dc-7fb6-4452-8499-05cb780996e0",
           "name": "Mailgun"
         }
       },
       "continueOnFail": true
     }
   ],
-  "connections": {},
+  "connections": {
+    "Appointment Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Appointment Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Appointment Event": {
+      "main": [
+        [
+          {
+            "node": "IF Cancelled?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Cancelled?": {
+      "main": [
+        [
+          {
+            "node": "Mark Reminders Cancelled",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Calculate Reminder Times",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Reminder Times": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Upsert Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Upsert Schedule": {
+      "main": [
+        [
+          {
+            "node": "Wait Until 24h Before",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Until 24h Before": {
+      "main": [
+        [
+          {
+            "node": "Build 24h Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build 24h Reminder": {
+      "main": [
+        [
+          {
+            "node": "Mailgun: 24h Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mailgun: 24h Reminder": {
+      "main": [
+        [
+          {
+            "node": "Wait Until 1h Before",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Until 1h Before": {
+      "main": [
+        [
+          {
+            "node": "Build 1h Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build 1h Reminder": {
+      "main": [
+        [
+          {
+            "node": "Mailgun: 1h Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
   "pinData": {},
   "meta": {
     "templateCredsSetupCompleted": true

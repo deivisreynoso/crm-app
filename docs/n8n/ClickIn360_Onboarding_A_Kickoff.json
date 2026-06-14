@@ -1,6 +1,22 @@
 {
-  "name": "ClickIn360 Onboarding A — Kickoff",
+  "name": "ClickIn360 Onboarding A \u2014 Kickoff",
   "nodes": [
+    {
+      "parameters": {
+        "content": "## Workflow A \u2014 Kickoff\n\n**Triggers:** quote.accepted, invoice.paid, onboarding.manual_start\n\n**STEP 1** quote.accepted \u2192 records state in Supabase (waits for payment).\n\n**STEP 2** invoice.paid \u2192 if no prior run, sends welcome email with onboarding + booking links.\n\n**STEP 3** manual_start \u2192 skips gate, sends welcome immediately.\n\n**STEP 4** Create `onboarding_runs` table in ClickIn360 Supabase (see automations-setup-guide.md).\n\n**STEP 5** Ensure contact has onboarding_token (CRM: Start onboarding button generates it).",
+        "height": 340,
+        "width": 500,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -600,
+        -100
+      ],
+      "id": "ac1e0aef-ea5d-46a0-a9a0-e1f55548d03d",
+      "name": "INSTRUCTIONS: Onboarding A"
+    },
     {
       "parameters": {
         "httpMethod": "POST",
@@ -13,52 +29,256 @@
         0,
         0
       ],
-      "id": "c30614ca-1ab7-47b2-9fc9-77663a4a7f5e",
-      "name": "CRM Event Webhook",
+      "id": "d0b22edf-4b36-4ef5-9f31-f0742e3b4492",
+      "name": "Onboarding A Webhook",
       "webhookId": "ad82f928-4a37-4c77-8384-0613a10f86e8"
     },
     {
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.CRM_BASE_URL }}/api/contacts/{{ $json.payload.document.contact_id }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": false,
-        "jsonBody": null,
-        "options": {}
+        "jsCode": "const root = $input.first().json;\nconst event = root.event;\nconst payload = root.payload || {};\nconst document = payload.document || {};\nconst invoice = payload.invoice || {};\nconst contact = payload.contact || document.contact || invoice.contact || {};\nconst contactId = payload.contact_id || contact.id || document.contact_id || invoice.contact_id;\nconst documentId = payload.document_id || document.id || invoice.quote_id || null;\nconst workspaceOwnerId = root.workspace_owner_id;\nconst idempotencyKey = documentId ? `${contactId}:${documentId}` : `${contactId}:no-quote`;\nconst crmBase = ($env.CRM_BASE_URL || 'https://www.clickin360.com').replace(/\\/$/, '');\nconst onboardingToken = payload.onboarding_token || contact.onboarding_token;\nconst onboardingUrl = onboardingToken ? `${crmBase}/onboarding/${onboardingToken}` : null;\nconst locale = contact.preferred_language === 'en' ? 'en' : 'es';\nreturn [{ json: { event, payload, document, invoice, contact, contactId, documentId, workspaceOwnerId, idempotencyKey, onboardingUrl, locale, contactEmail: contact.email, firstName: contact.first_name || 'there' } }];"
       },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        400,
+        280,
         0
       ],
-      "id": "caa64591-5ff3-40da-a5ef-bf9ceeb714f6",
-      "name": "CRM: Fetch Contact",
+      "id": "45712079-871c-416a-be5b-f94a2257d744",
+      "name": "Parse CRM Payload"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nlet action = 'stop';\nlet reason = '';\n\nif (d.event === 'onboarding.manual_start') {\n  action = 'start';\n  reason = 'manual_override';\n} else if (d.event === 'quote.accepted') {\n  action = 'record_quote';\n  reason = 'quote_accepted_pending_invoice';\n} else if (d.event === 'invoice.paid') {\n  const quoteId = d.invoice?.quote_id || d.documentId;\n  if (!quoteId) {\n    action = 'start';\n    reason = 'invoice_paid_no_quote';\n  } else {\n    action = 'start';\n    reason = 'invoice_paid_with_quote';\n  }\n}\n\nreturn [{ json: { ...d, action, reason } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        0
+      ],
+      "id": "7188377e-56fa-47fc-9d5d-1307224ef006",
+      "name": "Gate: Should Start Onboarding?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e28cd99c-627b-403e-b06d-9ac9eaeef934",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "record_quote",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        840,
+        200
+      ],
+      "id": "e0d6d9ce-803d-4052-a8d4-a6706d6ed9da",
+      "name": "IF Record Quote Accepted?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Gate: Should Start Onboarding?').first().json;\nreturn [{ json: {\n  idempotency_key: d.idempotencyKey,\n  contact_id: String(d.contactId),\n  document_id: d.documentId ? String(d.documentId) : null,\n  workspace_owner_id: String(d.workspaceOwnerId),\n  status: 'quote_accepted',\n  quote_accepted_at: new Date().toISOString(),\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        200
+      ],
+      "id": "85784218-9bb6-4f91-bf68-9632d2f1f555",
+      "name": "Build Quote Accepted Record"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "tableId": "onboarding_runs",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "idempotency_key",
+              "fieldValue": "={{ $json.idempotency_key }}"
+            },
+            {
+              "fieldId": "contact_id",
+              "fieldValue": "={{ $json.contact_id }}"
+            },
+            {
+              "fieldId": "document_id",
+              "fieldValue": "={{ $json.document_id }}"
+            },
+            {
+              "fieldId": "workspace_owner_id",
+              "fieldValue": "={{ $json.workspace_owner_id }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.status }}"
+            },
+            {
+              "fieldId": "quote_accepted_at",
+              "fieldValue": "={{ $json.quote_accepted_at }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1400,
+        200
+      ],
+      "id": "fe537b95-168d-4a69-8071-6f76e9e15013",
+      "name": "Supabase: Upsert Quote Accepted",
       "credentials": {
-        "httpHeaderAuth": {
-          "id": "avN9SN9QlpkztmyC",
-          "name": "CRM API"
+        "supabaseApi": {
+          "id": "RMU1A9mNhAl6E751",
+          "name": "Supabase account"
         }
       },
       "continueOnFail": true
     },
     {
       "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "88b05fcd-f795-4754-aa27-c4fef1102db7",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "start",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        840,
+        0
+      ],
+      "id": "47f777a1-5dc9-42dd-9fbf-8333ede9a70f",
+      "name": "IF Start Kickoff?"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "onboarding_runs",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "idempotency_key",
+              "keyValue": "={{ $json.idempotencyKey }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "0d292aae-a3cd-4c02-a966-2159a1b9804a",
+      "name": "Supabase: Check Idempotency",
+      "credentials": {
+        "supabaseApi": {
+          "id": "RMU1A9mNhAl6E751",
+          "name": "Supabase account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eeefe7b4-c350-4d05-afb4-7ef5fa9ca359",
+              "leftValue": "={{ $json.length }}",
+              "rightValue": "0",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1400,
+        0
+      ],
+      "id": "415e7478-bde9-4bbe-95f6-5bb690fcd03b",
+      "name": "IF New Run?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Gate: Should Start Onboarding?').first().json;\nconst booking = ($env.BOOKING_OFFERS_URL || ($env.CRM_BASE_URL + '/api/leads/booking-offers?lang=es'));\nconst isEn = d.locale === 'en';\nconst subject = isEn ? 'Welcome to ClickIn 360 \u2014 next steps' : 'Bienvenido a ClickIn 360 \u2014 siguientes pasos';\nconst text = isEn\n  ? `Hi ${d.firstName},\\n\\nWelcome to ClickIn 360! Your onboarding has started.\\n\\n1) Complete the questionnaire: ${d.onboardingUrl || '(link will be sent separately)'}\\n2) Book your kickoff call: ${booking}\\n\\nThank you!`\n  : `Hola ${d.firstName},\\n\\n\u00a1Bienvenido a ClickIn 360! Tu incorporaci\u00f3n ha comenzado.\\n\\n1) Completa el cuestionario: ${d.onboardingUrl || '(enlace por separado)'}\\n2) Agenda tu llamada de inicio: ${booking}\\n\\n\u00a1Gracias!`;\nreturn [{ json: { ...d, subject, text, toEmail: d.contactEmail } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        0
+      ],
+      "id": "3fc23f21-5b69-42da-a545-1dab56202421",
+      "name": "Build Welcome Email"
+    },
+    {
+      "parameters": {
         "fromEmail": "no-reply@clickin360.com",
-        "toEmail": "={{ $json.payload.contact.email }}",
-        "subject": "Welcome to ClickIn 360",
-        "text": "Your onboarding has started.",
+        "toEmail": "={{ $json.toEmail }}",
+        "subject": "={{ $json.subject }}",
+        "text": "={{ $json.text }}",
         "options": {}
       },
       "type": "n8n-nodes-base.mailgun",
       "typeVersion": 1,
       "position": [
-        800,
+        1960,
         0
       ],
-      "id": "c8528904-074b-4530-8210-0bd246e5ec6d",
-      "name": "Mailgun: Welcome Email",
+      "id": "c10332f4-a067-427e-841c-579a3e22e509",
+      "name": "Mailgun: Welcome + Kickoff",
       "credentials": {
         "mailgunApi": {
           "id": "686871dc-7fb6-4452-8499-05cb780996e0",
@@ -66,25 +286,171 @@
         }
       },
       "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "tableId": "onboarding_runs",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "idempotency_key",
+              "fieldValue": "={{ $('Parse CRM Payload').item.json.idempotencyKey }}"
+            },
+            {
+              "fieldId": "contact_id",
+              "fieldValue": "={{ String($('Parse CRM Payload').item.json.contactId) }}"
+            },
+            {
+              "fieldId": "document_id",
+              "fieldValue": "={{ $('Parse CRM Payload').item.json.documentId ? String($('Parse CRM Payload').item.json.documentId) : null }}"
+            },
+            {
+              "fieldId": "workspace_owner_id",
+              "fieldValue": "={{ String($('Parse CRM Payload').item.json.workspaceOwnerId) }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "started"
+            },
+            {
+              "fieldId": "started_at",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2240,
+        0
+      ],
+      "id": "29f5a5fe-f419-41d5-9d10-970adefc2fb8",
+      "name": "Supabase: Mark Started",
+      "credentials": {
+        "supabaseApi": {
+          "id": "RMU1A9mNhAl6E751",
+          "name": "Supabase account"
+        }
+      },
+      "continueOnFail": true
     }
   ],
   "connections": {
-    "CRM Event Webhook": {
+    "Onboarding A Webhook": {
       "main": [
         [
           {
-            "node": "CRM: Fetch Contact",
+            "node": "Parse CRM Payload",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "CRM: Fetch Contact": {
+    "Parse CRM Payload": {
       "main": [
         [
           {
-            "node": "Mailgun: Welcome Email",
+            "node": "Gate: Should Start Onboarding?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate: Should Start Onboarding?": {
+      "main": [
+        [
+          {
+            "node": "IF Start Kickoff?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF Record Quote Accepted?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Record Quote Accepted?": {
+      "main": [
+        [
+          {
+            "node": "Build Quote Accepted Record",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Build Quote Accepted Record": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Upsert Quote Accepted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Start Kickoff?": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Check Idempotency",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Supabase: Check Idempotency": {
+      "main": [
+        [
+          {
+            "node": "IF New Run?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF New Run?": {
+      "main": [
+        [
+          {
+            "node": "Build Welcome Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Build Welcome Email": {
+      "main": [
+        [
+          {
+            "node": "Mailgun: Welcome + Kickoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mailgun: Welcome + Kickoff": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Mark Started",
             "type": "main",
             "index": 0
           }
