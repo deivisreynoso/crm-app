@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { ensureContactOnboardingTokens } from "@/lib/onboarding/start";
 import { fireWebhook } from "@/lib/webhooks/outbound";
 
 export async function notifyInvoicePaid(
@@ -9,16 +10,40 @@ export async function notifyInvoicePaid(
 ): Promise<void> {
   const { data: invoice } = await supabase
     .from("invoices")
-    .select("*, contact:contacts(id, first_name, last_name, email, phone)")
+    .select(
+      "*, contact:contacts(id, first_name, last_name, email, phone, preferred_language, onboarding_token)"
+    )
     .eq("id", invoiceId)
     .eq("user_id", workspaceOwnerId)
     .maybeSingle();
 
   if (!invoice) return;
 
+  const contactId =
+    typeof invoice.contact_id === "string" ? invoice.contact_id : null;
+  const isQuoteInvoice =
+    invoice.invoice_type === "quote" || Boolean(invoice.quote_id);
+
+  let onboardingToken: string | null = null;
+
+  if (contactId && isQuoteInvoice) {
+    const tokens = await ensureContactOnboardingTokens(
+      supabase,
+      contactId,
+      workspaceOwnerId
+    );
+    onboardingToken = tokens.onboarding_token;
+
+    const nested = invoice.contact as Record<string, unknown> | null;
+    if (nested && typeof nested === "object") {
+      nested.onboarding_token = onboardingToken;
+    }
+  }
+
   void fireWebhook(supabase, workspaceOwnerId, "invoice.paid", {
     invoice_id: invoiceId,
     invoice,
+    ...(onboardingToken ? { onboarding_token: onboardingToken } : {}),
     ...extra,
   });
 }

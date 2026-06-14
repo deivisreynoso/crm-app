@@ -62,12 +62,16 @@ export async function patchContactForIntegration(
     }
   }
 
+  const { onboarding_token, feedback_token, ...contactFields } = parsed.data;
+
   const baseUpdates = {
     ...(await buildContactPatchUpdates(
       supabase,
       workspaceOwnerId,
-      parsed.data
+      contactFields
     )),
+    ...(onboarding_token !== undefined ? { onboarding_token } : {}),
+    ...(feedback_token !== undefined ? { feedback_token } : {}),
     updated_at: new Date().toISOString(),
   };
 

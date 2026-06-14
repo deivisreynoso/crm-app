@@ -88,6 +88,8 @@ export const contactPatchSchema = z.object({
   company_id: z.string().uuid().optional().or(z.literal('')),
   custom_fields: customFieldValuesSchema,
   review_request_opt_out: z.boolean().optional(),
+  onboarding_token: z.string().min(16).optional(),
+  feedback_token: z.string().min(16).optional(),
 });
 
 export const noteSchema = z.object({
