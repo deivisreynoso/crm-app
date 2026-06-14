@@ -10,12 +10,13 @@ export type SyncConversationInput = {
   channel: ConversationChannel;
   phone_number?: string | null;
   name?: string | null;
-  inbound_message: string;
+  inbound_message?: string;
   ai_reply?: string | null;
   next_action: string;
   qualification?: ConversationQualification;
   contact_id?: string | null;
   human_review_requested?: boolean;
+  outbound_only?: boolean;
 };
 
 function mergeQualification(
@@ -142,13 +143,15 @@ export async function syncConversationTurn(
     metadata: Record<string, unknown>;
   }> = [];
 
-  messageRows.push({
-    conversation_id: conversationId,
-    direction: "inbound",
-    sender_type: "visitor",
-    body: input.inbound_message,
-    metadata: {},
-  });
+  if (!input.outbound_only && input.inbound_message) {
+    messageRows.push({
+      conversation_id: conversationId,
+      direction: "inbound",
+      sender_type: "visitor",
+      body: input.inbound_message,
+      metadata: {},
+    });
+  }
 
   if (input.ai_reply?.trim()) {
     messageRows.push({
@@ -160,12 +163,14 @@ export async function syncConversationTurn(
     });
   }
 
-  const { error: msgError } = await supabase
-    .from("conversation_messages")
-    .insert(messageRows);
+  if (messageRows.length > 0) {
+    const { error: msgError } = await supabase
+      .from("conversation_messages")
+      .insert(messageRows);
 
-  if (msgError) {
-    throw new Error(msgError.message);
+    if (msgError) {
+      throw new Error(msgError.message);
+    }
   }
 
   const wasReviewRequested = Boolean(existing?.human_review_requested);

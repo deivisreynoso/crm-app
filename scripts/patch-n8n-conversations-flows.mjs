@@ -135,6 +135,7 @@ function patchWhatsappNewVersion() {
   const file = "ClickIn360 Whatsapp Flow New Version.json";
   const wf = load(file);
   applySessionLookupFix(wf, "Normalize WABA Payload", "whatsapp-new");
+  applyWhatsappOutboundSyncFix(wf, "whatsapp-new");
   const out = save(file, wf);
   console.log("WhatsApp New Version patched:", out, "nodes:", wf.nodes.length);
 }
@@ -262,6 +263,94 @@ function crmFormatSlotsJs() {
   return `// Node: "Format Available Slots" — CRM booking-offers response\n\nconst crm = $json;\nconst previousState = $('State Manager').first().json;\n\nreturn [{\n  json: {\n    ...previousState,\n    next_action: crm.next_action || 'book_call',\n    available_slots: crm.available_slots || [],\n    selected_slot: null,\n    selected_slot_index: null,\n    latest_ai_response: crm.message || previousState.latest_ai_response\n  }\n}];`;
 }
 
+function syncTurnAiReplyExpression() {
+  return "(function(){ const a=$('State Manager').first().json; return ['offer_booking','reschedule','confirm_booking'].includes(a.next_action)?null:a.latest_ai_response; })()";
+}
+
+function qualificationFromStateManager(prefix = "$('State Manager').first().json") {
+  return `{ name: ${prefix}.name, email: ${prefix}.email, platform: ${prefix}.platform, channels: ${prefix}.communication_channels || [], friction_area: ${prefix}.friction_area, signals: ${prefix}.signals || [], temperature: ${prefix}.temperature, summary: ${prefix}.summary, message_volume: ${prefix}.message_volume, main_customer_questions: ${prefix}.main_customer_questions || [] }`;
+}
+
+function whatsappSyncTurnJsonBody(contactIdExpr = "null") {
+  const qual = qualificationFromStateManager();
+  const aiReply = syncTurnAiReplyExpression();
+  return `={{ JSON.stringify({ session_id: $('State Manager').first().json.session_id, channel: 'whatsapp', phone_number: $('State Manager').first().json.phone_number, name: $('State Manager').first().json.name, inbound_message: $('Normalize WABA Payload').first().json.message, ai_reply: ${aiReply}, next_action: $('State Manager').first().json.next_action, qualification: ${qual}, contact_id: ${contactIdExpr}, human_review_requested: $('State Manager').first().json.next_action === 'human_review' }) }}`;
+}
+
+function bookingConfirmationAiReplyExpression() {
+  return `(function(){
+  const sm = $('State Manager').first().json;
+  const booked = $('Update Session as Booked').item.json;
+  let text = sm.latest_ai_response || "Listo, tu llamada quedó agendada. ¡Nos vemos pronto!";
+  if (booked.selected_slot) {
+    text += "\\n\\n📅 " + new Intl.DateTimeFormat("es-MX", {weekday:"long",day:"numeric",month:"long",hour:"numeric",minute:"2-digit",timeZone:"America/Mexico_City"}).format(new Date(booked.selected_slot)).replace(/^(\\w)/, c => c.toUpperCase()).replace(/, (\\w)/, (m, c) => ", " + c.toUpperCase()) + "\\n🕐 Hora Ciudad de México";
+  }
+  return text;
+})()`;
+}
+
+function applyWhatsappOutboundSyncFix(workflow, scope = "whatsapp") {
+  const syncTurn = nodeByName(workflow, "CRM: Sync Turn");
+  if (syncTurn) {
+    syncTurn.parameters.jsonBody = whatsappSyncTurnJsonBody();
+  }
+
+  const slotsOutboundId = stableUuid(scope, "CRM: Sync Slots Outbound");
+  const bookingConfirmId = stableUuid(scope, "CRM: Sync Booking Confirmation");
+  const qual = qualificationFromStateManager();
+  const sendSlots = nodeByName(workflow, "Send Message with Slots");
+  const sendConfirm = nodeByName(workflow, "Send Confirmation ");
+
+  let slotsOutbound = nodeByName(workflow, "CRM: Sync Slots Outbound");
+  if (!slotsOutbound) {
+    slotsOutbound = httpNode(
+      "CRM: Sync Slots Outbound",
+      slotsOutboundId,
+      sendSlots?.position
+        ? [sendSlots.position[0] + 224, sendSlots.position[1]]
+        : [5488, 352],
+      "POST",
+      "https://www.clickin360.com/api/integrations/conversations/sync",
+      `={{ JSON.stringify({ outbound_only: true, session_id: $('State Manager').first().json.session_id, channel: 'whatsapp', phone_number: $('State Manager').first().json.phone_number, name: $('State Manager').first().json.name, ai_reply: $('Update Slots in DB').first().json.latest_ai_response, next_action: 'book_call', qualification: ${qual}, human_review_requested: false }) }}`
+    );
+    workflow.nodes.push(slotsOutbound);
+  } else {
+    slotsOutbound.parameters.jsonBody = `={{ JSON.stringify({ outbound_only: true, session_id: $('State Manager').first().json.session_id, channel: 'whatsapp', phone_number: $('State Manager').first().json.phone_number, name: $('State Manager').first().json.name, ai_reply: $('Update Slots in DB').first().json.latest_ai_response, next_action: 'book_call', qualification: ${qual}, human_review_requested: false }) }}`;
+  }
+
+  let bookingConfirm = nodeByName(workflow, "CRM: Sync Booking Confirmation");
+  const confirmAiReply = bookingConfirmationAiReplyExpression();
+  if (!bookingConfirm) {
+    bookingConfirm = httpNode(
+      "CRM: Sync Booking Confirmation",
+      bookingConfirmId,
+      sendConfirm?.position
+        ? [sendConfirm.position[0] + 224, sendConfirm.position[1]]
+        : [5264, 928],
+      "POST",
+      "https://www.clickin360.com/api/integrations/conversations/sync",
+      `={{ JSON.stringify({ outbound_only: true, session_id: $('State Manager').first().json.session_id, channel: 'whatsapp', phone_number: $('State Manager').first().json.phone_number, name: $('State Manager').first().json.name, ai_reply: ${confirmAiReply}, next_action: 'confirm_booking', qualification: ${qual}, human_review_requested: false }) }}`
+    );
+    workflow.nodes.push(bookingConfirm);
+  } else {
+    bookingConfirm.parameters.jsonBody = `={{ JSON.stringify({ outbound_only: true, session_id: $('State Manager').first().json.session_id, channel: 'whatsapp', phone_number: $('State Manager').first().json.phone_number, name: $('State Manager').first().json.name, ai_reply: ${confirmAiReply}, next_action: 'confirm_booking', qualification: ${qual}, human_review_requested: false }) }}`;
+  }
+
+  if (sendSlots) {
+    workflow.connections["Send Message with Slots"] = {
+      main: [[{ node: "CRM: Sync Slots Outbound", type: "main", index: 0 }]],
+    };
+  }
+  workflow.connections["CRM: Sync Slots Outbound"] = { main: [[]] };
+
+  if (sendConfirm) {
+    workflow.connections["Send Confirmation "] = {
+      main: [[{ node: "CRM: Sync Booking Confirmation", type: "main", index: 0 }]],
+    };
+  }
+  workflow.connections["CRM: Sync Booking Confirmation"] = { main: [[]] };
+}
+
 function patchWhatsapp() {
   const source = fs.existsSync(path.join(N8N_DIR, "ClickIn360 Whatsapp Flow .json"))
     ? "ClickIn360 Whatsapp Flow .json"
@@ -347,7 +436,7 @@ function patchWhatsapp() {
     [3120, 400],
     "POST",
     "https://www.clickin360.com/api/integrations/conversations/sync",
-    "={{ JSON.stringify({ session_id: $('State Manager').first().json.session_id, channel: 'whatsapp', phone_number: $('State Manager').first().json.phone_number, name: $('State Manager').first().json.name, inbound_message: $('Normalize WABA Payload').first().json.message, ai_reply: $('State Manager').first().json.latest_ai_response, next_action: $('State Manager').first().json.next_action, qualification: { name: $('State Manager').first().json.name, email: $('State Manager').first().json.email, platform: $('State Manager').first().json.platform, channels: $('State Manager').first().json.communication_channels || [], friction_area: $('State Manager').first().json.friction_area, signals: $('State Manager').first().json.signals || [], temperature: $('State Manager').first().json.temperature, summary: $('State Manager').first().json.summary, message_volume: $('State Manager').first().json.message_volume, main_customer_questions: $('State Manager').first().json.main_customer_questions || [] }, contact_id: null, human_review_requested: $('State Manager').first().json.next_action === 'human_review' }) }}"
+    whatsappSyncTurnJsonBody()
   );
 
   const bookingOffers = httpNode(
@@ -479,6 +568,7 @@ function patchWhatsapp() {
 
   strengthenLeadSessionLookup(wf);
   fixSessionExistsCheck(wf);
+  applyWhatsappOutboundSyncFix(wf, "whatsapp");
 
   const out = save("ClickIn360_Whatsapp_Flow_Updated.json", wf);
   const text = JSON.stringify(wf);

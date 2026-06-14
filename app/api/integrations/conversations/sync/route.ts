@@ -19,18 +19,37 @@ const qualificationSchema = z
   })
   .optional();
 
-const bodySchema = z.object({
-  session_id: z.string().min(1),
-  channel: z.enum(["whatsapp", "webchat"]),
-  phone_number: z.string().nullable().optional(),
-  name: z.string().nullable().optional(),
-  inbound_message: z.string(),
-  ai_reply: z.string().nullable().optional(),
-  next_action: z.string(),
-  qualification: qualificationSchema,
-  contact_id: z.string().uuid().nullable().optional(),
-  human_review_requested: z.boolean().optional(),
-});
+const bodySchema = z
+  .object({
+    session_id: z.string().min(1),
+    channel: z.enum(["whatsapp", "webchat"]),
+    phone_number: z.string().nullable().optional(),
+    name: z.string().nullable().optional(),
+    inbound_message: z.string().optional(),
+    ai_reply: z.string().nullable().optional(),
+    next_action: z.string(),
+    qualification: qualificationSchema,
+    contact_id: z.string().uuid().nullable().optional(),
+    human_review_requested: z.boolean().optional(),
+    outbound_only: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.outbound_only) {
+      if (!data.ai_reply?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "ai_reply is required when outbound_only is true",
+          path: ["ai_reply"],
+        });
+      }
+    } else if (!data.inbound_message) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "inbound_message is required",
+        path: ["inbound_message"],
+      });
+    }
+  });
 
 export async function POST(req: NextRequest) {
   const auth = requireConversationIntegrationAuth(req);

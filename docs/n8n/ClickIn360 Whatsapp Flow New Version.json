@@ -1061,7 +1061,7 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ session_id: $('State Manager').first().json.session_id, channel: 'whatsapp', phone_number: $('State Manager').first().json.phone_number, name: $('State Manager').first().json.name, inbound_message: $('Normalize WABA Payload').first().json.message, ai_reply: $('State Manager').first().json.latest_ai_response, next_action: $('State Manager').first().json.next_action, qualification: { name: $('State Manager').first().json.name, email: $('State Manager').first().json.email, platform: $('State Manager').first().json.platform, channels: $('State Manager').first().json.communication_channels || [], friction_area: $('State Manager').first().json.friction_area, signals: $('State Manager').first().json.signals || [], temperature: $('State Manager').first().json.temperature, summary: $('State Manager').first().json.summary, message_volume: $('State Manager').first().json.message_volume, main_customer_questions: $('State Manager').first().json.main_customer_questions || [] }, contact_id: null, human_review_requested: $('State Manager').first().json.next_action === 'human_review' }) }}",
+        "jsonBody": "={{ JSON.stringify({ session_id: $('State Manager').first().json.session_id, channel: 'whatsapp', phone_number: $('State Manager').first().json.phone_number, name: $('State Manager').first().json.name, inbound_message: $('Normalize WABA Payload').first().json.message, ai_reply: (function(){ const a=$('State Manager').first().json; return ['offer_booking','reschedule','confirm_booking'].includes(a.next_action)?null:a.latest_ai_response; })(), next_action: $('State Manager').first().json.next_action, qualification: { name: $('State Manager').first().json.name, email: $('State Manager').first().json.email, platform: $('State Manager').first().json.platform, channels: $('State Manager').first().json.communication_channels || [], friction_area: $('State Manager').first().json.friction_area, signals: $('State Manager').first().json.signals || [], temperature: $('State Manager').first().json.temperature, summary: $('State Manager').first().json.summary, message_volume: $('State Manager').first().json.message_volume, main_customer_questions: $('State Manager').first().json.main_customer_questions || [] }, contact_id: null, human_review_requested: $('State Manager').first().json.next_action === 'human_review' }) }}",
         "options": {}
       },
       "id": "4dd86c89-24c0-4166-be7d-ece8da7e2969",
@@ -1188,6 +1188,62 @@
       ],
       "parameters": {
         "jsCode": "return [{ json: $('Normalize WABA Payload').first().json }];"
+      }
+    },
+    {
+      "id": "be11bef6-07e3-4d99-ad73-f8ca3807b5e7",
+      "name": "CRM: Sync Slots Outbound",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        5488,
+        352
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.clickin360.com/api/integrations/conversations/sync",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ outbound_only: true, session_id: $('State Manager').first().json.session_id, channel: 'whatsapp', phone_number: $('State Manager').first().json.phone_number, name: $('State Manager').first().json.name, ai_reply: $('Update Slots in DB').first().json.latest_ai_response, next_action: 'book_call', qualification: { name: $('State Manager').first().json.name, email: $('State Manager').first().json.email, platform: $('State Manager').first().json.platform, channels: $('State Manager').first().json.communication_channels || [], friction_area: $('State Manager').first().json.friction_area, signals: $('State Manager').first().json.signals || [], temperature: $('State Manager').first().json.temperature, summary: $('State Manager').first().json.summary, message_volume: $('State Manager').first().json.message_volume, main_customer_questions: $('State Manager').first().json.main_customer_questions || [] }, human_review_requested: false }) }}",
+        "options": {
+          "continueOnFail": true
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "avN9SN9QlpkztmyC",
+          "name": "CRM API"
+        }
+      }
+    },
+    {
+      "id": "79ed9c8e-836d-4638-a5b3-40fc5487ec22",
+      "name": "CRM: Sync Booking Confirmation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        5264,
+        928
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.clickin360.com/api/integrations/conversations/sync",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ outbound_only: true, session_id: $('State Manager').first().json.session_id, channel: 'whatsapp', phone_number: $('State Manager').first().json.phone_number, name: $('State Manager').first().json.name, ai_reply: (function(){\n  const sm = $('State Manager').first().json;\n  const booked = $('Update Session as Booked').item.json;\n  let text = sm.latest_ai_response || \"Listo, tu llamada quedó agendada. ¡Nos vemos pronto!\";\n  if (booked.selected_slot) {\n    text += \"\\n\\n📅 \" + new Intl.DateTimeFormat(\"es-MX\", {weekday:\"long\",day:\"numeric\",month:\"long\",hour:\"numeric\",minute:\"2-digit\",timeZone:\"America/Mexico_City\"}).format(new Date(booked.selected_slot)).replace(/^(\\w)/, c => c.toUpperCase()).replace(/, (\\w)/, (m, c) => \", \" + c.toUpperCase()) + \"\\n🕐 Hora Ciudad de México\";\n  }\n  return text;\n})(), next_action: 'confirm_booking', qualification: { name: $('State Manager').first().json.name, email: $('State Manager').first().json.email, platform: $('State Manager').first().json.platform, channels: $('State Manager').first().json.communication_channels || [], friction_area: $('State Manager').first().json.friction_area, signals: $('State Manager').first().json.signals || [], temperature: $('State Manager').first().json.temperature, summary: $('State Manager').first().json.summary, message_volume: $('State Manager').first().json.message_volume, main_customer_questions: $('State Manager').first().json.main_customer_questions || [] }, human_review_requested: false }) }}",
+        "options": {
+          "continueOnFail": true
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "avN9SN9QlpkztmyC",
+          "name": "CRM API"
+        }
       }
     }
   ],
@@ -1619,6 +1675,38 @@
             "index": 0
           }
         ]
+      ]
+    },
+    "Send Message with Slots": {
+      "main": [
+        [
+          {
+            "node": "CRM: Sync Slots Outbound",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM: Sync Slots Outbound": {
+      "main": [
+        []
+      ]
+    },
+    "Send Confirmation ": {
+      "main": [
+        [
+          {
+            "node": "CRM: Sync Booking Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM: Sync Booking Confirmation": {
+      "main": [
+        []
       ]
     }
   },
