@@ -97,4 +97,8 @@ This produces import-ready workflows:
 - `ClickIn360_Web_Chat_Qualification_Flow_Updated.json` — 5 new nodes (session-state, human branch, sync inbound, sync turn, human respond)
 - `ClickIn360_Whatsapp_Flow_Updated.json` — GHL removed; CRM booking + conversation sync nodes added
 
-Re-run the script whenever you replace the source exports.
+Re-run the script whenever you replace the source exports. It also patches **`ClickIn360 Whatsapp Flow New Version.json`** in place when present.
+
+## Import file
+
+Use **`ClickIn360 Whatsapp Flow New Version.json`** (or `ClickIn360_Whatsapp_Flow_Updated.json`, kept in sync) for N8N import.

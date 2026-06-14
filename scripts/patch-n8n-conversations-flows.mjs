@@ -102,6 +102,43 @@ function fixSessionExistsCheck(workflow) {
   cond.leftValue = "={{ $json.session_id }}";
 }
 
+/** Fix duplicate lead_sessions insert when CRM nodes sit upstream of lookup. */
+function applySessionLookupFix(workflow, normalizeNodeName, scope = "whatsapp") {
+  const passId = stableUuid(scope, "Pass Session Context");
+  let pass = nodeByName(workflow, "Pass Session Context");
+  const branch = nodeByName(workflow, "CRM: Human Handler Branch");
+  const lookup = nodeByName(workflow, "Lookup Lead Session");
+  const passPosition = branch?.position
+    ? [branch.position[0] + 96, lookup?.position?.[1] ?? branch.position[1] + 96]
+    : [448, 544];
+
+  if (!pass) {
+    workflow.nodes.push(passSessionNode(passId, passPosition, normalizeNodeName));
+  } else {
+    pass.parameters.jsCode = `return [{ json: $('${normalizeNodeName}').first().json }];`;
+    pass.position = passPosition;
+  }
+
+  strengthenLeadSessionLookup(workflow);
+  fixSessionExistsCheck(workflow);
+
+  const branchConn = workflow.connections["CRM: Human Handler Branch"];
+  if (branchConn?.main?.[1]) {
+    branchConn.main[1] = [{ node: "Pass Session Context", type: "main", index: 0 }];
+  }
+  workflow.connections["Pass Session Context"] = {
+    main: [[{ node: "Lookup Lead Session", type: "main", index: 0 }]],
+  };
+}
+
+function patchWhatsappNewVersion() {
+  const file = "ClickIn360 Whatsapp Flow New Version.json";
+  const wf = load(file);
+  applySessionLookupFix(wf, "Normalize WABA Payload", "whatsapp-new");
+  const out = save(file, wf);
+  console.log("WhatsApp New Version patched:", out, "nodes:", wf.nodes.length);
+}
+
 function patchWebchat() {
   const wf = load("ClickIn360 Web Chat Qualification Flow.json");
   const ids = {
@@ -226,7 +263,14 @@ function crmFormatSlotsJs() {
 }
 
 function patchWhatsapp() {
-  const wf = load("ClickIn360 Whatsapp Flow .json");
+  const source = fs.existsSync(path.join(N8N_DIR, "ClickIn360 Whatsapp Flow .json"))
+    ? "ClickIn360 Whatsapp Flow .json"
+    : null;
+  if (!source) {
+    console.log("WhatsApp source export missing — skipping full patch (use New Version + applySessionLookupFix).");
+    return;
+  }
+  const wf = load(source);
   const ids = {
     check: stableUuid("whatsapp", "CRM: Check Session State"),
     branch: stableUuid("whatsapp", "CRM: Human Handler Branch"),
@@ -474,4 +518,5 @@ function validateWebchat() {
 
 patchWebchat();
 patchWhatsapp();
+patchWhatsappNewVersion();
 validateWebchat();

@@ -902,7 +902,7 @@
       "name": "If"
     },
     {
-      "id": "34da3d68-65ea-4222-b9b2-8e8da911106c",
+      "id": "2622cda8-7610-4716-a0a2-70b2a2c01c58",
       "name": "CRM: Check Session State",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -930,7 +930,7 @@
       }
     },
     {
-      "id": "950f3c0f-d02f-4248-bbd8-b44aa1f8a3f5",
+      "id": "d2ed10bb-41eb-43e0-afc2-8175e5782a45",
       "name": "CRM: Human Handler Branch",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
@@ -947,7 +947,7 @@
           },
           "conditions": [
             {
-              "id": "6b4837b6-bdfe-446b-a6ed-0b3f1cfe5e59",
+              "id": "ea9fb2a7-978f-41bb-a711-ee6c87b1d16f",
               "leftValue": "={{ $json.handler }}",
               "rightValue": "human",
               "operator": {
@@ -962,7 +962,7 @@
       }
     },
     {
-      "id": "0f0bba5d-63f7-4674-b3c3-7d3e7c160681",
+      "id": "54e15948-b3be-4f9e-aad9-4ffd43ccc6db",
       "name": "Pass Session Context",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -975,7 +975,7 @@
       }
     },
     {
-      "id": "5d8aa4df-6e13-450f-8283-5a5479f1024b",
+      "id": "36dac4b8-8f22-40cf-a36c-abfd8965356f",
       "name": "CRM: Sync Inbound Only",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -1003,7 +1003,7 @@
       }
     },
     {
-      "id": "7e60a66a-d075-4079-bbc8-e5524d126e3a",
+      "id": "3f9491e2-0d90-455b-a116-5b87b128d55b",
       "name": "Respond: Human Handler",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
@@ -1020,7 +1020,7 @@
       }
     },
     {
-      "id": "14a9e4d9-6a5b-47cb-9958-491d72438c0d",
+      "id": "3bd93343-f147-45ea-a988-491c3ec7bb95",
       "name": "CRM: Sync Turn",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
