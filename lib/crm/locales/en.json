@@ -11,8 +11,9 @@
     "finances": "Finances",
     "quotes": "Quotes",
     "services": "Product Catalog",
+    "media": "Media",
     "attachments": "Attachments",
-    "calendar": "Calendar",
+    "calendar": "Calendars",
     "settings": "Settings"
   },
   "settings": {
@@ -162,6 +163,13 @@
     "upload": "Upload file",
     "noFiles": "No attachments yet"
   },
+  "media": {
+    "title": "Media",
+    "description": "Browse your workspace Google Drive and link files to contacts",
+    "driveSection": "Google Drive",
+    "connectedBanner": "Google Drive connected for this workspace.",
+    "connectError": "Google Drive connection failed. Check OAuth settings and try again."
+  },
   "actions": {
     "edit": "Edit",
     "open": "Open",
@@ -194,7 +202,7 @@
     "tasksTab": "Tasks",
     "saveChanges": "Save Changes",
     "companyPlaceholder": "Company name",
-    "websitePlaceholder": "https://example.com",
+    "websitePlaceholder": "example.com",
     "aboutPlaceholder": "Background, context, relationship notes…",
     "sourcePlaceholder": "How they found you",
     "platformPlaceholder": "e.g. Shopify",

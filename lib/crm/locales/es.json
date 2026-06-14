@@ -11,8 +11,9 @@
     "finances": "Finanzas",
     "quotes": "Cotizaciones",
     "services": "Catálogo de productos",
+    "media": "Media",
     "attachments": "Adjuntos",
-    "calendar": "Calendario",
+    "calendar": "Calendarios",
     "settings": "Configuración"
   },
   "settings": {
@@ -162,6 +163,13 @@
     "upload": "Subir archivo",
     "noFiles": "Aún no hay adjuntos"
   },
+  "media": {
+    "title": "Media",
+    "description": "Explora Google Drive del workspace y vincula archivos a contactos",
+    "driveSection": "Google Drive",
+    "connectedBanner": "Google Drive conectado para este workspace.",
+    "connectError": "No se pudo conectar Google Drive. Revisa OAuth e inténtalo de nuevo."
+  },
   "actions": {
     "edit": "Editar",
     "open": "Abrir",
@@ -194,7 +202,7 @@
     "tasksTab": "Tareas",
     "saveChanges": "Guardar cambios",
     "companyPlaceholder": "Nombre de la empresa",
-    "websitePlaceholder": "https://ejemplo.com",
+    "websitePlaceholder": "ejemplo.com",
     "aboutPlaceholder": "Contexto, relación, notas…",
     "sourcePlaceholder": "Cómo te encontró",
     "platformPlaceholder": "ej. Shopify",

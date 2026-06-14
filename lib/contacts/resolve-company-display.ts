@@ -67,6 +67,13 @@ export async function finalizeContactCompanyUpdates(
 ): Promise<Record<string, unknown>> {
   const extra: Record<string, unknown> = {};
 
+  // Free-text company edits (edit form) take precedence over a stale company_id
+  // that may still be present in the payload from form defaultValues.
+  if (data.company !== undefined) {
+    extra.company_id = null;
+    return extra;
+  }
+
   if (data.company_id !== undefined) {
     const linkedId = data.company_id?.trim() || null;
     if (linkedId) {
@@ -79,10 +86,6 @@ export async function finalizeContactCompanyUpdates(
       if (company?.name) extra.company = company.name;
     }
     return extra;
-  }
-
-  if (data.company !== undefined) {
-    extra.company_id = null;
   }
 
   return extra;

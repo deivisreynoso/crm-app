@@ -26,6 +26,8 @@ import {
 import { SERVICE_TICKET_OBJECT } from "@/lib/constants/service-tickets";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { SavedFiltersBar } from "@/components/filters/saved-filters-bar";
+import { ListFiltersPanel } from "@/components/filters/list-filters-panel";
+import { FilterField } from "@/components/filters/filter-field";
 import { formatDate } from "@/lib/utils";
 import { formatApiError } from "@/lib/validation-errors";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
@@ -47,6 +49,14 @@ export default function ServiceTicketsPage() {
   const createTicket = useCreateTicket();
   const deleteTicket = useDeleteTicket();
 
+  const hasActiveFilters = Boolean(statusFilter || createdFrom || createdTo);
+
+  function clearFilters() {
+    setStatusFilter("");
+    setCreatedFrom("");
+    setCreatedTo("");
+  }
+
   return (
     <div className="space-y-6 w-full">
       <ConfirmDialog {...dialogProps} />
@@ -62,56 +72,68 @@ export default function ServiceTicketsPage() {
         }
       />
 
-      <div className="flex flex-wrap gap-3 items-center">
-        <SavedFiltersBar
-          entityType="ticket"
-          currentConfig={{
-            ...(statusFilter ? { status: statusFilter } : {}),
-            ...(createdFrom ? { created_from: createdFrom } : {}),
-            ...(createdTo ? { created_to: createdTo } : {}),
-          }}
-          onApply={(config) => {
-            setStatusFilter(typeof config.status === "string" ? config.status : "");
-            setCreatedFrom(
-              typeof config.created_from === "string" ? config.created_from : ""
-            );
-            setCreatedTo(
-              typeof config.created_to === "string" ? config.created_to : ""
-            );
-          }}
-        />
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="input-field min-w-[160px]"
-          aria-label="Filter by status"
-        >
-          <option value="">All statuses</option>
-          <option value="open">Open</option>
-          <option value="in_progress">In progress</option>
-          <option value="on_hold">On hold</option>
-          <option value="closed">Closed</option>
-        </select>
-        <input
-          type="date"
-          value={createdFrom}
-          onChange={(e) => setCreatedFrom(e.target.value)}
-          className="input-field"
-          aria-label="Created from"
-          title="Created from"
-        />
-        <input
-          type="date"
-          value={createdTo}
-          onChange={(e) => setCreatedTo(e.target.value)}
-          className="input-field"
-          aria-label="Created to"
-          title="Created to"
-        />
-        <span className="text-sm text-body-muted">
-          {tickets.length} ticket{tickets.length !== 1 ? "s" : ""}
-        </span>
-      </div>
+      <ListFiltersPanel
+        gridClassName="list-filters-panel__grid--tickets"
+        savedFilters={
+          <SavedFiltersBar
+            entityType="ticket"
+            currentConfig={{
+              ...(statusFilter ? { status: statusFilter } : {}),
+              ...(createdFrom ? { created_from: createdFrom } : {}),
+              ...(createdTo ? { created_to: createdTo } : {}),
+            }}
+            onApply={(config) => {
+              setStatusFilter(typeof config.status === "string" ? config.status : "");
+              setCreatedFrom(
+                typeof config.created_from === "string" ? config.created_from : ""
+              );
+              setCreatedTo(
+                typeof config.created_to === "string" ? config.created_to : ""
+              );
+            }}
+          />
+        }
+        resultCount={
+          <span className="list-filters-panel__count">
+            {tickets.length} ticket{tickets.length !== 1 ? "s" : ""}
+          </span>
+        }
+        showClear={hasActiveFilters}
+        onClear={clearFilters}
+      >
+        <FilterField label="Status" htmlFor="ticket-status">
+          <select
+            id="ticket-status"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="filter-input-compact"
+          >
+            <option value="">All statuses</option>
+            <option value="open">Open</option>
+            <option value="in_progress">In progress</option>
+            <option value="on_hold">On hold</option>
+            <option value="closed">Closed</option>
+          </select>
+        </FilterField>
+        <FilterField label="Created from" htmlFor="ticket-created-from">
+          <input
+            id="ticket-created-from"
+            type="date"
+            value={createdFrom}
+            onChange={(e) => setCreatedFrom(e.target.value)}
+            className="filter-input-compact"
+          />
+        </FilterField>
+        <FilterField label="Created to" htmlFor="ticket-created-to">
+          <input
+            id="ticket-created-to"
+            type="date"
+            value={createdTo}
+            onChange={(e) => setCreatedTo(e.target.value)}
+            className="filter-input-compact"
+          />
+        </FilterField>
+      </ListFiltersPanel>
 
       <DataTableShell
         isLoading={isLoading}

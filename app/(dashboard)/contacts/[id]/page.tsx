@@ -94,7 +94,8 @@ export default function ContactDetailPage({ params }: PageProps) {
   }
 
   async function handleUpdate(data: ContactFormInput) {
-    await updateContact.mutateAsync(data);
+    const { company_id: _omit, ...patch } = data;
+    await updateContact.mutateAsync(patch);
     setIsEditing(false);
   }
 

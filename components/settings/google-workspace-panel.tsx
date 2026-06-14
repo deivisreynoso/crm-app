@@ -12,6 +12,7 @@ import {
   useCalendarStatus,
   useGmailStatus,
 } from "@/hooks/useIntegrationsStatus";
+import { useGoogleDriveStatus, useDisconnectGoogleDrive } from "@/hooks/useGoogleDrive";
 
 type CardStatus = "connected" | "available" | "not_configured";
 
@@ -29,9 +30,16 @@ function GoogleWorkspacePanelInner() {
     isLoading: calendarLoading,
     refetch: refetchCalendar,
   } = useCalendarStatus();
+  const {
+    data: drive,
+    isLoading: driveLoading,
+    refetch: refetchDrive,
+  } = useGoogleDriveStatus();
+  const disconnectDrive = useDisconnectGoogleDrive();
 
   const [disconnectingGmail, setDisconnectingGmail] = useState(false);
   const [disconnectingCalendar, setDisconnectingCalendar] = useState(false);
+  const [disconnectingDrive, setDisconnectingDrive] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,7 +72,21 @@ function GoogleWorkspacePanelInner() {
           : "Gmail connection failed. Check redirect URI and OAuth settings."
       );
     }
-  }, [searchParams, refetchCalendar, refetchGmail, refetchSetup]);
+
+    const driveParam = searchParams.get("google_drive");
+    if (driveParam === "connected") {
+      setBanner("Google Drive connected for this workspace.");
+      void refetchDrive();
+      void refetchSetup();
+    } else if (driveParam === "error") {
+      const reason = searchParams.get("reason");
+      setError(
+        reason === "migration"
+          ? "Drive authorized but tokens could not be saved. Run migration 069_google_drive_integration.sql, then reconnect."
+          : "Google Drive connection failed. Check redirect URI and OAuth settings."
+      );
+    }
+  }, [searchParams, refetchCalendar, refetchGmail, refetchDrive, refetchSetup]);
 
   async function handleDisconnectGmail() {
     setError(null);
@@ -103,6 +125,7 @@ function GoogleWorkspacePanelInner() {
   const oauthConfigured = setup?.oauth_configured ?? false;
   const gmailConnected = gmail?.connected ?? false;
   const calendarConnected = calendar?.connected ?? false;
+  const driveConnected = drive?.connected ?? false;
 
   const gmailStatus: CardStatus = !oauthConfigured
     ? "not_configured"
@@ -115,6 +138,27 @@ function GoogleWorkspacePanelInner() {
     : calendarConnected
       ? "connected"
       : "available";
+
+  const driveStatus: CardStatus = !oauthConfigured
+    ? "not_configured"
+    : driveConnected
+      ? "connected"
+      : "available";
+
+  async function handleDisconnectDrive() {
+    setError(null);
+    setDisconnectingDrive(true);
+    try {
+      await disconnectDrive.mutateAsync();
+      setBanner("Google Drive disconnected.");
+      void refetchDrive();
+      void refetchSetup();
+    } catch (err) {
+      setError(formatApiError(err, "Could not disconnect Google Drive"));
+    } finally {
+      setDisconnectingDrive(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -175,7 +219,7 @@ function GoogleWorkspacePanelInner() {
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <ConnectionCard
           name="Gmail"
           description="Send quotes and contact emails from your company address. Sync threads on the contact Emails tab when read access is granted."
@@ -252,6 +296,42 @@ function GoogleWorkspacePanelInner() {
               : undefined
           }
         />
+
+        <ConnectionCard
+          name="Google Drive"
+          description="Connect the workspace business Drive for the Media library. Team members can browse and link files to contacts."
+          status={driveLoading ? "available" : driveStatus}
+          actionLabel={
+            !oauthConfigured
+              ? "Configure server OAuth first"
+              : driveConnected
+                ? "Connected"
+                : "Connect Drive"
+          }
+          onAction={
+            oauthConfigured && !driveConnected
+              ? () => {
+                  window.location.href = "/api/auth/google-drive";
+                }
+              : undefined
+          }
+          secondaryAction={
+            driveConnected
+              ? {
+                  label: disconnectingDrive ? "Disconnecting…" : "Disconnect",
+                  onClick: () => void handleDisconnectDrive(),
+                  disabled: disconnectingDrive,
+                }
+              : undefined
+          }
+          hint={
+            drive?.email
+              ? `Workspace Drive: ${drive.email}`
+              : drive?.redirect_uri
+                ? `Redirect URI:\n${drive.redirect_uri}`
+                : undefined
+          }
+        />
       </div>
 
       {gmailConnected && gmail?.email && (
@@ -273,6 +353,7 @@ function GoogleWorkspacePanelInner() {
         void refetchSetup();
         void refetchGmail();
         void refetchCalendar();
+        void refetchDrive();
       }}>
         Refresh status
       </Button>

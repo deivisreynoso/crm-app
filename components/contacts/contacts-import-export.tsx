@@ -25,6 +25,7 @@ type ImportResult = {
 type Props = {
   filters: ExportFilters;
   onImported: () => void;
+  compact?: boolean;
 };
 
 function buildExportUrl(filters: ExportFilters) {
@@ -64,7 +65,7 @@ function templateCsv(): string {
   return `${header}\r\n${sample}`;
 }
 
-export function ContactsImportExport({ filters, onImported }: Props) {
+export function ContactsImportExport({ filters, onImported, compact = false }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -126,36 +127,72 @@ export function ContactsImportExport({ filters, onImported }: Props) {
     }
   }
 
+  const btnClass = compact
+    ? "inline-flex items-center gap-1.5 rounded-md border border-[var(--card-border)] bg-[var(--card)] px-2.5 py-1.5 text-xs font-medium text-[var(--foreground)] hover:bg-[var(--sidebar-hover)] transition-colors disabled:opacity-50"
+    : undefined;
+
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={exporting}
-          onClick={() => void handleExport()}
-        >
-          <Download className="w-4 h-4 mr-1.5" />
-          {exporting ? "Exporting…" : "Export CSV"}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={importing}
-          onClick={() => fileRef.current?.click()}
-        >
-          <Upload className="w-4 h-4 mr-1.5" />
-          {importing ? "Importing…" : "Import CSV"}
-        </Button>
-        <button
-          type="button"
-          onClick={downloadTemplate}
-          className="text-xs text-[var(--secondary)] hover:underline"
-        >
-          Download template
-        </button>
+    <div className={compact ? "contents" : "flex flex-col gap-2"}>
+      <div className={compact ? "flex flex-wrap items-center gap-1.5" : "flex flex-wrap items-center gap-2"}>
+        {compact ? (
+          <>
+            <button
+              type="button"
+              disabled={exporting}
+              onClick={() => void handleExport()}
+              className={btnClass}
+            >
+              <Download className="w-3.5 h-3.5" />
+              {exporting ? "Exporting…" : "Export"}
+            </button>
+            <button
+              type="button"
+              disabled={importing}
+              onClick={() => fileRef.current?.click()}
+              className={btnClass}
+            >
+              <Upload className="w-3.5 h-3.5" />
+              {importing ? "Importing…" : "Import"}
+            </button>
+            <button
+              type="button"
+              onClick={downloadTemplate}
+              className="text-xs font-medium text-[var(--secondary)] hover:text-[var(--primary)] transition-colors px-1"
+            >
+              Template
+            </button>
+          </>
+        ) : (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={exporting}
+              onClick={() => void handleExport()}
+            >
+              <Download className="w-4 h-4 mr-1.5" />
+              {exporting ? "Exporting…" : "Export CSV"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={importing}
+              onClick={() => fileRef.current?.click()}
+            >
+              <Upload className="w-4 h-4 mr-1.5" />
+              {importing ? "Importing…" : "Import CSV"}
+            </Button>
+            <button
+              type="button"
+              onClick={downloadTemplate}
+              className="text-xs text-[var(--secondary)] hover:underline"
+            >
+              Download template
+            </button>
+          </>
+        )}
         <input
           ref={fileRef}
           type="file"
@@ -167,14 +204,25 @@ export function ContactsImportExport({ filters, onImported }: Props) {
           }}
         />
       </div>
-      {message && (
+      {!compact && message && (
         <p className="text-sm text-[var(--success)] bg-emerald-50 border border-emerald-100 rounded-md px-3 py-2">
           {message}
         </p>
       )}
-      {error && (
+      {!compact && error && (
         <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
           {error}
+        </p>
+      )}
+      {compact && (message || error) && (
+        <p
+          className={`text-xs px-2 py-1 rounded-md ${
+            error
+              ? "text-red-600 bg-red-50 border border-red-100"
+              : "text-[var(--success)] bg-emerald-50 border border-emerald-100"
+          }`}
+        >
+          {error ?? message}
         </p>
       )}
     </div>

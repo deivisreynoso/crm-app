@@ -31,6 +31,8 @@ export async function batchResolveDocumentFileUrls(
     if (path && signedByPath.has(path)) {
       return signedByPath.get(path) ?? row.file_url ?? null;
     }
+    const external = (row as { external_url?: string | null }).external_url;
+    if (external?.trim()) return external.trim();
     return row.file_url ?? null;
   });
 }

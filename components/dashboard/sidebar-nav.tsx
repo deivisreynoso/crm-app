@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
-import { MAIN_NAV, SECONDARY_NAV, type NavIconAccent, type NavItem } from "@/lib/navigation";
+import { MAIN_NAV, type NavIconAccent, type NavItem } from "@/lib/navigation";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
 
 export const navIconAccentStyles: Record<
@@ -136,23 +136,14 @@ function filterNavByRole(items: NavItem[], canWrite: boolean) {
 
 export function SidebarNav() {
   const pathname = usePathname();
-  const { dict, locale } = useCrmLocale();
+  const { dict } = useCrmLocale();
   const { canWrite } = useWorkspaceCapabilities();
   const navDict = dict.nav as Record<string, string>;
-  const toolsTitle = locale === "es" ? "Herramientas" : "Tools";
-  const toolsNav = filterNavByRole(SECONDARY_NAV, canWrite);
+  const navItems = filterNavByRole(MAIN_NAV, canWrite);
 
   return (
     <nav className="flex flex-col gap-5" aria-label="Main navigation">
-      <NavSection items={MAIN_NAV} pathname={pathname} dict={navDict} />
-      {toolsNav.length > 0 && (
-        <NavSection
-          title={toolsTitle}
-          items={toolsNav}
-          pathname={pathname}
-          dict={navDict}
-        />
-      )}
+      <NavSection items={navItems} pathname={pathname} dict={navDict} />
     </nav>
   );
 }

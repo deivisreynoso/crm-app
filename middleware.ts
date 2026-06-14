@@ -32,6 +32,7 @@ const CRM_PROTECTED = [
   "/quotes",
   "/services",
   "/attachments",
+  "/media",
 ];
 
 function isCrmProtected(pathname: string) {

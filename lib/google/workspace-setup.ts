@@ -1,10 +1,12 @@
 import { createServerSideClient } from "@/lib/supabase";
 import {
   getGoogleCalendarRedirectUri,
+  getGoogleDriveRedirectUri,
   getGoogleGmailRedirectUri,
   isGoogleGmailConfigured,
 } from "@/lib/google/oauth-config";
 import { GMAIL_OAUTH_SCOPES, getGoogleGmailConnection } from "@/lib/google/gmail";
+import { DRIVE_OAUTH_SCOPES, getGoogleDriveConnection } from "@/lib/google/drive";
 
 export type GoogleWorkspaceSetupResponse = {
   oauth_configured: boolean;
@@ -29,6 +31,13 @@ export type GoogleWorkspaceSetupResponse = {
     status_path: string;
     connected: boolean;
   };
+  drive: {
+    redirect_uri: string;
+    connect_path: string;
+    status_path: string;
+    connected: boolean;
+    email: string | null;
+  };
   checklist: { id: string; label: string; done: boolean }[];
 };
 
@@ -44,17 +53,23 @@ async function getCalendarConnected(actorUserId: string): Promise<boolean> {
 
 export async function buildGoogleWorkspaceSetup(
   requestUrl: string,
-  actorUserId: string
+  actorUserId: string,
+  workspaceOwnerId?: string
 ): Promise<GoogleWorkspaceSetupResponse> {
   const oauthConfigured = isGoogleGmailConfigured();
   const gmailRedirect = getGoogleGmailRedirectUri(requestUrl);
   const calendarRedirect = getGoogleCalendarRedirectUri(requestUrl);
+  const driveRedirect = getGoogleDriveRedirectUri(requestUrl);
   const connection = oauthConfigured
     ? await getGoogleGmailConnection(actorUserId, { verifyRead: false })
     : { connected: false, email: null, read_access: false };
   const calendarConnected = oauthConfigured
     ? await getCalendarConnected(actorUserId)
     : false;
+  const driveOwnerId = workspaceOwnerId ?? actorUserId;
+  const driveConnection = oauthConfigured
+    ? await getGoogleDriveConnection(driveOwnerId)
+    : { connected: false, email: null, root_folder_id: null, connected_by: null };
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "") ?? null;
 
@@ -81,6 +96,11 @@ export async function buildGoogleWorkspaceSetup(
       done: oauthConfigured,
     },
     {
+      id: "redirect_drive",
+      label: `Register Drive redirect URI: ${driveRedirect}`,
+      done: oauthConfigured,
+    },
+    {
       id: "connect_gmail",
       label: "Connect your Workspace mailbox below",
       done: connection.connected,
@@ -94,6 +114,11 @@ export async function buildGoogleWorkspaceSetup(
       id: "read_scope",
       label: "Approve Gmail read access to sync threads on contact records",
       done: connection.read_access,
+    },
+    {
+      id: "connect_drive",
+      label: "Connect workspace Google Drive for Media",
+      done: driveConnection.connected,
     },
   ];
 
@@ -119,6 +144,13 @@ export async function buildGoogleWorkspaceSetup(
       connect_path: "/api/auth/google-calendar",
       status_path: "/api/integrations/google-calendar/status",
       connected: calendarConnected,
+    },
+    drive: {
+      redirect_uri: driveRedirect,
+      connect_path: "/api/auth/google-drive",
+      status_path: "/api/integrations/google-drive/status",
+      connected: driveConnection.connected,
+      email: driveConnection.email,
     },
     checklist,
   };

@@ -124,10 +124,11 @@ export function ContactForm({
           <FormLabel htmlFor="website">Website</FormLabel>
           <input
             id="website"
-            type="url"
+            type="text"
             {...register("website")}
             className="input-field"
-            placeholder="https://"
+            placeholder="example.com"
+            autoComplete="url"
           />
         </div>
         <div>

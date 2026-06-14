@@ -6,6 +6,9 @@ export const GOOGLE_CALENDAR_CALLBACK_PATH = "/api/auth/google-calendar/callback
 /** OAuth callback path — must match a route under app/api/auth/google-gmail/callback */
 export const GOOGLE_GMAIL_CALLBACK_PATH = "/api/auth/google-gmail/callback";
 
+/** OAuth callback path — workspace Google Drive */
+export const GOOGLE_DRIVE_CALLBACK_PATH = "/api/auth/google-drive/callback";
+
 /** Primary: GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET. Legacy alias: GOOGLE_OAUTH_* */
 export function getGoogleOAuthClientId(): string | undefined {
   return (
@@ -50,6 +53,17 @@ export function isGoogleGmailConfigured(): boolean {
 }
 
 export function isGoogleCalendarConfigured(): boolean {
+  return isGoogleOAuthConfigured();
+}
+
+export function getGoogleDriveRedirectUri(requestUrl?: string): string {
+  const fromEnv = process.env.GOOGLE_DRIVE_REDIRECT_URI?.trim();
+  if (fromEnv) return fromEnv;
+
+  return `${resolvePublicAppOrigin(requestUrl)}${GOOGLE_DRIVE_CALLBACK_PATH}`;
+}
+
+export function isGoogleDriveConfigured(): boolean {
   return isGoogleOAuthConfigured();
 }
 

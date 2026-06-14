@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import axios from "axios";
 import Link from "next/link";
+import { Search } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ContactForm } from "@/components/forms/ContactForm";
@@ -29,6 +30,8 @@ import { formatDate } from "@/lib/utils";
 import { formatApiError } from "@/lib/validation-errors";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { SavedFiltersBar } from "@/components/filters/saved-filters-bar";
+import { ListFiltersPanel } from "@/components/filters/list-filters-panel";
+import { FilterField } from "@/components/filters/filter-field";
 import { ContactsImportExport } from "@/components/contacts/contacts-import-export";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
@@ -105,6 +108,19 @@ function ContactsPageContent() {
     setPage(1);
   }
 
+  function clearFilters() {
+    setSearch("");
+    setSearchInput("");
+    setStatusFilter("");
+    setCreatedFrom("");
+    setCreatedTo("");
+    setPage(1);
+  }
+
+  const hasActiveFilters = Boolean(
+    search || statusFilter || createdFrom || createdTo
+  );
+
   const contacts = data?.data ?? [];
   const total = data?.pagination.total ?? 0;
   const totalPages = Math.ceil(total / 20) || 1;
@@ -145,99 +161,123 @@ function ContactsPageContent() {
         </div>
       )}
 
-      <div className="surface-card p-4 space-y-3">
-        {canWrite && (
-        <ContactsImportExport
-          filters={{
-            search: search || undefined,
-            status: statusFilter || undefined,
-            createdFrom: createdFrom || undefined,
-            createdTo: createdTo || undefined,
-          }}
-          onImported={() => {
-            setPage(1);
-            router.refresh();
-          }}
-        />
-        )}
-        <SavedFiltersBar
-          entityType="contact"
-          currentConfig={{
-            ...(search ? { search } : {}),
-            ...(statusFilter ? { status: statusFilter } : {}),
-            ...(createdFrom ? { created_from: createdFrom } : {}),
-            ...(createdTo ? { created_to: createdTo } : {}),
-          }}
-          onApply={(config) => {
-            if (typeof config.search === "string") {
-              setSearch(config.search);
-              setSearchInput(config.search);
-            } else {
-              setSearch("");
-              setSearchInput("");
-            }
-            setStatusFilter(typeof config.status === "string" ? config.status : "");
-            setCreatedFrom(
-              typeof config.created_from === "string" ? config.created_from : ""
-            );
-            setCreatedTo(
-              typeof config.created_to === "string" ? config.created_to : ""
-            );
-            setPage(1);
-          }}
-        />
-        <form
-          onSubmit={handleSearch}
-          className="flex flex-col sm:flex-row gap-3"
-        >
-          <input
-            type="search"
-            placeholder="Search by name, email, or company..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className="flex-1 px-4 py-2 border border-[var(--card-border)] rounded-md bg-[var(--card)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
-          />
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
+      <ListFiltersPanel
+        gridClassName="list-filters-panel__grid--contacts"
+        toolbar={
+          canWrite ? (
+            <ContactsImportExport
+              compact
+              filters={{
+                search: search || undefined,
+                status: statusFilter || undefined,
+                createdFrom: createdFrom || undefined,
+                createdTo: createdTo || undefined,
+              }}
+              onImported={() => {
+                setPage(1);
+                router.refresh();
+              }}
+            />
+          ) : undefined
+        }
+        savedFilters={
+          <SavedFiltersBar
+            entityType="contact"
+            currentConfig={{
+              ...(search ? { search } : {}),
+              ...(statusFilter ? { status: statusFilter } : {}),
+              ...(createdFrom ? { created_from: createdFrom } : {}),
+              ...(createdTo ? { created_to: createdTo } : {}),
+            }}
+            onApply={(config) => {
+              if (typeof config.search === "string") {
+                setSearch(config.search);
+                setSearchInput(config.search);
+              } else {
+                setSearch("");
+                setSearchInput("");
+              }
+              setStatusFilter(typeof config.status === "string" ? config.status : "");
+              setCreatedFrom(
+                typeof config.created_from === "string" ? config.created_from : ""
+              );
+              setCreatedTo(
+                typeof config.created_to === "string" ? config.created_to : ""
+              );
               setPage(1);
             }}
-            className="px-4 py-2 border border-[var(--card-border)] rounded-md bg-[var(--card)] text-[var(--foreground)]"
-          >
-            <option value="">All statuses</option>
-            <option value="lead">Lead</option>
-            <option value="prospect">Prospect</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-          <input
-            type="date"
-            value={createdFrom}
-            onChange={(e) => {
-              setCreatedFrom(e.target.value);
-              setPage(1);
-            }}
-            className="px-4 py-2 border border-[var(--card-border)] rounded-md bg-[var(--card)] text-[var(--foreground)]"
-            aria-label="Created from"
-            title="Created from"
           />
-          <input
-            type="date"
-            value={createdTo}
-            onChange={(e) => {
-              setCreatedTo(e.target.value);
-              setPage(1);
-            }}
-            className="px-4 py-2 border border-[var(--card-border)] rounded-md bg-[var(--card)] text-[var(--foreground)]"
-            aria-label="Created to"
-            title="Created to"
-          />
-          <Button type="submit" variant="outline">
-            Search
-          </Button>
+        }
+        resultCount={
+          <span className="list-filters-panel__count">
+            {total} contact{total !== 1 ? "s" : ""}
+          </span>
+        }
+        showClear={hasActiveFilters}
+        onClear={clearFilters}
+      >
+        <form onSubmit={handleSearch} className="contents">
+          <FilterField label="Search" htmlFor="contact-search">
+            <div className="filter-search-wrap">
+              <Search className="filter-search-icon" aria-hidden />
+              <input
+                id="contact-search"
+                type="search"
+                placeholder="Name, email, or company…"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="filter-input-compact"
+              />
+            </div>
+          </FilterField>
+          <FilterField label="Status" htmlFor="contact-status">
+            <select
+              id="contact-status"
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
+              className="filter-input-compact"
+            >
+              <option value="">All statuses</option>
+              <option value="lead">Lead</option>
+              <option value="prospect">Prospect</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </FilterField>
+          <FilterField label="Created from" htmlFor="contact-created-from">
+            <input
+              id="contact-created-from"
+              type="date"
+              value={createdFrom}
+              onChange={(e) => {
+                setCreatedFrom(e.target.value);
+                setPage(1);
+              }}
+              className="filter-input-compact"
+            />
+          </FilterField>
+          <FilterField label="Created to" htmlFor="contact-created-to">
+            <input
+              id="contact-created-to"
+              type="date"
+              value={createdTo}
+              onChange={(e) => {
+                setCreatedTo(e.target.value);
+                setPage(1);
+              }}
+              className="filter-input-compact"
+            />
+          </FilterField>
+          <FilterField label="Apply" className="max-lg:col-span-full">
+            <button type="submit" className="filter-submit-btn w-full lg:w-auto">
+              Search
+            </button>
+          </FilterField>
         </form>
-      </div>
+      </ListFiltersPanel>
 
       <DataTableShell
         isLoading={isLoading}

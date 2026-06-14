@@ -61,9 +61,6 @@ export function SettingsPageContent() {
         description="Connect your Google Workspace mailbox and calendar. Each teammate uses their own credentials."
       >
         <GoogleWorkspacePanel />
-        <p className="text-xs text-body-muted mt-4">
-          Google Drive connection will appear here in a future release.
-        </p>
       </SettingsSection>
 
       {canManage ? (
