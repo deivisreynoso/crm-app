@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
+  useClearAllNotifications,
   useMarkNotificationRead,
   useNotifications,
 } from "@/hooks/useNotifications";
@@ -16,6 +17,7 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const { data, isLoading } = useNotifications();
   const markRead = useMarkNotificationRead();
+  const clearAll = useClearAllNotifications();
 
   async function handleNotificationClick(
     id: string,
@@ -61,8 +63,27 @@ export function NotificationBell() {
             onClick={() => setOpen(false)}
           />
           <div className="absolute right-0 top-full mt-2 z-50 w-80 max-h-96 overflow-y-auto rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-[var(--shadow-md)]">
-            <div className="px-4 py-3 border-b border-[var(--card-border)]">
+            <div className="px-4 py-3 border-b border-[var(--card-border)] flex items-center justify-between gap-2">
               <p className="text-sm font-semibold text-heading">Notifications</p>
+              {items.length > 0 && (
+                <button
+                  type="button"
+                  disabled={clearAll.isPending}
+                  onClick={() => {
+                    if (
+                      !window.confirm(
+                        "Clear all notifications? This cannot be undone."
+                      )
+                    ) {
+                      return;
+                    }
+                    void clearAll.mutateAsync();
+                  }}
+                  className="text-xs font-medium text-body-muted hover:text-heading disabled:opacity-50"
+                >
+                  Clear all
+                </button>
+              )}
             </div>
             {isLoading ? (
               <p className="p-4 text-sm text-body-muted">Loading…</p>

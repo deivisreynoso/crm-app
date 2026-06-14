@@ -101,4 +101,15 @@ export function useSendConversationMessage(conversationId: string) {
   });
 }
 
+export function useDeleteConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => axios.delete(`/api/conversations/${id}`),
+    onSuccess: (_res, id) => {
+      void qc.removeQueries({ queryKey: ["conversation", id] });
+      void qc.invalidateQueries({ queryKey: ["conversations"] });
+    },
+  });
+}
+
 export type { ConversationQualification };

@@ -9,6 +9,7 @@ export interface NotificationPreferences {
   opportunity_reminders: boolean;
   ticket_notifications: boolean;
   email_notifications: boolean;
+  conversation_notifications?: boolean;
   email_frequency: string;
   timezone: string;
 }

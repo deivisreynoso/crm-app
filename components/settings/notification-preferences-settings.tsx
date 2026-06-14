@@ -17,6 +17,7 @@ export function NotificationPreferencesSettings() {
   const [oppReminders, setOppReminders] = useState(true);
   const [ticketNotifs, setTicketNotifs] = useState(true);
   const [emailNotifs, setEmailNotifs] = useState(true);
+  const [conversationNotifs, setConversationNotifs] = useState(true);
   const [frequency, setFrequency] = useState("daily");
   const [timezone, setTimezone] = useState("UTC");
 
@@ -26,6 +27,7 @@ export function NotificationPreferencesSettings() {
     setOppReminders(data.opportunity_reminders);
     setTicketNotifs(data.ticket_notifications);
     setEmailNotifs(data.email_notifications ?? true);
+    setConversationNotifs(data.conversation_notifications ?? true);
     setFrequency(data.email_frequency);
     setTimezone(data.timezone || "UTC");
   }, [data]);
@@ -100,6 +102,17 @@ export function NotificationPreferencesSettings() {
             }}
           />
           Email replies from contacts
+        </label>
+        <label className="flex items-center gap-2 text-sm text-heading">
+          <input
+            type="checkbox"
+            checked={conversationNotifs}
+            onChange={(e) => {
+              setConversationNotifs(e.target.checked);
+              void save({ conversation_notifications: e.target.checked });
+            }}
+          />
+          WhatsApp and webchat conversations needing review
         </label>
       </div>
       <div>

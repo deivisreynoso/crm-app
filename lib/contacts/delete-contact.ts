@@ -4,8 +4,11 @@ import { deleteDocumentStorage } from "@/lib/storage/cleanup-document";
 /**
  * Remove dependent records tied to a contact, then delete the contact.
  * DB CASCADE handles opportunities, tickets, activities, tasks, contact_emails, calendar_events (035).
- * Documents/payments use SET NULL on contact_id — deleted explicitly here.
+ * Documents use SET NULL on contact_id — deleted explicitly here.
+ * Legacy payments table was removed in migration 058 (finance_transactions replaces it).
+ * Invoices RESTRICT contact delete — caller must void/remove invoices first.
  * Notes use polymorphic entity_id — deleted explicitly and via migration 036 trigger.
+ * Conversations use SET NULL on contact_id (066).
  */
 export async function deleteContactWithDependents(
   supabase: SupabaseClient,
@@ -38,6 +41,29 @@ export async function deleteContactWithDependents(
 
   const opportunityIds = (opportunities ?? []).map((o) => o.id as string);
 
+  const { data: linkedInvoices, error: invoiceCheckError } = await supabase
+    .from("invoices")
+    .select("id")
+    .eq("contact_id", contactId)
+    .eq("user_id", workspaceOwnerId)
+    .limit(1);
+
+  if (invoiceCheckError) {
+    const missingTable = /could not find|schema cache/i.test(invoiceCheckError.message);
+    if (!missingTable) {
+      return { data: null, error: invoiceCheckError };
+    }
+  } else if ((linkedInvoices ?? []).length > 0) {
+    return {
+      data: null,
+      error: {
+        message:
+          "This contact has invoices. Void or delete those invoices before removing the contact.",
+        code: "CONTACT_HAS_INVOICES",
+      },
+    };
+  }
+
   const { data: contactDocs } = await supabase
     .from("documents")
     .select("storage_path")
@@ -48,7 +74,7 @@ export async function deleteContactWithDependents(
     await deleteDocumentStorage(supabase, doc.storage_path as string | null);
   }
 
-  const deleteByContact = async (table: "calendar_events" | "documents" | "payments") => {
+  const deleteByContact = async (table: "calendar_events" | "documents") => {
     const { error } = await supabase
       .from(table)
       .delete()
@@ -69,27 +95,13 @@ export async function deleteContactWithDependents(
     return null;
   };
 
-  const deletePaymentsByOpportunities = async () => {
-    if (opportunityIds.length === 0) return null;
-    const { error } = await supabase
-      .from("payments")
-      .delete()
-      .in("opportunity_id", opportunityIds)
-      .eq("user_id", workspaceOwnerId);
-    if (error) return error;
-    return null;
-  };
-
-  for (const table of ["calendar_events", "documents", "payments"] as const) {
+  for (const table of ["calendar_events", "documents"] as const) {
     const err = await deleteByContact(table);
     if (err) return { data: null, error: err };
   }
 
   const docOppErr = await deleteDocsByOpportunities();
   if (docOppErr) return { data: null, error: docOppErr };
-
-  const payOppErr = await deletePaymentsByOpportunities();
-  if (payOppErr) return { data: null, error: payOppErr };
 
   const { error: notesError } = await supabase
     .from("notes")

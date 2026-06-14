@@ -26,3 +26,13 @@ export function useMarkNotificationRead() {
     },
   });
 }
+
+export function useClearAllNotifications() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => axios.delete("/api/notifications"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+}

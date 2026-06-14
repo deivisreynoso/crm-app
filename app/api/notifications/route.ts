@@ -31,10 +31,41 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const unreadCount = (data ?? []).filter((n) => !n.is_read).length;
-    return NextResponse.json({ data: data ?? [], unreadCount });
+    const { count: unreadCount, error: unreadError } = await supabase
+      .from("notifications")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId!)
+      .eq("is_read", false);
+
+    if (unreadError) {
+      return NextResponse.json({ error: unreadError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ data: data ?? [], unreadCount: unreadCount ?? 0 });
   } catch (err) {
     console.error("GET /api/notifications:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(_req: NextRequest) {
+  try {
+    const { userId, error } = await requireAuth();
+    if (error) return error;
+
+    const supabase = createServerSideClient();
+    const { error: dbError } = await supabase
+      .from("notifications")
+      .delete()
+      .eq("user_id", userId!);
+
+    if (dbError) {
+      return NextResponse.json({ error: dbError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("DELETE /api/notifications:", err);
+    return NextResponse.json({ error: "Failed to clear notifications" }, { status: 500 });
   }
 }

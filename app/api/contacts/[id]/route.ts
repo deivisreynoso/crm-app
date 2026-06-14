@@ -196,6 +196,9 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
       if (dbError.code === "NOT_FOUND") {
         return NextResponse.json({ error: "Contact not found" }, { status: 404 });
       }
+      if (dbError.code === "CONTACT_HAS_INVOICES") {
+        return NextResponse.json({ error: dbError.message }, { status: 409 });
+      }
       console.error("DELETE /api/contacts/[id] db:", dbError);
       const message = humanizeDbError(dbError.message);
       const status = /foreign key|violates/i.test(dbError.message) ? 409 : 500;

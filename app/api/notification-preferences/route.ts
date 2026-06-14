@@ -9,6 +9,7 @@ const DEFAULTS = {
   opportunity_reminders: true,
   ticket_notifications: true,
   email_notifications: true,
+  conversation_notifications: true,
   email_frequency: "daily",
   timezone: "UTC",
 };

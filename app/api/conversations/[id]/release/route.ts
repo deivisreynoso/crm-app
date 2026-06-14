@@ -31,6 +31,7 @@ export async function POST(_req: NextRequest, context: RouteContext) {
       .update({
         handler: "ai",
         handler_user_id: null,
+        human_review_requested: false,
         updated_at: now,
       })
       .eq("id", id)

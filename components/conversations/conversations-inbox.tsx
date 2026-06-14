@@ -4,12 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   useConversation,
   useConversationMessagesAfter,
   useConversations,
+  useDeleteConversation,
   useReleaseConversation,
   useSendConversationMessage,
   useTakeoverConversation,
@@ -221,6 +223,7 @@ export function ConversationsInbox() {
   const [selectedId, setSelectedId] = useState<string | null>(highlightId);
   const [draft, setDraft] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const filters = useMemo(() => {
     const base: Record<string, string | boolean | number> = { limit: 50 };
@@ -250,11 +253,37 @@ export function ConversationsInbox() {
   }, [polledMessages, detail, refetchDetail]);
   const takeover = useTakeoverConversation();
   const release = useReleaseConversation();
+  const deleteConversation = useDeleteConversation();
   const sendMessage = useSendConversationMessage(selectedId ?? "");
 
   useEffect(() => {
     if (highlightId) setSelectedId(highlightId);
   }, [highlightId]);
+
+  useEffect(() => {
+    setDeleteError(null);
+  }, [selectedId]);
+
+  async function handleDeleteConversation() {
+    if (!selectedId || !detail) return;
+    const label =
+      (detail.qualification as ConversationQualification)?.name ??
+      detail.external_session_id;
+    if (
+      !window.confirm(
+        `Delete this conversation with ${label}? All messages will be removed permanently.`
+      )
+    ) {
+      return;
+    }
+    setDeleteError(null);
+    try {
+      await deleteConversation.mutateAsync(selectedId);
+      setSelectedId(null);
+    } catch (err) {
+      setDeleteError(formatApiError(err, "Could not delete conversation"));
+    }
+  }
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -348,26 +377,43 @@ export function ConversationsInbox() {
                   </p>
                 </div>
                 {canWrite && (
-                  detail.handler === "human" ? (
+                  <>
+                    {detail.handler === "human" ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={release.isPending}
+                        onClick={() => void release.mutateAsync(detail.id)}
+                      >
+                        Hand back to Andrea
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        disabled={takeover.isPending}
+                        onClick={() => void takeover.mutateAsync(detail.id)}
+                      >
+                        Take over
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={release.isPending}
-                      onClick={() => void release.mutateAsync(detail.id)}
+                      disabled={deleteConversation.isPending}
+                      onClick={() => void handleDeleteConversation()}
+                      className="text-[var(--error)] hover:text-[var(--error)]"
+                      aria-label="Delete conversation"
                     >
-                      Hand back to Andrea
+                      <Trash2 className="h-4 w-4" />
                     </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      disabled={takeover.isPending}
-                      onClick={() => void takeover.mutateAsync(detail.id)}
-                    >
-                      Take over
-                    </Button>
-                  )
+                  </>
                 )}
               </div>
+              {deleteError && (
+                <p className="px-4 py-2 text-xs text-[var(--error)] border-b border-[var(--card-border)]">
+                  {deleteError}
+                </p>
+              )}
 
               <div className="flex flex-1 min-h-0">
                 <div className="flex-1 flex flex-col min-h-0">
