@@ -18,6 +18,8 @@ export function NotificationPreferencesSettings() {
   const [ticketNotifs, setTicketNotifs] = useState(true);
   const [emailNotifs, setEmailNotifs] = useState(true);
   const [conversationNotifs, setConversationNotifs] = useState(true);
+  const [salesNotifs, setSalesNotifs] = useState(true);
+  const [supportNotifs, setSupportNotifs] = useState(true);
   const [frequency, setFrequency] = useState("daily");
   const [timezone, setTimezone] = useState("UTC");
 
@@ -28,6 +30,8 @@ export function NotificationPreferencesSettings() {
     setTicketNotifs(data.ticket_notifications);
     setEmailNotifs(data.email_notifications ?? true);
     setConversationNotifs(data.conversation_notifications ?? true);
+    setSalesNotifs(data.sales_notifications ?? true);
+    setSupportNotifs(data.support_notifications ?? true);
     setFrequency(data.email_frequency);
     setTimezone(data.timezone || "UTC");
   }, [data]);
@@ -102,6 +106,28 @@ export function NotificationPreferencesSettings() {
             }}
           />
           Email replies from contacts
+        </label>
+        <label className="flex items-center gap-2 text-sm text-heading">
+          <input
+            type="checkbox"
+            checked={salesNotifs}
+            onChange={(e) => {
+              setSalesNotifs(e.target.checked);
+              void save({ sales_notifications: e.target.checked });
+            }}
+          />
+          Sales group events (leads, invoice payments, quote responses)
+        </label>
+        <label className="flex items-center gap-2 text-sm text-heading">
+          <input
+            type="checkbox"
+            checked={supportNotifs}
+            onChange={(e) => {
+              setSupportNotifs(e.target.checked);
+              void save({ support_notifications: e.target.checked });
+            }}
+          />
+          Support group events (new service tickets)
         </label>
         <label className="flex items-center gap-2 text-sm text-heading">
           <input

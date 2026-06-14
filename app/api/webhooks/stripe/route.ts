@@ -5,6 +5,11 @@ import { ensureInvoiceForQuoteCheckout } from "@/lib/finances/ensure-invoice-for
 import { recalculateInvoicePaymentStatus } from "@/lib/finances/invoice-payment-status";
 import { recordStripeFinanceTransaction } from "@/lib/finances/transactions";
 import type { FinanceCurrency } from "@/lib/finances/transactions";
+import {
+  emailSalesGroup,
+  notifySalesGroupInApp,
+  salesInvoicePaidGroupEmail,
+} from "@/lib/notifications/workspace-groups";
 import Stripe from "stripe";
 
 function normalizeCurrency(value: string | null | undefined): FinanceCurrency {
@@ -127,6 +132,42 @@ export async function POST(req: Request) {
     await recalculateInvoicePaymentStatus(supabase, workspaceOwnerId, resolvedInvoiceId, {
       lastPaymentAmount: session.amount_total ? session.amount_total / 100 : 0,
     });
+
+    if (paymentLinkId) {
+      const amount = session.amount_total ? session.amount_total / 100 : 0;
+      const currency = normalizeCurrency(session.currency);
+      const { data: invoice } = await supabase
+        .from("invoices")
+        .select("invoice_number")
+        .eq("id", resolvedInvoiceId)
+        .maybeSingle();
+
+      const invoiceNumber = (invoice?.invoice_number as string) || resolvedInvoiceId;
+      void notifySalesGroupInApp(supabase, workspaceOwnerId, {
+        kind: "sales_invoice_paid",
+        title: `Invoice ${invoiceNumber} paid via payment link`,
+        message: new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency,
+        }).format(amount),
+        related_entity_type: "invoice",
+        related_entity_id: resolvedInvoiceId,
+      });
+
+      const mail = salesInvoicePaidGroupEmail({
+        invoiceNumber,
+        amount,
+        currency,
+        invoiceId: resolvedInvoiceId,
+      });
+      void emailSalesGroup(
+        supabase,
+        workspaceOwnerId,
+        mail.subject,
+        mail.html,
+        mail.text
+      );
+    }
   }
 
   if (event.type === "payment_intent.succeeded") {

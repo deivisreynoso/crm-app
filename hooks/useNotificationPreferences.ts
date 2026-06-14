@@ -10,6 +10,8 @@ export interface NotificationPreferences {
   ticket_notifications: boolean;
   email_notifications: boolean;
   conversation_notifications?: boolean;
+  sales_notifications?: boolean;
+  support_notifications?: boolean;
   email_frequency: string;
   timezone: string;
 }

@@ -6,6 +6,7 @@ import { getWorkspaceWebsiteLeadsConfig } from "@/lib/team/workspace";
 import type { WebsiteCalendarSelection } from "@/lib/leads/booking-calendar-event";
 import { upsertBookingCalendarEvent, findContactDiscoveryAppointment } from "@/lib/leads/reschedule-booking";
 import { notifyWebsiteLeadAssignee } from "@/lib/leads/website-lead-notify";
+import { notifySalesGroupWebsiteLead } from "@/lib/notifications/sales-group-events";
 import type { CrmLocale } from "@/lib/crm/i18n";
 
 export type WebsiteContactInfo = {
@@ -258,6 +259,16 @@ async function appendToExistingContact(
     });
   }
 
+  void notifySalesGroupWebsiteLead(supabase, {
+    workspaceOwnerId,
+    contactId,
+    leadName: `${first_name} ${last_name}`.trim(),
+    leadEmail: input.contact_info.email.trim().toLowerCase(),
+    source: input.source,
+    hasAppointment: Boolean(calendarEventId),
+    returningVisitor: true,
+  });
+
   void triggerN8NWebhook("website.lead", {
     contact_id: contactId,
     opportunity_id: opportunityId,
@@ -426,6 +437,16 @@ export async function createLeadFromWebsite(input: {
       returningVisitor: false,
     });
   }
+
+  void notifySalesGroupWebsiteLead(supabase, {
+    workspaceOwnerId,
+    contactId,
+    leadName: `${first_name} ${last_name}`.trim(),
+    leadEmail: email,
+    source: input.source,
+    hasAppointment: Boolean(calendarEventId),
+    returningVisitor: false,
+  });
 
   void triggerN8NWebhook("website.lead", {
     contact_id: contactId,

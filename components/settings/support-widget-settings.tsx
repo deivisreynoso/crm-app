@@ -10,6 +10,7 @@ type SupportWidgetSettings = {
   support_widget_enabled: boolean;
   support_widget_assignee: string | null;
   support_widget_email_notify: boolean;
+  support_group_email: string;
   support_url: string;
   embed_code: string;
 };
@@ -124,6 +125,26 @@ export function SupportWidgetSettings() {
         />
         <span>Send confirmation email to customer via Mailgun ({`no-reply@clickin360.com`})</span>
       </label>
+
+      <div>
+        <FormLabel htmlFor="support-group-email">Support group email</FormLabel>
+        <input
+          id="support-group-email"
+          type="email"
+          className="input-field w-full mt-1"
+          defaultValue={settings.support_group_email}
+          onBlur={(e) =>
+            void save({
+              support_group_email: e.target.value.trim() || "support@clickin360.com",
+            })
+          }
+          disabled={saving}
+          placeholder="support@clickin360.com"
+        />
+        <p className="mt-1 text-xs text-body-muted">
+          Receives email when new service tickets are submitted (CRM or customer portal).
+        </p>
+      </div>
 
       <div>
         <FormLabel>Embed code</FormLabel>

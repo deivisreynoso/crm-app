@@ -21,6 +21,7 @@ export function WorkspaceLeadsSettings() {
   const [members, setMembers] = useState<Member[]>([]);
   const [assignee, setAssignee] = useState("");
   const [emailNotify, setEmailNotify] = useState(true);
+  const [salesGroupEmail, setSalesGroupEmail] = useState("sales@clickin360.com");
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,7 +39,8 @@ export function WorkspaceLeadsSettings() {
       if (elizabeth) setAssignee(elizabeth.id);
     }
     setEmailNotify(settings?.website_leads_email_notify !== false);
-  }, [settings?.default_sales_assignee, settings?.website_leads_email_notify, members]);
+    setSalesGroupEmail(settings?.sales_group_email ?? "sales@clickin360.com");
+  }, [settings?.default_sales_assignee, settings?.website_leads_email_notify, settings?.sales_group_email, members]);
 
   const assignableMembers = members.filter(
     (m) => m.role === "owner" || m.role === "admin" || m.role === "sales"
@@ -52,6 +54,7 @@ export function WorkspaceLeadsSettings() {
       await update.mutateAsync({
         default_sales_assignee: assignee || null,
         website_leads_email_notify: emailNotify,
+        sales_group_email: salesGroupEmail.trim() || "sales@clickin360.com",
       });
       setMsg("Website lead routing saved.");
     } catch (err) {
@@ -102,6 +105,20 @@ export function WorkspaceLeadsSettings() {
           Email the assignee when a new website lead arrives (in addition to in-app notification)
         </span>
       </label>
+      <div>
+        <FormLabel>Sales group email</FormLabel>
+        <input
+          type="email"
+          className="input-field w-full mt-1"
+          value={salesGroupEmail}
+          onChange={(e) => setSalesGroupEmail(e.target.value)}
+          placeholder="sales@clickin360.com"
+        />
+        <p className="mt-1 text-xs text-body-muted">
+          Receives sales alerts: website leads, invoice payments via payment links, and quote
+          accept/decline responses.
+        </p>
+      </div>
       {error && <p className="text-sm text-[var(--error)]">{error}</p>}
       {msg && <p className="text-sm text-emerald-700">{msg}</p>}
       <Button type="submit" size="sm" disabled={update.isPending}>

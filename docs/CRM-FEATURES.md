@@ -7,6 +7,7 @@ Related docs:
 - [CLICKIN360-CRM-API.md](./CLICKIN360-CRM-API.md) — HTTP API reference
 - [AUTH-ROADMAP.md](./AUTH-ROADMAP.md) — login methods, Google SSO, dual-email owner mapping
 - [AUDIT-FIX-TRACKER.md](./AUDIT-FIX-TRACKER.md) — security/performance fix backlog
+- [CUSTOMER-ONBOARDING-WORKFLOW-PROPOSAL.md](./CUSTOMER-ONBOARDING-WORKFLOW-PROPOSAL.md) — automated onboarding workflow (N8N + CRM touchpoints)
 
 ---
 
@@ -28,6 +29,8 @@ git log -1 --format='%h %s (%cs)'
 
 | Date | Commit | Type | Summary |
 |------|--------|------|---------|
+| 2026-06-14 | *(pending)* | feature | **Group notifications:** sales/support group emails + in-app prefs (migration **070**); Google Drive attach in email composer; onboarding workflow proposal |
+| 2026-06-14 | `ee5093d` | feature | Google Drive **Shared drives** browse; docs pass (CRM-FEATURES, API, AUTH-ROADMAP, audit tracker, inbox proposal) |
 | 2026-06-14 | `cd30229` | fix | **Google Drive Media:** upload, folders, shared-drive browse; Media page hook fix |
 | 2026-06-14 | `c0966ba` | fix | Google Drive connected status + OAuth redirect URI docs in Integrations UI |
 | 2026-06-14 | `1dbe485` | feature | **Google Drive Media** (`/media`), flat sidebar nav (Attachments + Media), modern `ListFiltersPanel` on contacts/tickets; migration **069** |
@@ -141,7 +144,7 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 - Notes, tasks (with assignee/due), activity feed (notes + activities including email metadata)
 - **Activity composer tabs:** Post | Email | Log a Call | New Task on contact detail
 - **Notes & tasks:** edit and delete from activity timeline / tasks panel (author or admin)
-- **Gmail — unified email composer:** rich text (bold, italic, lists, tables, links), **Cc/Bcc**, attachments, merge fields, template insert/save, preview, signature append; used on contact activity, send-email modal, tickets, and quote send
+- **Gmail — unified email composer:** rich text (bold, italic, lists, tables, links), **Cc/Bcc**, attachments (local upload + **Google Drive** picker), merge fields, template insert/save, preview, signature append; used on contact activity, send-email modal, tickets, and quote send
 - **Email timeline colors:** inbound rose, outbound sky blue
 - **Inbound email notifications** (preference `email_notifications`; deep link to contact)
 - **Google review request** from contact — editable subject/body/Cc; workspace review template in Settings (not in general template list)
@@ -228,8 +231,12 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 
 ### Notifications
 
-- In-app notifications (tickets, tasks, opportunities, inbound email, **conversations needing review**, finance events, etc.)
-- Per-user notification preferences (`email_notifications`, `conversation_notifications`, `finance_notifications`, task/opportunity/ticket toggles, timezone)
+- In-app notifications (tickets, tasks, opportunities, inbound email, **conversations needing review**, finance events, **sales group events**, **support group events**, etc.)
+- Per-user notification preferences (`email_notifications`, `conversation_notifications`, `finance_notifications`, **`sales_notifications`**, **`support_notifications`**, task/opportunity/ticket toggles, timezone)
+- **Workspace group email routing** (migration **070**): configurable shared inboxes on `user_settings`
+  - **Sales group** (default `sales@clickin360.com`) — website leads, invoice paid via payment link, quote accept/decline; in-app alerts to owner + sales/admin roles who opted in
+  - **Support group** (default `support@clickin360.com`) — new service tickets (CRM + public widget); in-app alerts to owner/admin/support assignees who opted in
+  - Configure sales address in Settings → Website leads; support address in Settings → Support widget
 
 ### Conversations (WhatsApp + webchat inbox)
 
@@ -345,6 +352,7 @@ Production should run migrations **001–069** in order. Notable groups:
 | 067 | Conversations delete policy for workspace members |
 | 068 | `conversation_notifications` on `notification_preferences` |
 | 069 | `google_drive_tokens`; `documents.source` / `external_id` / `external_url` |
+| 070 | `sales_group_email`, `support_group_email` on `user_settings`; `sales_notifications`, `support_notifications` on `notification_preferences` |
 
 ---
 

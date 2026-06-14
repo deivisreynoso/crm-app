@@ -8,6 +8,8 @@ export interface WorkspaceSettings {
   default_currency: WorkspaceCurrency;
   default_sales_assignee?: string | null;
   website_leads_email_notify?: boolean;
+  sales_group_email?: string;
+  support_group_email?: string;
   booking_availability?: BookingAvailabilityConfig;
   ui_locale?: "en" | "es";
   quote_logo_storage_path?: string | null;
@@ -37,6 +39,7 @@ export function useUpdateWorkspaceSettings() {
       default_currency?: WorkspaceCurrency;
       default_sales_assignee?: string | null;
       website_leads_email_notify?: boolean;
+      sales_group_email?: string;
       booking_availability?: BookingAvailabilityConfig;
       quote_company_name?: string;
       quote_primary_color?: string;

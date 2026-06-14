@@ -11,6 +11,7 @@ import {
   ticketDisplayLabel,
 } from "@/lib/service-ticket-number";
 import { createNotification } from "@/lib/notifications/create-notification";
+import { notifySupportGroupNewTicket } from "@/lib/notifications/support-group-events";
 import { logContactActivity } from "@/lib/activities/log-contact-activity";
 import {
   assertParentsInWorkspace,
@@ -140,6 +141,15 @@ export async function POST(req: NextRequest) {
       message: notifyMessage,
       related_entity_type: "ticket",
       related_entity_id: data.id as string,
+    });
+
+    void notifySupportGroupNewTicket(supabase, {
+      workspaceOwnerId: workspaceOwnerId!,
+      ticketId: data.id as string,
+      ticketNumber,
+      subject: (data.subject as string) || (data.title as string) || "Service ticket",
+      priority: (data.priority as string) || "medium",
+      source: "crm",
     });
 
     if (parsed.data.contact_id) {

@@ -452,6 +452,8 @@ export const notificationPreferencesSchema = z.object({
   ticket_notifications: z.boolean().optional(),
   email_notifications: z.boolean().optional(),
   conversation_notifications: z.boolean().optional(),
+  sales_notifications: z.boolean().optional(),
+  support_notifications: z.boolean().optional(),
   email_frequency: z.enum(["instant", "daily", "weekly", "off"]).optional(),
   timezone: z.string().optional().or(z.literal("")),
 });

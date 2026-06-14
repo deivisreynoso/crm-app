@@ -7,6 +7,7 @@ const patchSchema = z.object({
   support_widget_enabled: z.boolean().optional(),
   support_widget_assignee: z.string().uuid().nullable().optional(),
   support_widget_email_notify: z.boolean().optional(),
+  support_group_email: z.string().email().max(320).optional().or(z.literal("")),
 });
 
 function appUrl(): string {
@@ -28,7 +29,7 @@ export async function GET() {
   const { data } = await supabase
     .from("user_settings")
     .select(
-      "support_widget_enabled, support_widget_assignee, support_widget_email_notify"
+      "support_widget_enabled, support_widget_assignee, support_widget_email_notify, support_group_email"
     )
     .eq("user_id", workspaceOwnerId!)
     .maybeSingle();
@@ -40,6 +41,7 @@ export async function GET() {
       support_widget_enabled: data?.support_widget_enabled ?? false,
       support_widget_assignee: data?.support_widget_assignee ?? null,
       support_widget_email_notify: data?.support_widget_email_notify ?? true,
+      support_group_email: data?.support_group_email ?? "support@clickin360.com",
       support_url: `${base}/en/support`,
       support_url_es: `${base}/es/support`,
       embed_code: `<iframe src="${base}/support?embed=1" width="100%" height="640" style="border:0;border-radius:12px" title="Support"></iframe>`,
@@ -72,6 +74,10 @@ export async function PATCH(req: NextRequest) {
   }
   if (parsed.data.support_widget_email_notify !== undefined) {
     patch.support_widget_email_notify = parsed.data.support_widget_email_notify;
+  }
+  if (parsed.data.support_group_email !== undefined) {
+    patch.support_group_email =
+      parsed.data.support_group_email?.trim() || "support@clickin360.com";
   }
 
   const supabase = createServerSideClient();

@@ -8,6 +8,7 @@ import {
   Braces,
   ExternalLink,
   Eye,
+  HardDrive,
   Paperclip,
   Trash2,
   X,
@@ -31,12 +32,16 @@ import {
   quoteEmailHasSignatureBlock,
 } from "@/lib/email/quote-email-merge";
 import { useGmailStatus } from "@/hooks/useGmail";
+import { GoogleDrivePickerModal } from "@/components/email/google-drive-picker-modal";
+import type { DriveFileItem } from "@/lib/google/drive";
 import type { Contact } from "@/types";
 import { cn } from "@/lib/utils";
+import { formatApiError } from "@/lib/validation-errors";
 
 export type EmailComposerAttachment = {
   id: string;
   file: File;
+  source?: "local" | "google_drive";
 };
 
 export type EmailComposerSendPayload = {
@@ -112,6 +117,8 @@ export function EmailComposer({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [clearOpen, setClearOpen] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
+  const [drivePickerOpen, setDrivePickerOpen] = useState(false);
+  const [driveLoading, setDriveLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { confirm, dialogProps } = useConfirmDialog();
 
@@ -250,6 +257,51 @@ export function EmailComposer({
     }
   }
 
+  async function handleDriveFileSelect(file: DriveFileItem) {
+    if (attachments.length >= 5) {
+      setError("Maximum 5 attachments per email.");
+      return;
+    }
+
+    setDriveLoading(true);
+    setError(null);
+    try {
+      const { data } = await axios.get<{
+        filename: string;
+        mime_type: string;
+        content_base64: string;
+        web_view_link?: string | null;
+      }>(`/api/integrations/google-drive/files/${encodeURIComponent(file.id)}/download`);
+
+      const bytes = Uint8Array.from(atob(data.content_base64), (c) => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: data.mime_type });
+      const driveFile = new File([blob], data.filename, { type: data.mime_type });
+
+      setAttachments((prev) => [
+        ...prev,
+        {
+          id: `drive-${file.id}-${Date.now()}`,
+          file: driveFile,
+          source: "google_drive",
+        },
+      ]);
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 422) {
+        const link = file.webViewLink;
+        if (link) {
+          setBodyHtml(
+            (prev) =>
+              `${prev}<p><a href="${link}">${file.name}</a> (Google Drive)</p>`
+          );
+          return;
+        }
+      }
+      setError(formatApiError(err, "Could not attach Drive file"));
+    } finally {
+      setDriveLoading(false);
+    }
+  }
+
   const previewHtml = templateContext
     ? prepareBodyForSend(bodyHtml, templateContext, { stripUnresolved: false })
     : bodyHtml;
@@ -359,6 +411,9 @@ export function EmailComposer({
                 className="inline-flex items-center gap-1 rounded-md border border-[var(--card-border)] px-2 py-1 text-xs"
               >
                 <Paperclip className="h-3 w-3" />
+                {a.source === "google_drive" && (
+                  <HardDrive className="h-3 w-3 text-[var(--secondary)]" />
+                )}
                 {a.file.name}
                 <button
                   type="button"
@@ -407,6 +462,16 @@ export function EmailComposer({
             onClick={() => document.getElementById("email-attach-input")?.click()}
           >
             <Paperclip className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            title="Attach from Google Drive"
+            disabled={driveLoading || attachments.length >= 5}
+            onClick={() => setDrivePickerOpen(true)}
+          >
+            <HardDrive className="h-4 w-4" />
           </Button>
           <Button
             type="button"
@@ -500,7 +565,13 @@ export function EmailComposer({
       />
 
       <ConfirmDialog {...dialogProps} />
-      <ConfirmDialog {...dialogProps} />
+      <GoogleDrivePickerModal
+        open={drivePickerOpen}
+        onClose={() => setDrivePickerOpen(false)}
+        onSelect={(file) => void handleDriveFileSelect(file)}
+        maxSelections={5}
+        selectedCount={attachments.length}
+      />
       <ConfirmDialog
         open={clearOpen}
         title="Clear email?"

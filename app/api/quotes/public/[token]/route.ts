@@ -3,6 +3,11 @@ import { createServerSideClient } from "@/lib/supabase";
 import { loadPublicQuoteByToken } from "@/lib/quotes/load-public-quote";
 import { logContactActivity } from "@/lib/activities/log-contact-activity";
 import { triggerN8NWebhook } from "@/lib/n8n";
+import {
+  emailSalesGroup,
+  notifySalesGroupInApp,
+  salesQuoteResponseGroupEmail,
+} from "@/lib/notifications/workspace-groups";
 import { z } from "zod";
 
 type RouteContext = { params: Promise<{ token: string }> };
@@ -134,6 +139,34 @@ export async function POST(req: NextRequest, context: RouteContext) {
       response_name: responseName,
       response_email: responseEmail,
     });
+
+    const workspaceOwnerId = doc.user_id as string;
+    const quoteRef = (doc.quote_reference as string) || (doc.title as string);
+    const kind = isAccept ? "sales_quote_accepted" : "sales_quote_declined";
+    const verb = isAccept ? "accepted" : "declined";
+
+    void notifySalesGroupInApp(supabase, workspaceOwnerId, {
+      kind,
+      title: `Quote ${quoteRef} ${verb}`,
+      message: responseName ?? responseEmail ?? undefined,
+      related_entity_type: "document",
+      related_entity_id: doc.id as string,
+    });
+
+    const mail = salesQuoteResponseGroupEmail({
+      quoteReference: quoteRef,
+      action: isAccept ? "accepted" : "declined",
+      responseName,
+      responseEmail,
+      documentId: doc.id as string,
+    });
+    void emailSalesGroup(
+      supabase,
+      workspaceOwnerId,
+      mail.subject,
+      mail.html,
+      mail.text
+    );
 
     return NextResponse.json({
       success: true,

@@ -25,6 +25,7 @@ const settingsPatchSchema = z.object({
   default_currency: z.enum(["USD", "MXN"]).optional(),
   default_sales_assignee: z.string().uuid().nullable().optional(),
   website_leads_email_notify: z.boolean().optional(),
+  sales_group_email: z.string().email().max(320).optional().or(z.literal("")),
   booking_availability: bookingAvailabilityPatchSchema.optional(),
   ui_locale: z.enum(["en", "es"]).optional(),
   quote_company_name: z.string().max(120).optional().or(z.literal("")),
@@ -42,7 +43,7 @@ const settingsPatchSchema = z.object({
 });
 
 const SETTINGS_SELECT =
-  "default_currency, default_sales_assignee, website_leads_email_notify, booking_availability, ui_locale, quote_logo_storage_path, quote_company_name, quote_primary_color, quote_font_family, google_reviews_url, review_request_template_id, updated_at";
+  "default_currency, default_sales_assignee, website_leads_email_notify, sales_group_email, support_group_email, booking_availability, ui_locale, quote_logo_storage_path, quote_company_name, quote_primary_color, quote_font_family, google_reviews_url, review_request_template_id, updated_at";
 
 async function loadSettings(workspaceOwnerId: string) {
   const supabase = createServerSideClient();
@@ -122,6 +123,7 @@ export async function PATCH(req: NextRequest) {
       parsed.data.default_currency === undefined &&
       parsed.data.default_sales_assignee === undefined &&
       parsed.data.website_leads_email_notify === undefined &&
+      parsed.data.sales_group_email === undefined &&
       parsed.data.booking_availability === undefined &&
       parsed.data.ui_locale === undefined &&
       parsed.data.quote_company_name === undefined &&
@@ -146,6 +148,10 @@ export async function PATCH(req: NextRequest) {
     }
     if (parsed.data.website_leads_email_notify !== undefined) {
       patch.website_leads_email_notify = parsed.data.website_leads_email_notify;
+    }
+    if (parsed.data.sales_group_email !== undefined) {
+      patch.sales_group_email =
+        parsed.data.sales_group_email?.trim() || "sales@clickin360.com";
     }
     if (parsed.data.booking_availability !== undefined) {
       patch.booking_availability = parsed.data.booking_availability;

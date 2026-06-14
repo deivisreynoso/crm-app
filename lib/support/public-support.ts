@@ -11,6 +11,7 @@ import { sendEmail } from "@/lib/email/send";
 import { supportTicketConfirmationEmail, parseSupportLocale } from "@/lib/email/support-ticket-confirmation";
 import { logContactActivity } from "@/lib/activities/log-contact-activity";
 import { createNotification } from "@/lib/notifications/create-notification";
+import { notifySupportGroupNewTicket } from "@/lib/notifications/support-group-events";
 import type { CrmLocale } from "@/lib/crm/i18n";
 
 const SESSION_TTL_MS = 30 * 60 * 1000;
@@ -164,6 +165,17 @@ export async function createPublicSupportTicket(
     message: label,
     related_entity_type: "ticket",
     related_entity_id: ticket.id as string,
+  });
+
+  void notifySupportGroupNewTicket(supabase, {
+    workspaceOwnerId: session.workspaceOwnerId,
+    ticketId: ticket.id as string,
+    ticketNumber: ref,
+    subject,
+    priority: input.priority,
+    source: "website_widget",
+    title: "New support ticket (customer portal)",
+    message: label,
   });
 
   if (settings?.support_widget_email_notify !== false) {

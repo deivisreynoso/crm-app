@@ -7,7 +7,12 @@ export type NotificationKind =
   | "email_received"
   | "finance_payment_received"
   | "finance_invoice_overdue"
-  | "conversation_review";
+  | "conversation_review"
+  | "sales_website_lead"
+  | "sales_invoice_paid"
+  | "sales_quote_accepted"
+  | "sales_quote_declined"
+  | "support_ticket_received";
 
 const PREF_KEY: Record<NotificationKind, keyof NotificationPrefs> = {
   task_reminder: "task_reminders",
@@ -17,6 +22,11 @@ const PREF_KEY: Record<NotificationKind, keyof NotificationPrefs> = {
   finance_payment_received: "finance_notifications",
   finance_invoice_overdue: "finance_notifications",
   conversation_review: "conversation_notifications",
+  sales_website_lead: "sales_notifications",
+  sales_invoice_paid: "sales_notifications",
+  sales_quote_accepted: "sales_notifications",
+  sales_quote_declined: "sales_notifications",
+  support_ticket_received: "support_notifications",
 };
 
 type NotificationPrefs = {
@@ -26,6 +36,8 @@ type NotificationPrefs = {
   email_notifications: boolean;
   finance_notifications: boolean;
   conversation_notifications: boolean;
+  sales_notifications: boolean;
+  support_notifications: boolean;
 };
 
 export async function createNotification(
@@ -40,32 +52,42 @@ export async function createNotification(
   }
 ) {
   const prefColumns =
-    "task_reminders, opportunity_reminders, ticket_notifications, email_notifications, finance_notifications, conversation_notifications";
+    "task_reminders, opportunity_reminders, ticket_notifications, email_notifications, finance_notifications, conversation_notifications, sales_notifications, support_notifications";
 
-  let { data: prefs, error: prefError } = await supabase
+  const { data: initialPrefs, error: prefError } = await supabase
     .from("notification_preferences")
     .select(prefColumns)
     .eq("user_id", userId)
     .maybeSingle();
 
+  let prefs = initialPrefs;
+
   if (
     prefError &&
-    /conversation_notifications|schema cache|could not find/i.test(prefError.message)
+    /conversation_notifications|sales_notifications|support_notifications|schema cache|could not find/i.test(
+      prefError.message
+    )
   ) {
     ({ data: prefs } = await supabase
       .from("notification_preferences")
       .select(
-        "task_reminders, opportunity_reminders, ticket_notifications, email_notifications, finance_notifications"
+        "task_reminders, opportunity_reminders, ticket_notifications, email_notifications, finance_notifications, conversation_notifications"
       )
       .eq("user_id", userId)
       .maybeSingle());
   }
 
   const prefKey = PREF_KEY[input.kind];
-  const enabled =
-    prefKey === "conversation_notifications" && prefs && !("conversation_notifications" in prefs)
-      ? true
-      : (prefs?.[prefKey as keyof NotificationPrefs] ?? true);
+  const missingPrefColumn =
+    prefs &&
+    ((prefKey === "conversation_notifications" &&
+      !("conversation_notifications" in prefs)) ||
+      ((prefKey === "sales_notifications" || prefKey === "support_notifications") &&
+        !(prefKey in prefs)));
+
+  const enabled = missingPrefColumn
+    ? true
+    : (prefs?.[prefKey as keyof NotificationPrefs] ?? true);
   if (!enabled) return null;
 
   const { data, error } = await supabase

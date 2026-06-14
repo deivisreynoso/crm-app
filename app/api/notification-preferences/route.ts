@@ -10,6 +10,8 @@ const DEFAULTS = {
   ticket_notifications: true,
   email_notifications: true,
   conversation_notifications: true,
+  sales_notifications: true,
+  support_notifications: true,
   email_frequency: "daily",
   timezone: "UTC",
 };

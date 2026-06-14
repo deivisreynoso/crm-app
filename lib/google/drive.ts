@@ -442,3 +442,95 @@ export async function uploadGoogleDriveFile(
 
   return mapDriveFile(file);
 }
+
+const GOOGLE_NATIVE_EXPORT: Record<
+  string,
+  { exportMime: string; filenameSuffix: string }
+> = {
+  "application/vnd.google-apps.document": {
+    exportMime: "application/pdf",
+    filenameSuffix: ".pdf",
+  },
+  "application/vnd.google-apps.spreadsheet": {
+    exportMime:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    filenameSuffix: ".xlsx",
+  },
+  "application/vnd.google-apps.presentation": {
+    exportMime: "application/pdf",
+    filenameSuffix: ".pdf",
+  },
+  "application/vnd.google-apps.drawing": {
+    exportMime: "image/png",
+    filenameSuffix: ".png",
+  },
+};
+
+const MAX_EMAIL_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+
+export type DriveAttachmentContent = {
+  filename: string;
+  mimeType: string;
+  buffer: Buffer;
+  webViewLink?: string;
+};
+
+export async function downloadGoogleDriveFileForAttachment(
+  workspaceOwnerId: string,
+  fileId: string
+): Promise<DriveAttachmentContent | null> {
+  const meta = await getGoogleDriveFileMeta(workspaceOwnerId, fileId);
+  if (!meta || meta.isFolder) return null;
+
+  const accessToken = await getGoogleDriveAccessToken(workspaceOwnerId);
+  if (!accessToken) return null;
+
+  const exportSpec = GOOGLE_NATIVE_EXPORT[meta.mimeType];
+  let url: string;
+  let filename = meta.name;
+  let mimeType: string;
+
+  if (exportSpec) {
+    const params = new URLSearchParams({
+      mimeType: exportSpec.exportMime,
+    });
+    url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}/export?${params.toString()}`;
+    mimeType = exportSpec.exportMime;
+    if (!filename.toLowerCase().endsWith(exportSpec.filenameSuffix)) {
+      const base = filename.replace(/\.[^.]+$/, "");
+      filename = `${base}${exportSpec.filenameSuffix}`;
+    }
+  } else if (meta.mimeType.startsWith("application/vnd.google-apps.")) {
+    return null;
+  } else {
+    const params = new URLSearchParams({
+      alt: "media",
+      supportsAllDrives: "true",
+    });
+    url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?${params.toString()}`;
+    mimeType = meta.mimeType || "application/octet-stream";
+  }
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!res.ok) {
+    console.error("Drive download failed:", await res.text());
+    return null;
+  }
+
+  const buffer = Buffer.from(await res.arrayBuffer());
+  if (buffer.length > MAX_EMAIL_ATTACHMENT_BYTES) {
+    throw new Error(
+      `File is too large to attach (${Math.round(buffer.length / 1024 / 1024)} MB). Use the Drive link instead.`
+    );
+  }
+
+  return {
+    filename,
+    mimeType,
+    buffer,
+    webViewLink: meta.webViewLink,
+  };
+}
