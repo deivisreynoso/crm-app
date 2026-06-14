@@ -3,19 +3,19 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## CRM Event Router\n\n**STEP 1** Generate `CRM_OUTBOUND_WEBHOOK_SECRET` (openssl rand -hex 32) and set in CRM .env + N8N variables.\n\n**STEP 2** Activate this workflow. Copy Production URL from **CRM Router Webhook** \u2192 CRM Settings \u2192 Automations \u2192 Webhook URL.\n\n**STEP 3** Set N8N env `N8N_WEBHOOK_BASE` (e.g. https://n8n.clickin360.com/webhook).\n\n**STEP 4** Import & activate sub-workflows A, B, C, Appointment Reminders.\n\n**STEP 5** Test with curl (see docs/n8n/automations-setup-guide.md).",
-        "height": 360,
-        "width": 520,
+        "content": "## Self-hosted n8n Community Edition\n\n**No Settings → Variables** on the free plan. Edit the **Config: Edit These Values** Set node (yellow fields) in each workflow instead.\n\nOptional: you can also set OS/Docker env vars on the n8n container — not required if you use the Config node.\n\n**STEP 1** Edit **Config: Edit These Values** → set `crm_outbound_webhook_secret` and `n8n_webhook_base`.\n\n**STEP 2** Activate workflow. Copy Production URL → CRM Settings → Automations → Webhook URL.\n\n**STEP 3** Import & activate sub-workflows A, B, C, Appointments (edit Config in each).",
+        "height": 400,
+        "width": 540,
         "color": 4
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -600,
-        -200
+        720,
+        96
       ],
-      "id": "c0b4f526-9f01-4d02-aa3f-6a0b7e749b3a",
-      "name": "INSTRUCTIONS: Router Setup"
+      "id": "bda198df-6a9c-45fc-9982-674cbf216efe",
+      "name": "INSTRUCTIONS: Router (Community)"
     },
     {
       "parameters": {
@@ -26,25 +26,54 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        0,
-        0
+        1344,
+        320
       ],
-      "id": "d88f24a3-0ce4-461f-b20c-7d1e84148f94",
+      "id": "a23c1f4e-68e5-4a70-abd9-3b21649d5396",
       "name": "CRM Router Webhook",
       "webhookId": "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e"
     },
     {
       "parameters": {
-        "jsCode": "const headers = $input.first().json.headers || {};\nconst secret = headers['x-crm-webhook-secret'] || headers['X-Crm-Webhook-Secret'] || '';\nconst expected = $env.CRM_OUTBOUND_WEBHOOK_SECRET || '';\nif (!expected || secret !== expected) {\n  throw new Error('Invalid x-crm-webhook-secret');\n}\nconst body = $input.first().json.body || $input.first().json;\nreturn [{ json: body }];"
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f601bc80-40f4-4687-bc0f-f3737855f448",
+              "name": "crm_outbound_webhook_secret",
+              "value": "224fcc493dd97aa228b8a7d336cc42e22706915ac3d08cd10339b3a4a584a216",
+              "type": "string"
+            },
+            {
+              "id": "cc07d49e-8a64-4abb-a303-87edab0942f6",
+              "name": "n8n_webhook_base",
+              "value": "https://n8n.clickin360.com/webhook",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1600,
+        320
+      ],
+      "id": "adb49c21-d390-432c-a658-9adb0ef0c5ad",
+      "name": "Config: Edit These Values"
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $input.first().json;\nconst webhook = $('CRM Router Webhook').first().json;\n\nconst expected = (config.crm_outbound_webhook_secret || '').trim();\nif (!expected || expected === 'PASTE_SAME_SECRET_AS_CRM_HERE') {\n  throw new Error('Edit the Config node: replace PASTE_SAME_SECRET_AS_CRM_HERE with your real secret.');\n}\n\nconst rawHeaders = webhook.headers || {};\nconst headerSecret = Object.entries(rawHeaders)\n  .find(([k]) => k.toLowerCase() === 'x-crm-webhook-secret')?.[1];\nconst secret = String(headerSecret || '').trim();\n\nif (!secret) {\n  throw new Error('Missing x-crm-webhook-secret header. CRM must send it, or test with curl -H \"x-crm-webhook-secret: ...\"');\n}\n\nif (secret !== expected) {\n  throw new Error('Secret mismatch: header does not match Config node. Use the exact same value in CRM and n8n.');\n}\n\nfunction extractPayload(src) {\n  if (src.body && typeof src.body === 'object' && src.body.event) return src.body;\n  if (src.event) {\n    const { headers, params, query, body, crm_outbound_webhook_secret, n8n_webhook_base, ...rest } = src;\n    if (rest.event) return rest;\n  }\n  return src;\n}\n\nconst crm = extractPayload(webhook);\nconst event = crm.event || config.event;\nif (!event) {\n  throw new Error('No event in webhook body.');\n}\n\nreturn [{\n  json: {\n    event,\n    workspace_owner_id: crm.workspace_owner_id || config.workspace_owner_id,\n    emitted_at: crm.emitted_at || config.emitted_at,\n    payload: crm.payload || config.payload || {},\n    n8n_webhook_base: (config.n8n_webhook_base || '').replace(/\\/$/, ''),\n  },\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        280,
-        0
+        1872,
+        320
       ],
-      "id": "56a94165-ad37-4fcc-b9b7-a3ce3a6f367e",
-      "name": "Validate Secret"
+      "id": "42cb62d7-37d9-475a-8a66-424200142db6",
+      "name": "Validate Secret + Pass Through"
     },
     {
       "parameters": {
@@ -243,242 +272,229 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        560,
-        0
+        2128,
+        320
       ],
-      "id": "a93bbb47-310d-4fc7-a5a1-8a5e128257cc",
+      "id": "93e19638-a0aa-4e72-b08a-0e6880ccee14",
       "name": "Route By Event"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={$env.N8N_WEBHOOK_BASE}/ad82f928-4a37-4c77-8384-0613a10f86e8",
-        "options": {},
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "url": "={{ $json.n8n_webhook_base }}/ad82f928-4a37-4c77-8384-0613a10f86e8",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}"
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        900,
-        -200
+        2384,
+        128
       ],
-      "id": "a52ac49a-5651-40a3-a7b6-51bc295d63f2",
+      "id": "10567f38-91e1-467d-ab4b-8bef1c7da129",
       "name": "Forward: Onboarding A",
-      "continueOnFail": true,
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "avN9SN9QlpkztmyC",
-          "name": "CRM API"
-        }
-      }
+      "continueOnFail": true
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={$env.N8N_WEBHOOK_BASE}/ad82f928-4a37-4c77-8384-0613a10f86e8",
-        "options": {},
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "url": "={{ $json.n8n_webhook_base }}/ad82f928-4a37-4c77-8384-0613a10f86e8",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}"
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        900,
-        -80
+        2384,
+        240
       ],
-      "id": "80a5ffdd-baf4-494d-8232-02f9bb12b2c4",
+      "id": "87465239-0ee1-460c-bfd5-8df26dec8ada",
       "name": "Forward: Onboarding A (invoice)",
-      "continueOnFail": true,
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "avN9SN9QlpkztmyC",
-          "name": "CRM API"
-        }
-      }
+      "continueOnFail": true
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={$env.N8N_WEBHOOK_BASE}/ad82f928-4a37-4c77-8384-0613a10f86e8",
-        "options": {},
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "url": "={{ $json.n8n_webhook_base }}/ad82f928-4a37-4c77-8384-0613a10f86e8",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}"
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        900,
-        40
+        2384,
+        368
       ],
-      "id": "7b869d95-1e85-411c-bed3-c4998c473f83",
+      "id": "6f60ff12-ec5e-47d5-a909-dbee8c7d2507",
       "name": "Forward: Onboarding A (manual)",
-      "continueOnFail": true,
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "avN9SN9QlpkztmyC",
-          "name": "CRM API"
-        }
-      }
+      "continueOnFail": true
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={$env.N8N_WEBHOOK_BASE}/74d2a3eb-0e44-4595-9fe5-01faa0ebc66b",
-        "options": {},
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "url": "={{ $json.n8n_webhook_base }}/74d2a3eb-0e44-4595-9fe5-01faa0ebc66b",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}"
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        900,
-        160
+        2384,
+        480
       ],
-      "id": "e58cd2ff-b35b-4c9e-929a-a40a7bba7269",
+      "id": "91d62247-db81-4bbb-9a23-6522116ed26c",
       "name": "Forward: Onboarding B",
-      "continueOnFail": true,
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "avN9SN9QlpkztmyC",
-          "name": "CRM API"
-        }
-      }
+      "continueOnFail": true
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={$env.N8N_WEBHOOK_BASE}/ae1e67a5-a991-40e2-ae74-9ab817f73d57",
-        "options": {},
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "url": "={{ $json.n8n_webhook_base }}/ae1e67a5-a991-40e2-ae74-9ab817f73d57",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}"
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        900,
-        280
+        2384,
+        608
       ],
-      "id": "e7198d4c-241e-432a-825b-c9cd1e9ad5b8",
+      "id": "3b02a460-5b1a-4535-98d4-45f5725f6fa8",
       "name": "Forward: Onboarding C",
-      "continueOnFail": true,
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "avN9SN9QlpkztmyC",
-          "name": "CRM API"
-        }
-      }
+      "continueOnFail": true
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={$env.N8N_WEBHOOK_BASE}/a9b459bc-7c58-4474-b6e2-82bb13172a89",
-        "options": {},
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "url": "={{ $json.n8n_webhook_base }}/a9b459bc-7c58-4474-b6e2-82bb13172a89",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}"
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        900,
-        400
+        2384,
+        720
       ],
-      "id": "adef8826-a169-4e7b-8bef-344c34aa02dc",
+      "id": "51811402-d82c-42de-81da-39c36ec6bccc",
       "name": "Forward: Appointments (create)",
-      "continueOnFail": true,
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "avN9SN9QlpkztmyC",
-          "name": "CRM API"
-        }
-      }
+      "continueOnFail": true
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={$env.N8N_WEBHOOK_BASE}/a9b459bc-7c58-4474-b6e2-82bb13172a89",
-        "options": {},
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "url": "={{ $json.n8n_webhook_base }}/a9b459bc-7c58-4474-b6e2-82bb13172a89",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}"
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        900,
-        520
+        2384,
+        848
       ],
-      "id": "4ba45035-c0e6-45ae-bb51-ce45bc2eb37e",
+      "id": "3ff8faa2-dd18-40b1-97eb-9bb426a8b049",
       "name": "Forward: Appointments (update)",
-      "continueOnFail": true,
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "avN9SN9QlpkztmyC",
-          "name": "CRM API"
-        }
-      }
+      "continueOnFail": true
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={$env.N8N_WEBHOOK_BASE}/a9b459bc-7c58-4474-b6e2-82bb13172a89",
-        "options": {},
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "url": "={{ $json.n8n_webhook_base }}/a9b459bc-7c58-4474-b6e2-82bb13172a89",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}"
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        900,
-        640
+        2384,
+        960
       ],
-      "id": "9ad5ed06-15ac-4447-8631-ecc4abca0263",
+      "id": "64e3717c-d687-4d24-a57d-e3d45d0fd578",
       "name": "Forward: Appointments (cancel)",
-      "continueOnFail": true,
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "avN9SN9QlpkztmyC",
-          "name": "CRM API"
-        }
-      }
+      "continueOnFail": true
     }
   ],
+  "pinData": {
+    "CRM Router Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.clickin360.com",
+            "user-agent": "curl/8.7.1",
+            "content-length": "198",
+            "accept": "*/*",
+            "content-type": "application/json",
+            "via": "2.0 Caddy",
+            "x-crm-webhook-secret": "224fcc493dd97aa228b8a7d336cc42e22706915ac3d08cd10339b3a4a584a216",
+            "x-forwarded-for": "47.204.32.42",
+            "x-forwarded-host": "n8n.clickin360.com",
+            "x-forwarded-proto": "https",
+            "accept-encoding": "gzip"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "event": "onboarding.manual_start",
+            "workspace_owner_id": "test",
+            "emitted_at": "2026-01-01T00:00:00Z",
+            "payload": {
+              "contact_id": "test",
+              "contact": {
+                "email": "deivis.reynoso@gmail.com",
+                "first_name": "Test"
+              }
+            }
+          },
+          "webhookUrl": "https://n8n.clickin360.com/webhook/b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
   "connections": {
     "CRM Router Webhook": {
       "main": [
         [
           {
-            "node": "Validate Secret",
+            "node": "Config: Edit These Values",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Validate Secret": {
+    "Config: Edit These Values": {
+      "main": [
+        [
+          {
+            "node": "Validate Secret + Pass Through",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Secret + Pass Through": {
       "main": [
         [
           {
@@ -550,11 +566,16 @@
       ]
     }
   },
-  "pinData": {},
-  "meta": {
-    "templateCredsSetupCompleted": true
-  },
+  "active": true,
   "settings": {
-    "executionOrder": "v1"
-  }
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "14ce2d8c-db40-476b-b8f4-45f1b9a2d4b7",
+  "meta": {
+    "instanceId": "d3fa9cdd620dd2c6b69b121e71ddbcc9471c89fa2a348af4786bfb8119fd5402"
+  },
+  "nodeGroups": [],
+  "id": "i0cgIpAlXipIQEpk",
+  "tags": []
 }

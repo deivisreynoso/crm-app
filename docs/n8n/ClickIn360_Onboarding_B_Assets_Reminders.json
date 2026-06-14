@@ -3,8 +3,8 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Workflow B \u2014 Assets & Reminders\n\n**Trigger:** questionnaire.submitted\n\n**STEP 1** Sends confirmation email to customer.\n\n**STEP 2 (extend)** Add Wait nodes for Day 1 and Day 3 if questionnaire incomplete \u2014 query CRM tasks via future integration endpoint or Supabase.\n\n**STEP 3** Optional WhatsApp reminder using **WhatsApp account** credential.\n\n**STEP 4** Notify account owner via Mailgun to sales@clickin360.com.",
-        "height": 300,
+        "content": "## Self-hosted n8n Community Edition\n\n**No Settings \u2192 Variables** on the free plan. Edit the **Config: Edit These Values** Set node (yellow fields) in each workflow instead.\n\nOptional: you can also set OS/Docker env vars on the n8n container \u2014 not required if you use the Config node.\n\n**Trigger:** questionnaire.submitted\n\nEdit Config: `crm_base_url` for feedback links.",
+        "height": 280,
         "width": 500,
         "color": 4
       },
@@ -14,7 +14,7 @@
         -600,
         0
       ],
-      "id": "3b0fef22-fa14-48e9-96dd-5a67dff82a3c",
+      "id": "2f8e3289-3573-47b4-8be0-139b117dda34",
       "name": "INSTRUCTIONS: Onboarding B"
     },
     {
@@ -29,34 +29,61 @@
         0,
         0
       ],
-      "id": "b5d833e5-bb9f-47eb-a6a8-92a3f3c0056c",
+      "id": "a9f21b0c-e25f-4348-891a-8217c4f2427b",
       "name": "Onboarding B Webhook",
       "webhookId": "74d2a3eb-0e44-4595-9fe5-01faa0ebc66b"
     },
     {
       "parameters": {
-        "jsCode": "const root = $input.first().json;\nconst payload = root.payload || {};\nconst contact = payload.contact || {};\nconst locale = payload.locale === 'en' ? 'en' : 'es';\nconst crmBase = ($env.CRM_BASE_URL || 'https://www.clickin360.com').replace(/\\/$/, '');\nreturn [{ json: { ...root, contact, locale, contactEmail: contact.email, firstName: contact.first_name || 'there', feedbackUrl: contact.feedback_token ? `${crmBase}/feedback/${contact.feedback_token}` : null } }];"
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "85da1fb9-874d-4171-abf4-0d6df5847d0e",
+              "name": "crm_base_url",
+              "value": "https://www.clickin360.com",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "includeOtherFields": true
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        260,
+        0
+      ],
+      "id": "988be346-620e-4580-b30e-a665417b4043",
+      "name": "Config: Edit These Values"
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $input.first().json;\nconst crmBase = (root.crm_base_url || 'https://www.clickin360.com').replace(/\\/$/, '');\nconst payload = root.payload || {};\nconst contact = payload.contact || {};\nconst locale = payload.locale === 'en' ? 'en' : 'es';\nreturn [{ json: { ...root, contact, locale, contactEmail: contact.email, firstName: contact.first_name || 'there', feedbackUrl: contact.feedback_token ? `${crmBase}/feedback/${contact.feedback_token}` : null } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        280,
+        520,
         0
       ],
-      "id": "d4a1a1f7-9212-4dc6-9f4e-9c50e9f60b92",
+      "id": "32cdae38-c375-4602-beaf-a16a67e22b74",
       "name": "Parse Payload"
     },
     {
       "parameters": {
-        "jsCode": "const d = $input.first().json;\nconst isEn = d.locale === 'en';\nreturn [{ json: {\n  toEmail: d.contactEmail,\n  subject: isEn ? 'We received your onboarding questionnaire' : 'Recibimos tu cuestionario de incorporaci\u00f3n',\n  text: isEn\n    ? `Hi ${d.firstName}, thank you for completing the onboarding questionnaire. Our team will review your answers and follow up shortly.`\n    : `Hola ${d.firstName}, gracias por completar el cuestionario de incorporaci\u00f3n. Nuestro equipo revisar\u00e1 tus respuestas y te contactar\u00e1 pronto.`,\n}}];"
+        "jsCode": "const d = $input.first().json;\nconst isEn = d.locale === 'en';\nreturn [{ json: { toEmail: d.contactEmail, subject: isEn ? 'We received your onboarding questionnaire' : 'Recibimos tu cuestionario de incorporaci\u00f3n', text: isEn ? `Hi ${d.firstName}, thank you for completing the onboarding questionnaire. Our team will review your answers and follow up shortly.` : `Hola ${d.firstName}, gracias por completar el cuestionario de incorporaci\u00f3n. Nuestro equipo revisar\u00e1 tus respuestas y te contactar\u00e1 pronto.` } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        560,
+        780,
         0
       ],
-      "id": "d6d133ae-00f7-4498-a2a0-c221ca0fc3ee",
+      "id": "76486133-cccf-450b-90fd-85c69f911cae",
       "name": "Build Confirmation Email"
     },
     {
@@ -70,10 +97,10 @@
       "type": "n8n-nodes-base.mailgun",
       "typeVersion": 1,
       "position": [
-        840,
+        1040,
         0
       ],
-      "id": "6ede849f-a787-4714-8017-da13ebca7b85",
+      "id": "b1fc4392-3d62-4165-b4c5-84851724e485",
       "name": "Mailgun: Questionnaire Confirmation",
       "credentials": {
         "mailgunApi": {
@@ -94,10 +121,10 @@
       "type": "n8n-nodes-base.mailgun",
       "typeVersion": 1,
       "position": [
-        1120,
+        1300,
         0
       ],
-      "id": "f91010a7-3a26-4c5e-b16d-043dfd66109e",
+      "id": "8ab87616-e8ec-44b0-8fc5-bee08dbc89ea",
       "name": "Mailgun: Notify Owner",
       "credentials": {
         "mailgunApi": {
@@ -110,6 +137,17 @@
   ],
   "connections": {
     "Onboarding B Webhook": {
+      "main": [
+        [
+          {
+            "node": "Config: Edit These Values",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config: Edit These Values": {
       "main": [
         [
           {
