@@ -280,7 +280,7 @@
           "conditions": [
             {
               "keyName": "session_id",
-              "keyValue": "={{$json.session_id}}"
+              "keyValue": "={{ $('Normalize Web Payload').first().json.session_id }}"
             }
           ]
         }
@@ -901,7 +901,7 @@
       "name": "If"
     },
     {
-      "id": "74cd8b1c-f5d4-4633-a4bc-0d86afbb1770",
+      "id": "dfe9e0ef-4141-43ed-836a-843ec604ecdc",
       "name": "CRM: Check Session State",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -929,7 +929,7 @@
       }
     },
     {
-      "id": "53b12434-60e5-4f51-a37c-6b9cd0ebfb5a",
+      "id": "8cb03510-df6b-4576-b4bb-0482667acca7",
       "name": "CRM: Human Handler Branch",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
@@ -946,7 +946,7 @@
           },
           "conditions": [
             {
-              "id": "c7c4da2d-4498-4614-8878-8253b5ec3828",
+              "id": "ec240da8-1723-40b7-ac5a-a0e35b5119a2",
               "leftValue": "={{ $json.handler }}",
               "rightValue": "human",
               "operator": {
@@ -961,7 +961,7 @@
       }
     },
     {
-      "id": "c928c72d-01e9-4430-a51c-d4d2d83c1858",
+      "id": "f4716035-3614-4c0d-9289-ffa5d838457d",
       "name": "CRM: Sync Inbound Only",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -989,7 +989,7 @@
       }
     },
     {
-      "id": "825be53e-3d98-41a4-9954-bba2a3ea7fb8",
+      "id": "d222dfbe-ceb0-4b84-a0ab-52c3b5919669",
       "name": "Respond: Human Handler",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
@@ -1006,7 +1006,7 @@
       }
     },
     {
-      "id": "c5e97713-c51e-4ec2-a440-e8d7bd60f2c6",
+      "id": "93a36560-cad9-4a01-b7f4-5696de68b7f8",
       "name": "CRM: Sync Turn",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,

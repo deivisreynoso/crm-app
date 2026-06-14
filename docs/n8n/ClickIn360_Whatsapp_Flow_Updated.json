@@ -342,7 +342,7 @@
           "conditions": [
             {
               "keyName": "session_id",
-              "keyValue": "={{$json.session_id}}"
+              "keyValue": "={{ $('Normalize WABA Payload').first().json.session_id }}"
             }
           ]
         }
@@ -968,7 +968,7 @@
       }
     },
     {
-      "id": "4daaa907-49e9-4999-85f2-59d9304dfbd0",
+      "id": "6620dfef-0adf-47fb-9899-889cc08d03fb",
       "name": "CRM: Check Session State",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -996,7 +996,7 @@
       }
     },
     {
-      "id": "a5c98245-f80b-4c73-b9f8-afba7a834d77",
+      "id": "bac013cd-e080-42af-bf86-63b0459a24f2",
       "name": "CRM: Human Handler Branch",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
@@ -1013,7 +1013,7 @@
           },
           "conditions": [
             {
-              "id": "89d2cb8e-6145-4e4f-9003-6d652aef9ce9",
+              "id": "cc64c381-85d7-4823-8790-2a087efd7c45",
               "leftValue": "={{ $json.handler }}",
               "rightValue": "human",
               "operator": {
@@ -1028,7 +1028,7 @@
       }
     },
     {
-      "id": "e8c7367b-fca2-49eb-8190-fe673a0d2773",
+      "id": "7551c621-35f3-4d31-9b59-88bd7c479915",
       "name": "CRM: Sync Inbound Only",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -1056,7 +1056,7 @@
       }
     },
     {
-      "id": "0c3fc6e9-799b-47c0-a23f-89fc4c17477a",
+      "id": "6c368534-b7f6-4b5d-aaf9-c69b63edd670",
       "name": "CRM: Sync Turn",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -1084,7 +1084,7 @@
       }
     },
     {
-      "id": "f62c690c-e0c7-4577-9595-af7976c531a1",
+      "id": "dad43d27-489a-4930-a752-b16fce093ee1",
       "name": "CRM: Get Booking Offers",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -1107,7 +1107,7 @@
       }
     },
     {
-      "id": "34f64448-7e56-46d5-9adb-7a639003f09e",
+      "id": "e726be16-8b7c-4c4f-bb19-f5edc1977a09",
       "name": "CRM: Book Appointment",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -1133,7 +1133,7 @@
       }
     },
     {
-      "id": "2d29a01c-4e96-47d9-a9aa-b52624d24b86",
+      "id": "3b0bc64b-a05c-4c00-a134-5f68897ea2f6",
       "name": "CRM: Sync Human Review",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -1161,7 +1161,7 @@
       }
     },
     {
-      "id": "26d556c0-338d-4bf6-b97f-2753283c2393",
+      "id": "7cb0930c-04d2-4952-a9d9-5c0689a5b669",
       "name": "Send: Human Review Reply",
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,

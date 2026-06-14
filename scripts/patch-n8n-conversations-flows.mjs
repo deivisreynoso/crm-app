@@ -67,6 +67,13 @@ function httpNode(name, id, position, method, url, jsonBody, continueOnFail = tr
   };
 }
 
+function fixLookupSessionId(workflow, normalizeNodeName) {
+  const lookup = nodeByName(workflow, "Lookup Lead Session");
+  const cond = lookup?.parameters?.filters?.conditions?.[0];
+  if (!cond) return;
+  cond.keyValue = `={{ $('${normalizeNodeName}').first().json.session_id }}`;
+}
+
 function patchWebchat() {
   const wf = load("ClickIn360 Web Chat Qualification Flow.json");
   const ids = {
@@ -167,6 +174,8 @@ function patchWebchat() {
   if (updateLead?.main?.[0]) {
     updateLead.main[0].push({ node: "CRM: Sync Turn", type: "main", index: 0 });
   }
+
+  fixLookupSessionId(wf, "Normalize Web Payload");
 
   const out = save("ClickIn360_Web_Chat_Qualification_Flow_Updated.json", wf);
   console.log("Webchat updated:", out, "nodes:", wf.nodes.length);
@@ -378,6 +387,8 @@ function patchWhatsapp() {
     updateLead.main[0].push({ node: "CRM: Sync Turn", type: "main", index: 0 });
   }
 
+  fixLookupSessionId(wf, "Normalize WABA Payload");
+
   const out = save("ClickIn360_Whatsapp_Flow_Updated.json", wf);
   const text = JSON.stringify(wf);
   const ghlHits = (text.match(/highLevel|HighLevel/gi) || []).length;
@@ -395,6 +406,7 @@ function validateWebchat() {
   for (const n of src.nodes) {
     const u = upd.nodes.find((x) => x.id === n.id);
     if (!u) throw new Error(`Missing original node ${n.name}`);
+    if (n.name === "Lookup Lead Session") continue;
     if (JSON.stringify(u) !== JSON.stringify(n)) {
       throw new Error(`Modified original node ${n.name}`);
     }

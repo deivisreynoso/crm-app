@@ -44,6 +44,9 @@ Expected: `{"handler":"ai","conversation_id":null,"human_review_requested":false
 | CRM: Get Booking Offers | GET | `https://www.clickin360.com/api/leads/booking-offers?lang=es&reschedule=…` |
 | CRM: Book Appointment | POST | `https://www.clickin360.com/api/leads/bookings` |
 
+## Webchat — 4 new nodes only
+
+**Required fix:** After inserting CRM nodes, update **Lookup Lead Session** → filter `session_id` to `$('Normalize Web Payload').first().json.session_id` (not `$json.session_id`). The patch script applies this automatically.
 
 1. **CRM: Check Session State** — after `Normalize Web Payload`, before `Session Exists?`
 2. **CRM: Human Handler Branch** — IF `handler === 'human'`
