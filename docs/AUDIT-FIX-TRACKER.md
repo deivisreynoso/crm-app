@@ -49,7 +49,17 @@ Status: **done** | **todo**
 | I3 | Unified email composer | TipTap on contacts, tickets, quotes; bcc/attachments/signature |
 | I4 | Stripe quote Pay Now | Checkout session + webhooks |
 | I5 | GA4 Website dashboard | `GET /api/analytics/ga4` + Analytics UI tab |
-| I6 | Proposals on hold | `WHATSAPP-WEBCHAT-INBOX-PROPOSAL.md`, `SERVICE-TICKET-CID-PROPOSAL.md` — no implementation |
+| I6 | Proposals on hold | `WHATSAPP-WEBCHAT-INBOX-PROPOSAL.md`, `SERVICE-TICKET-CID-PROPOSAL.md` — CID widget implemented; inbox partial |
+
+## Sprint 4 — done (2026-06-14)
+
+| ID | Item | Notes |
+|----|------|--------|
+| S4-1 | Google Drive Media integration | Migration 069; workspace OAuth; shared drives browse |
+| S4-2 | List filter panel UX | `ListFiltersPanel` on contacts + tickets |
+| S4-3 | Contact company display/PATCH | `resolve-company-display.ts`; stale `company_id` cleared on text edit |
+| S4-4 | Conversations inbox | Migrations 066–068; takeover/release/delete; N8N sync |
+| S4-5 | Flat sidebar nav | `MAIN_NAV` only; Attachments + Media as top-level items |
 
 ## Optional follow-ups (todo)
 

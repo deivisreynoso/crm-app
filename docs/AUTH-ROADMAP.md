@@ -17,6 +17,7 @@ Related: [CLICKIN360-CRM-API.md](./CLICKIN360-CRM-API.md) (env vars, auth endpoi
 | **Password reset** | `POST /api/auth/forgot-password` → Mailgun email with `token_hash` link |
 | **Team invite email** | Mailgun when configured; copy link in UI as fallback |
 | **Gmail + Calendar** | Post-login Integrations (per-user OAuth), separate from login OAuth |
+| **Google Drive** | Post-login Integrations (workspace OAuth, owner/admin connects), separate from login OAuth |
 | **Dual-email owner** | Canonical session maps alias emails to `WEBSITE_LEADS_USER_ID` via `OWNER_LOGIN_ALIASES` and/or `team_members` |
 
 ### Login methods by role
@@ -69,11 +70,12 @@ After our register API (`email_confirm: true`), new invite signups should show *
      ```
      OWNER_LOGIN_ALIASES=deivis@clickin360.com,deivis.reynoso@gmail.com
      ```
-   - **Google OAuth** (login + Integrations):
+   - **Google OAuth** (login + Integrations — Gmail, Calendar, **Drive**):
      ```
      GOOGLE_OAUTH_CLIENT_ID=
      GOOGLE_OAUTH_CLIENT_SECRET=
      ```
+     Authorized redirect URIs must include `/api/auth/callback/google`, `/api/auth/google-gmail/callback`, `/api/auth/google-calendar/callback`, and `/api/auth/google-drive/callback` (or env overrides).
    - **Mailgun** (required for reset + invite email):
      ```
      MAILGUN_API_KEY=
@@ -86,9 +88,16 @@ After our register API (`email_confirm: true`), new invite signups should show *
    - Redirect URLs: `https://www.clickin360.com/auth/callback`
 
 3. **Google Cloud Console → OAuth client**
-   - Authorized redirect URI: `https://www.clickin360.com/api/auth/callback/google`
+   - Authorized redirect URIs (production example):
+     - `https://www.clickin360.com/api/auth/callback/google`
+     - `https://www.clickin360.com/api/auth/google-gmail/callback`
+     - `https://www.clickin360.com/api/auth/google-calendar/callback`
+     - `https://www.clickin360.com/api/auth/google-drive/callback`
 
-4. **Owner dual-email (recommended SQL)**
+4. **Supabase migrations**
+   - Run through **069** before connecting Google Drive (tokens table + document external columns)
+
+5. **Owner dual-email (recommended SQL)**
 
    Link workspace Google email to the canonical owner in `team_members`:
 
@@ -105,9 +114,9 @@ After our register API (`email_confirm: true`), new invite signups should show *
    SET member_user_id = EXCLUDED.member_user_id;
    ```
 
-5. **Verify env:** `./scripts/check-env-local.sh .env.local --container`
+6. **Verify env:** `./scripts/check-env-local.sh .env.local --container`
 
-6. **Remove duplicate auth users** manually in Supabase Auth when re-inviting with a new email.
+7. **Remove duplicate auth users** manually in Supabase Auth when re-inviting with a new email.
 
 ---
 
@@ -158,6 +167,7 @@ Transactional email (Mailgun):
 
 | Date | Change |
 |------|--------|
+| 2026-06 | Google Drive workspace OAuth (migration 069); four redirect URIs in production checklist |
 | 2026-06 | Iteration 2: removed MFA scaffolding (migration 051); auth login/session logic unchanged |
 | 2026-06 | CRM enhancement sprint: Google SSO login, role-based methods, canonical dual-email owner mapping, `authUserId` session field |
 | 2026-06 | Fix teammate login (fresh service-role client after sign-in); password reset via `token_hash`; OAuth redirects use `buildAppRedirectUrl` |

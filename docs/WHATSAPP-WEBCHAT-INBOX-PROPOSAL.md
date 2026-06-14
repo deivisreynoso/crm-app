@@ -1,8 +1,30 @@
 # WhatsApp + Webchat — Unified Conversation Inbox (Architecture Proposal)
 
-**Status:** On hold — code removed in Sprint 3. Proposal preserved for future reference. No implementation until explicitly re-approved.  
-**Iteration:** CRM Enhancement Sprint 2, Task 3 (proposal); Sprint 3 removed WhatsApp integration code  
+**Status:** **Partially implemented** (2026-06-13). CRM inbox UI + N8N sync/session-state APIs shipped (migrations **066–068**). Meta WABA inbound webhook and outbound send remain in **N8N** — not CRM routes.  
+**Iteration:** CRM Enhancement Sprint 2, Task 3 (proposal); Sprint 3 removed in-app WhatsApp scaffolding; post-Sprint 3 inbox restored via N8N sync  
 **Constraint:** No changes to existing authentication logic. `/api/integrations/n8n/inbound` remains live for webchat.
+
+**Operational guide:** [n8n/conversations-inbox-flow-updates.md](./n8n/conversations-inbox-flow-updates.md)
+
+---
+
+## Shipped in CRM (June 2026)
+
+| Piece | Status |
+|-------|--------|
+| **`/conversations` inbox UI** | List, filter, message thread, human takeover/release, delete |
+| **`conversations` + `conversation_messages` tables** | Migration 066; delete policy 067 |
+| **N8N sync APIs** | `POST /api/integrations/conversations/session-state`, `POST /api/integrations/conversations/sync` |
+| **Notifications** | `conversation_notifications` preference (migration 068) |
+| **Webchat live poll** | `GET /api/website/chat/messages` for open sessions |
+
+## Still in N8N / not in CRM
+
+| Piece | Status |
+|-------|--------|
+| **Meta WABA webhook** | N8N receives WhatsApp; no `app/api/integrations/whatsapp/*` in CRM |
+| **AI agent + booking nodes** | N8N workflows call Lead API + conversation sync |
+| **`lead_sessions`** | External Supabase or N8N session store (not CRM migrations) |
 
 ---
 
@@ -13,8 +35,8 @@
 | **Marketing webchat** | Browser widget → `POST /api/website/chat` (same-origin proxy) → N8N webhook (`N8N_WEBCHAT_WEBHOOK_URL`) |
 | **Lead sync** | N8N (or scripts) call `POST /api/leads/webchat` with `x-website-secret` → `createLeadFromWebsite()` creates/updates **contacts**, notes, opportunities |
 | **Booking** | `GET /api/leads/booking-offers`, `POST /api/leads/bookings` — CRM calendar + contacts (no GHL) |
-| **WhatsApp inbound (scaffolding)** | `GET/POST /api/integrations/whatsapp/inbound` — Meta verify + minimal normalize; no AI, no inbox |
-| **N8N inbound (scaffolding)** | `POST /api/integrations/n8n/inbound` — auth + ack only |
+| **WhatsApp inbound (scaffolding)** | ~~`GET/POST /api/integrations/whatsapp/inbound`~~ — removed Sprint 3; use N8N + conversation sync APIs |
+| **N8N inbound** | `POST /api/integrations/n8n/inbound` — auth + ack; conversation sync via dedicated routes |
 | **Session storage** | `lead_sessions` referenced in API docs; **not** in CRM migrations — lives in Supabase outside this repo or N8N-only |
 | **Human handoff** | `human_review` in N8N flow only; no CRM UI |
 

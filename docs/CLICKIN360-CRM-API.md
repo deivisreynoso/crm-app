@@ -1481,6 +1481,8 @@ sequenceDiagram
 | `GOOGLE_CLIENT_SECRET` | Google OAuth | Or `GOOGLE_OAUTH_CLIENT_SECRET` |
 | `GOOGLE_GMAIL_REDIRECT_URI` | Optional | Override Gmail OAuth callback URL |
 | `GOOGLE_CALENDAR_REDIRECT_URI` | Optional | Override Calendar OAuth callback URL |
+| `GOOGLE_DRIVE_REDIRECT_URI` | Optional | Override Drive OAuth callback URL |
+| `N8N_CRM_WEBHOOK_SECRET` | Optional | Alternate secret for conversation sync (`x-n8n-secret`) |
 
 ---
 
@@ -1500,7 +1502,9 @@ sequenceDiagram
 | Gmail send `403` | Connect Gmail in Settings → Integrations; check `needs_gmail_connect` in response |
 | Replies not syncing | Sender must connect Gmail with read scope (`/api/auth/google-gmail/reconnect`); migration 046 applied |
 | Integrations "Setup required" | Set `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (or `GOOGLE_OAUTH_*`); restart app |
-| OAuth redirect mismatch | Authorized redirect URIs in Google Cloud must match `{APP_URL}/api/auth/callback/google` (login), `…/google-gmail/callback`, and `…/google-calendar/callback` |
+| OAuth redirect mismatch | Authorized redirect URIs in Google Cloud must match login, Gmail, Calendar, and **Drive** callback paths (see §3.2) |
+| Google Drive `migration` error after connect | Run migration **069**, then reconnect Drive in Settings |
+| Conversations N8N `401` | Deploy inbox code + migration **066**; verify `x-website-secret` matches `WEBSITE_LEADS_API_SECRET` |
 | Google login blocked | Use `@clickin360.com` account; viewers must use email/password |
 | Owner sees wrong profile | Set `OWNER_LOGIN_ALIASES` and/or `team_members` row for workspace email; `WEBSITE_LEADS_USER_ID` must be canonical owner UUID |
 | Password change updates wrong account | Fixed: uses `session.user.authUserId`; redeploy latest `main` |
@@ -1552,7 +1556,8 @@ See [§9](#9-crm-api-session). Full route list matches files under `app/api/**/r
 | Contact company sync | `lib/contacts/enrich-company-from-contact.ts` |
 | Migrations | `migrations/035_*` … `050_*` |
 | Gmail sync | `lib/google/gmail-sync.ts`, `lib/emails/save-contact-email.ts` |
-| Google OAuth | `lib/google/oauth-config.ts` |
+| Google OAuth | `lib/google/oauth-config.ts`, `lib/google/drive.ts` |
+| Conversations | `lib/conversations/`, `app/api/conversations/`, `app/api/integrations/conversations/` |
 | Auth / login policy | `lib/auth.ts`, `lib/auth/login-policy.ts`, `lib/auth/canonical-user.ts` |
 | Email signature | `lib/email/signature.ts` |
 | N8N / Stripe | `lib/integrations/n8n/`, `lib/integrations/stripe/` |
@@ -1560,4 +1565,4 @@ See [§9](#9-crm-api-session). Full route list matches files under `app/api/**/r
 
 ---
 
-*Last updated: 2026-06-12 (Sprint 3 — migration 052). Update this file when adding or changing API routes.*
+*Last updated: 2026-06-14 — Google Drive Media, conversations inbox, contact company PATCH (migrations 066–069). Update this file when adding or changing API routes.*

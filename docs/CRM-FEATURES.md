@@ -254,6 +254,7 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 
 ### Settings (owner / admin)
 
+- Sections gated by `lib/settings/access.ts` — members see templates, review invitations, booking, integrations; owner/admin additionally see custom fields, audit log, team, admin integrations, website leads, duplicates, platform language
 - Platform language (EN/ES)
 - **Admin integrations** — status panel for N8N, **Stripe** (checkout + webhook path), Mailgun, **GA4 Data API**, Google OAuth, **Support widget** (`GET /api/settings/integrations`)
 - Website leads (default assignee; optional **email notify** on new leads — migration 064)
