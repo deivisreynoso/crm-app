@@ -26,7 +26,11 @@ export function useGoogleDriveStatus() {
   });
 }
 
-export function useGoogleDriveFiles(folderId?: string | null) {
+export function useGoogleDriveFiles(
+  folderId?: string | null,
+  options?: { enabled?: boolean }
+) {
+  const enabled = options?.enabled ?? true;
   return useQuery({
     queryKey: ["google-drive-files", folderId ?? "root"],
     queryFn: async () => {
@@ -38,7 +42,7 @@ export function useGoogleDriveFiles(folderId?: string | null) {
       });
       return data;
     },
-    enabled: true,
+    enabled,
     retry: false,
   });
 }

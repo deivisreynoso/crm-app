@@ -112,14 +112,18 @@ export async function getGoogleDriveConnection(
   }
 
   const supabase = createServerSideClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("google_drive_tokens")
-    .select("id, email_address, root_folder_id, connected_by")
+    .select("user_id, email_address, root_folder_id, connected_by")
     .eq("user_id", workspaceOwnerId)
     .maybeSingle();
 
+  if (error) {
+    console.error("getGoogleDriveConnection:", error.message);
+  }
+
   return {
-    connected: !!data?.id,
+    connected: !!data?.user_id,
     email: data?.email_address?.trim() || null,
     root_folder_id: data?.root_folder_id?.trim() || null,
     connected_by: data?.connected_by ?? null,

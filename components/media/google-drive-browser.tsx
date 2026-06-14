@@ -49,7 +49,7 @@ export function GoogleDriveBrowser() {
     error: filesError,
     refetch: refetchFiles,
     isFetching,
-  } = useGoogleDriveFiles(status?.connected ? currentFolderId : null);
+  } = useGoogleDriveFiles(currentFolderId, { enabled: !!status?.connected });
 
   const linkFile = useLinkGoogleDriveFile();
   const [linkTarget, setLinkTarget] = useState<DriveFileItem | null>(null);
@@ -90,14 +90,23 @@ export function GoogleDriveBrowser() {
           </p>
         </div>
         {canManage ? (
-          <Button
-            type="button"
-            onClick={() => {
-              window.location.href = "/api/auth/google-drive";
-            }}
-          >
-            Connect Google Drive
-          </Button>
+          <>
+            <Button
+              type="button"
+              onClick={() => {
+                window.location.href = "/api/auth/google-drive";
+              }}
+            >
+              Connect Google Drive
+            </Button>
+            {status.redirect_uri && (
+              <p className="text-xs text-body-muted max-w-lg mx-auto font-mono break-all">
+                Register this redirect URI in Google Cloud Console:
+                <br />
+                {status.redirect_uri}
+              </p>
+            )}
+          </>
         ) : (
           <p className="text-sm text-body-muted">
             Ask a workspace admin to connect Google Drive in Settings → Integrations.

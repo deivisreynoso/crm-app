@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { HardDrive } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-shell";
 import { GoogleDriveBrowser } from "@/components/media/google-drive-browser";
@@ -9,6 +10,7 @@ import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 
 function MediaPageContent() {
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const { dict } = useCrmLocale();
   const m = dict.media;
   const [banner, setBanner] = useState<string | null>(null);
@@ -18,6 +20,10 @@ function MediaPageContent() {
     const param = searchParams.get("google_drive");
     if (param === "connected") {
       setBanner(m?.connectedBanner ?? "Google Drive connected for this workspace.");
+      void queryClient.invalidateQueries({
+        queryKey: ["integration-google-drive-status"],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["google-drive-files"] });
     } else if (param === "forbidden") {
       setError("Only workspace admins can connect Google Drive.");
     } else if (param === "error") {
@@ -28,7 +34,7 @@ function MediaPageContent() {
           : (m?.connectError ?? "Google Drive connection failed. Check OAuth settings and try again.")
       );
     }
-  }, [searchParams, m?.connectedBanner, m?.connectError]);
+  }, [searchParams, m?.connectedBanner, m?.connectError, queryClient]);
 
   return (
     <div className="space-y-6 w-full">
