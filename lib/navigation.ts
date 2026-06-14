@@ -4,6 +4,7 @@ import {
   CreditCard,
   FileText,
   LayoutDashboard,
+  MessageSquare,
   Paperclip,
   Ticket,
   TrendingUp,
@@ -55,6 +56,14 @@ export const MAIN_NAV: NavItem[] = [
     icon: Ticket,
     iconAccent: "magenta",
     description: "Customer support",
+  },
+  {
+    href: "/conversations",
+    label: "Conversations",
+    labelKey: "conversations",
+    icon: MessageSquare,
+    iconAccent: "sky",
+    description: "WhatsApp and webchat inbox",
   },
   {
     href: "/finances",

@@ -12,6 +12,7 @@ const PUBLIC_API_PREFIXES = [
   "/api/quotes/public/",
   "/api/webhooks/stripe",
   "/api/integrations/n8n/",
+  "/api/integrations/conversations/",
   "/api/public/support/",
   "/api/cron/",
 ];
@@ -22,6 +23,7 @@ const INTEGRATION_API_PREFIXES = [
   "/api/integrations/accounts/",
   "/api/integrations/tickets/",
   "/api/integrations/opportunities",
+  "/api/integrations/conversations/",
 ];
 
 /** Viewer may update only their own account credentials */

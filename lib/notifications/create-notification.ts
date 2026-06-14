@@ -6,7 +6,8 @@ export type NotificationKind =
   | "ticket_update"
   | "email_received"
   | "finance_payment_received"
-  | "finance_invoice_overdue";
+  | "finance_invoice_overdue"
+  | "conversation_review";
 
 const PREF_KEY: Record<NotificationKind, keyof NotificationPrefs> = {
   task_reminder: "task_reminders",
@@ -15,6 +16,7 @@ const PREF_KEY: Record<NotificationKind, keyof NotificationPrefs> = {
   email_received: "email_notifications",
   finance_payment_received: "finance_notifications",
   finance_invoice_overdue: "finance_notifications",
+  conversation_review: "opportunity_reminders",
 };
 
 type NotificationPrefs = {

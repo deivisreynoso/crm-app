@@ -1,0 +1,1766 @@
+{
+  "name": "ClickIn360 Whatsapp Flow",
+  "nodes": [
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{$json.challenge}}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/plain"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -576,
+        0
+      ],
+      "id": "44e0d02b-a713-443c-842d-2bd7a0cbd1d0",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fe0bd8b3-29fb-41d7-a526-d43822236378",
+        "options": {
+          "rawBody": true,
+          "responseCode": {
+            "values": {}
+          },
+          "responseData": "success",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type: application/json",
+                "value": "{\"status\":\"received\"}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1024,
+        448
+      ],
+      "id": "5d8caece-5c14-4470-a8e8-32c7984161e8",
+      "name": "Post Hook Whatsapp",
+      "webhookId": "fe0bd8b3-29fb-41d7-a526-d43822236378"
+    },
+    {
+      "parameters": {
+        "path": "fe0bd8b3-29fb-41d7-a526-d43822236378",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1024,
+        0
+      ],
+      "id": "0fedfe9b-a020-4252-b032-885a92558cf3",
+      "name": "Meta Verification",
+      "webhookId": "fe0bd8b3-29fb-41d7-a526-d43822236378"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{$json.ai_prompt}}\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Eres Andrea, asesora de ClickIn360. Hablas con dueños y equipos de tiendas eCommerce por WhatsApp. Tu trabajo es ayudarles de forma genuina: responder sus dudas, entender si tienen fricción operativa que ClickIn360 puede resolver, y —cuando tenga sentido— invitarlos a una llamada corta con el equipo.\n\nNo eres un formulario. Eres una persona amable, profesional y útil que conversa de forma natural y va entendiendo el negocio en el camino.\n\n<contexto_negocio>\nClickIn360 construye sistemas de IA y automatización para tiendas eCommerce. Conectamos canales conversacionales (WhatsApp, Instagram, Messenger, web chat) con los datos de la tienda para reducir fricción antes y después de la compra.\n\nAyudamos con cosas como: soporte al cliente automatizado, asistencia de compra, recuperación de carritos abandonados, estatus de pedidos, devoluciones y cambios, preguntas repetitivas, y sobrecarga operativa cuando el negocio crece.\n\nNo vendemos \"un chatbot\". Detectamos si el negocio tiene fricción operativa real que la automatización puede mejorar.\n\nTienes acceso a una BASE DE CONOCIMIENTO dividida en secciones como herramientas separadas:\nDESCRIPCIÓN, SERVICIOS, PLATAFORMAS, FIT, PRECIOS, FAQS y OBJECIONES.\n\nÚsalas como tu fuente de verdad cuando el usuario haga preguntas que requieran información factual sobre ClickIn360. Consulta solo la sección relevante, no todas a la vez. No uses las herramientas para saludos, captura de datos ni conversación general — solo cuando el usuario necesita información específica.\n\nCuando uses una herramienta de la KB, lee el contenido completo pero responde ÚNICAMENTE con el dato puntual que el usuario preguntó. No resumas la sección completa. Extrae solo la respuesta directa en 1-2 oraciones máximo.\n\nSi el usuario ya tiene una cita agendada y quiere cambiarla o agendar otra → next_action = \"offer_booking\" para obtener horarios frescos.\nSi el usuario regresa después de cerrar la conversación y muestra interés → retoma la calificación normalmente.\n</contexto_negocio>\n\n<estilo>\n- Español natural de México. Si el usuario escribe en inglés, responde en inglés.\n- Cálida, profesional, cercana. Como una buena asesora, no como un bot.\n- Respuestas cortas: 1 o 2 oraciones por defecto. Puedes usar hasta 3 SOLO cuando estás explicando algo que el usuario preguntó.\n- Esto es WhatsApp — la gente lee rápido y no le gustan los textos largos. Ve al grano, una idea por mensaje.\n- No acumules problema + solución + beneficio + pregunta en un solo mensaje. Elige lo más importante.\n- Usa el nombre de la persona en el primer mensaje y en uno o dos momentos clave. NUNCA en cada mensaje — eso suena robótico.\n- No repitas de vuelta todo lo que el usuario dijo. Reconoce brevemente y sigue.\n- No prometas resultados ni garantices ventas.\n- Sin tecnicismos internos, sin nombres de frameworks, sin jerga.\n- Emojis: máximo uno ocasional, solo si encaja. No en cada mensaje.\n</estilo>\n\n<ritmo_conversacion>\nEsto es lo más importante para sonar natural:\n\n- NO toda respuesta termina con una pregunta. A veces solo responde y deja que la persona continúe.\n- Responde PRIMERO lo que el usuario pregunta, de forma genuina y útil. Después, si hay un hueco natural, avanza con una pregunta.\n- Haz como máximo UNA pregunta de calificación por mensaje, y solo cuando fluya naturalmente. No encadenes preguntas como interrogatorio.\n- Si el usuario hace varias preguntas, respóndelas antes de avanzar.\n- Si el usuario está explorando o tiene dudas, quédate ahí ayudando. No lo apures hacia la calificación.\n- Deja que la conversación respire. Eres una asesora paciente, no una máquina recolectando campos.\n\nNUNCA hagas esto (demasiado largo para WhatsApp):\n\"Eso es súper común en tiendas de moda — las devoluciones y preguntas de producto pueden ocupar horas del día si no están automatizadas. Eso es exactamente lo que podemos resolver: respuestas automáticas sobre tallas, disponibilidad, políticas de cambio... todo sin que tu equipo escriba cada respuesta. ¿Me compartes tu nombre y correo?\"\n\nSÍ haz esto (corto y natural):\n\"Eso lo resolvemos justo — respuestas automáticas a las dudas y devoluciones más comunes. ¿Me compartes tu nombre y correo para que el equipo te muestre cómo quedaría?\"\n\nNUNCA hagas esto (deflectar pregunta del usuario):\nUsuario: \"¿Cuánto cuesta?\"\nMAL: \"Para darte el costo primero necesito saber qué plataforma usas.\"\n\nSÍ haz esto (responder primero):\nUsuario: \"¿Cuánto cuesta?\"\nBIEN: \"Depende del alcance y los canales, así que varía. ¿Qué es lo que más te quita tiempo hoy?\"\n</ritmo_conversacion>\n\n<primer_mensaje>\nEn tu primer mensaje de la conversación:\n- Saluda de forma cálida y preséntate brevemente como Andrea de ClickIn360.\n- Si tienes el nombre de la persona en el contexto, úsalo.\n- Da una pista de en qué puedes ayudar, sin discurso de ventas.\n- Invita a la conversación de forma abierta. NO pidas el correo todavía. NO dispares una pregunta de calificación de inmediato.\n\nEjemplo (con nombre): \"¡Hola Deivis! Soy Andrea, de ClickIn360. Ayudamos a tiendas eCommerce a manejar mejor la atención y automatizar lo repetitivo. ¿En qué te puedo ayudar hoy?\"\nEjemplo (sin nombre): \"¡Hola! Soy Andrea, de ClickIn360. Ayudamos a tiendas eCommerce a manejar mejor la atención y automatizar lo repetitivo. ¿En qué te puedo ayudar?\"\n</primer_mensaje>\n\n<extraccion_de_datos>\nAntes de preguntar cualquier cosa, EXTRAE todo lo que el usuario ya mencionó en su mensaje. Captura primero, pregunta solo lo que falta.\n\n- \"usamos Shopify\" → platform = \"Shopify\"\n- \"mi correo es x@y.com\" → email = \"x@y.com\"\n- \"nos escriben por WhatsApp e Instagram\" → channels = [\"WhatsApp\", \"Instagram\"]\n- \"nos llegan muchos mensajes de devoluciones\" → friction_area = \"after_purchase\" + señal correspondiente\n\nREGLAS:\n- NUNCA preguntes por algo que el usuario ya dijo o que ya está en el contexto del lead.\n- Si el contexto ya tiene el nombre, NUNCA preguntes el nombre.\n- channels siempre es un array. Si no sabes, [].\n- Solo llena un campo si tienes confianza real. Si no, déjalo en null. No inventes ni adivines.\n- Si el usuario corrige un dato, actualízalo.\n- No confundas nombre de persona con nombre de negocio.\n\nmain_customer_questions = preguntas que los CLIENTES del negocio hacen sobre los productos, servicios o procesos de la tienda — no las preguntas que el usuario te hace a ti sobre ClickIn360.\n</extraccion_de_datos>\n\n<pending_field>\nSi el contexto incluye un pending_field con valor, el usuario probablemente está respondiendo esa pregunta ahora. Captura el valor, úsalo, y limpia pending_field a null.\n\nCuando TÚ hagas una pregunta para capturar un dato específico, registra:\n- pending_field = el campo que estás preguntando (ej: \"email\")\n- pending_question = la pregunta exacta que hiciste\n\nSi en tu mensaje no estás pidiendo un dato específico, deja ambos en null.\n</pending_field>\n\n<deteccion_de_senales>\nMientras conversas, detecta señales de lo que el usuario dice realmente. No infieras ni adivines — solo marca una señal si el usuario expresó algo que claramente la respalda.\n\nSeñales de FRICCIÓN operativa (las más valiosas):\n- support_overload — \"nos llegan muchos mensajes\", \"el equipo no se da abasto\"\n- repetitive_questions — \"los clientes preguntan lo mismo siempre\"\n- manual_processes — \"todo es manual\", \"lo hacemos a mano\"\n- abandoned_carts — \"perdemos carritos\", \"no terminan la compra\"\n- returns_friction — \"las devoluciones son un lío\", \"los reembolsos toman tiempo\"\n- response_delays — \"respondemos lento\", \"se nos pierden mensajes\"\n- scaling_pain — \"estamos creciendo\", \"ya no es sostenible\"\n\nSeñales de FIT eCommerce:\n- has_ecommerce — tiene tienda online activa\n- supported_platform — Shopify, WooCommerce, etc.\n- uses_channels — WhatsApp, Instagram, Messenger, web chat\n- has_volume — volumen real de mensajes o pedidos\n\nSeñales de INTENCIÓN de compra:\n- asked_how_it_works — pregunta cómo funciona\n- asked_integration — pregunta si se integra con sus herramientas\n- asked_implementation — pregunta cómo se implementa o en cuánto tiempo\n- explained_workflow — explica su proceso actual por voluntad propia\n- open_to_call — abierto a hablar o agendar\n\nSeñales de URGENCIA:\n- needs_soon — \"lo necesitamos pronto\"\n- actively_looking — \"estamos evaluando opciones\"\n- affecting_operations — \"esto nos está afectando ahora\"\n\nSeñales NEGATIVAS (descalifican):\n- price_only — solo quiere precio, sin contexto ni interés en su operación\n- no_ecommerce — no tiene tienda propia / solo marketplace\n- curiosity_only — solo curiosea sobre IA, sin negocio real detrás\n- wants_full_replacement — quiere que la IA reemplace por completo a su equipo\n- out_of_scope — pide algo fuera de lo que ClickIn360 ofrece\n</deteccion_de_senales>\n\n<temperatura>\nLee la probabilidad real de que esta persona sea un buen prospecto, como lo haría una buena asesora leyendo la conversación. No es una checklist rígida — es tu juicio basado en las señales reales.\n\n- hot — Buen fit eCommerce + fricción clara + intención o urgencia. Vale claramente una llamada.\n- warm — Algo de fit y algo de fricción, pero la intención aún no es clara. En la duda entre warm y algo más, trátalo como warm.\n- cold — Solo curiosidad, sin fricción operativa, negocio muy temprano, o dominan las señales negativas.\n\nTanto hot como warm van hacia la llamada. Solo cold sale de la conversación con cortesía.\n</temperatura>\n\n<requisito_de_contacto>\nPara invitar a una llamada necesitas datos de contacto. Esto es un REQUISITO, no negociable:\n- teléfono — ya lo tienes de WhatsApp.\n- nombre — si está en el contexto, ya lo tienes. Si NO está, debes capturarlo.\n- email — casi siempre debes pedirlo explícitamente.\n\nREGLA ABSOLUTA: NUNCA uses next_action = \"offer_booking\" ni \"book_call\" si falta el email. Sin importar qué tan caliente esté el lead. Si falta email, usa \"ask_contact\" y pídelo.\n\nCuando necesites capturar contacto:\n- Si ya tienes el nombre (del contexto): pide solo el email, de forma natural.\n- Si NO tienes el nombre: pide nombre y correo juntos en una sola petición natural.\n  Ej: \"Me encantaría que lo veas con el equipo en una llamada corta. ¿Me compartes tu nombre y correo para coordinarla?\"\n</requisito_de_contacto>\n\n<decision_next_action>\nDecide next_action según la temperatura y el estado de contacto:\n\n- Si el usuario pide explícitamente hablar con un humano, menciona integración custom, agente de voz, o un caso complejo fuera de lo estándar → human_review\n\n- Si temperatura = cold → close (despídete con cortesía, deja la puerta abierta)\n\n- Si temperatura = warm o hot:\n    - Si falta email → ask_contact (pide contacto, no menciones horarios todavía)\n    - Si ya tienes email y la temperatura es warm o hot → offer_booking INMEDIATAMENTE\n      reply_to_user puede ser algo como \"Perfecto, déjame buscar los horarios disponibles.\"\n      NO preguntes \"¿te parece bien?\", NO digas \"esta semana\", NO esperes confirmación adicional\n    - Si el usuario ya seleccionó un horario (respondió 1, 2 o 3) → confirm_booking\n\n- En cualquier otro caso → continue\n\nREGLA CRÍTICA DE BOOKING:\n- offer_booking = activa el sistema para mostrar horarios frescos del calendario. TÚ no muestras horarios.\n- confirm_booking = el usuario eligió un número. TÚ confirmas en lenguaje natural, el sistema agenda.\n- NUNCA muestres horarios, fechas o números de opciones en reply_to_user — eso lo maneja el sistema automáticamente.\n- NUNCA uses book_call directamente — usa offer_booking cuando el lead está listo, confirm_booking cuando eligió.\n\nREAGENDAMIENTO:\n- Si el usuario pide otro día, dice que ninguna opción le funciona, o menciona un día específico (\"el lunes\", \"la próxima semana\", \"otro día\")  o dice que ninguna opción le funciona → next_action = \"reschedule\"\n- reply_to_user = respuesta breve reconociendo su preferencia (ej: \"Claro, déjame buscar más opciones.\")\n- NO muestres horarios — el sistema buscará opciones nuevas automáticamente\n- NO intentes verificar si el horario solicitado está disponible — no tienes esa información\n- NO menciones que el horario \"no está disponible\" — el sistema fetcha opciones frescas\n- El sistema automáticamente mostrará nuevas opciones al usuario\n\n</decision_next_action>\n\n<formato_salida>\nDevuelve ÚNICAMENTE un objeto JSON con exactamente estos campos. Sin texto antes ni después, sin markdown, sin bloques de código.\n\n{\n  \"reply_to_user\": \"tu mensaje natural para el usuario, 1-2 oraciones por defecto\",\n  \"name\": \"string o null\",\n  \"email\": \"string o null\",\n  \"platform\": \"string o null\",\n  \"channels\": [],\n  \"friction_area\": \"before_purchase | after_purchase | both | null\",\n  \"main_customer_questions\": [],\n  \"message_volume\": \"string o null\",\n  \"signals\": [],\n  \"temperature\": \"hot | warm | cold\",\n  \"next_action\": \"continue | ask_contact | offer_booking | human_review | close | confirm_booking | reschedule\",\n  \"selected_slot_index\": \"string o null\",\n  \"pending_field\": \"string o null\",\n  \"pending_question\": \"string o null\",\n  \"summary\": \"resumen breve del lead en una oración, o null\"\n}\n\nReglas del JSON:\n- reply_to_user SIEMPRE presente y natural. Máximo 2 oraciones. Hasta 3 solo si explicas algo.\n- channels, main_customer_questions y signals SIEMPRE arrays (vacíos si no hay nada).\n- temperature y next_action SIEMPRE con uno de los valores permitidos.\n- Campos sin valor confiable: null.\n- Nunca inventes datos. Nunca omitas un campo.\n- reply_to_user NUNCA debe contener horarios, fechas específicas o números de opciones de calendario.\n\nREGLA ESPECIAL — SELECCIÓN DE HORARIO:\nCuando el usuario responde con 1, 2 o 3 eligiendo un horario:\n- selected_slot_index = \"1\", \"2\" o \"3\" (el número exacto que eligió, como string)\n- next_action = \"confirm_booking\"\n- reply_to_user confirma brevemente que quedó agendado, sin mencionar fecha ni hora (el sistema las envía)\n- NUNCA dejes selected_slot_index en null cuando el usuario eligió una opción numérica\n</formato_salida>"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1664,
+        544
+      ],
+      "id": "9367233a-2e6c-4a7b-b040-8c13f3dca784",
+      "name": "AI Intake Agent"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "dd88ab7f-5e6d-479b-a4d7-6ac21af7f2d9",
+                    "leftValue": "={{$json.next_action}}",
+                    "rightValue": "offer_booking",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "756d9921-ed0c-4b3c-abb2-b369d9dcf296",
+                    "leftValue": "={{$json.next_action}}",
+                    "rightValue": "human_review",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "aec302d2-6699-46ac-a8ba-03f55d1344cb",
+                    "leftValue": "={{$json.next_action}}",
+                    "rightValue": "confirm_booking",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a5c732ef-f89a-4e6d-b663-135d99283fa5",
+                    "leftValue": "={{$json.next_action}}",
+                    "rightValue": "reschedule",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2896,
+        496
+      ],
+      "id": "d7b15a87-4734-413a-9683-a33828e07a91",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "lead_sessions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "session_id",
+              "condition": "eq",
+              "keyValue": "={{$json.session_id}}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{$json.name}}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{$json.email}}"
+            },
+            {
+              "fieldId": "phone_number",
+              "fieldValue": "={{$json.phone_number}}"
+            },
+            {
+              "fieldId": "platform",
+              "fieldValue": "={{$json.platform}}"
+            },
+            {
+              "fieldId": "communication_channels",
+              "fieldValue": "={{$json.communication_channels}}"
+            },
+            {
+              "fieldId": "friction_area",
+              "fieldValue": "={{$json.friction_area}}"
+            },
+            {
+              "fieldId": "main_customer_questions",
+              "fieldValue": "={{$json.main_customer_questions}}"
+            },
+            {
+              "fieldId": "message_volume",
+              "fieldValue": "={{$json.message_volume}}"
+            },
+            {
+              "fieldId": "next_action",
+              "fieldValue": "={{$json.next_action}}"
+            },
+            {
+              "fieldId": "pending_field",
+              "fieldValue": "={{$json.pending_field}}"
+            },
+            {
+              "fieldId": "pending_question",
+              "fieldValue": "={{$json.pending_question}}"
+            },
+            {
+              "fieldId": "signals",
+              "fieldValue": "={{$json.signals}}"
+            },
+            {
+              "fieldId": "latest_ai_response",
+              "fieldValue": "={{$json.latest_ai_response}}"
+            },
+            {
+              "fieldId": "latest_user_message",
+              "fieldValue": "={{$json.latest_user_message}}"
+            },
+            {
+              "fieldId": "summary",
+              "fieldValue": "={{$json.summary}}"
+            },
+            {
+              "fieldId": "email_valid",
+              "fieldValue": "={{$json.email_valid}}"
+            },
+            {
+              "fieldId": "phone_valid",
+              "fieldValue": "={{$json.phone_valid}}"
+            },
+            {
+              "fieldId": "contact_valid",
+              "fieldValue": "={{$json.contact_valid}}"
+            },
+            {
+              "fieldId": "country",
+              "fieldValue": "={{$json.country}}"
+            },
+            {
+              "fieldId": "country_iso",
+              "fieldValue": "={{$json.country_iso}}"
+            },
+            {
+              "fieldId": "country_code",
+              "fieldValue": "={{$json.country_code}}"
+            },
+            {
+              "fieldId": "selected_slot",
+              "fieldValue": "={{$json.selected_slot}}"
+            },
+            {
+              "fieldId": "selected_slot_index",
+              "fieldValue": "={{$json.selected_slot_index}}"
+            },
+            {
+              "fieldId": "conversation_history",
+              "fieldValue": "={{$json.conversation_history}}"
+            },
+            {
+              "fieldId": "temperature",
+              "fieldValue": "={{ $json.temperature }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2672,
+        544
+      ],
+      "id": "965e9260-5859-4d57-98fa-f5cb24c937e1",
+      "name": "Update Lead Session",
+      "credentials": {
+        "supabaseApi": {
+          "id": "RMU1A9mNhAl6E751",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "lead_sessions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "session_id",
+              "keyValue": "={{$json.session_id}}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        320,
+        544
+      ],
+      "id": "9f908458-d2a9-4f1e-9534-2c87c0f6ddf1",
+      "name": "Lookup Lead Session",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "RMU1A9mNhAl6E751",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "lead_sessions",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "session_id",
+              "fieldValue": "={{ $('Normalize WABA Payload').first().json.session_id }}"
+            },
+            {
+              "fieldId": "phone_number",
+              "fieldValue": "={{ $('Normalize WABA Payload').first().json.phone_number }}"
+            },
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $('Normalize WABA Payload').first().json.name }}"
+            },
+            {
+              "fieldId": "next_action",
+              "fieldValue": "continue"
+            },
+            {
+              "fieldId": "latest_user_message",
+              "fieldValue": "={{ $('Normalize WABA Payload').first().json.message }}"
+            },
+            {
+              "fieldId": "available_slots",
+              "fieldValue": "={{ [] }}"
+            },
+            {
+              "fieldId": "conversation_history",
+              "fieldValue": "={{ [] }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        768,
+        640
+      ],
+      "id": "28d5dc98-7cfd-4d6d-b0cf-d30438b37d6b",
+      "name": "Create Lead Session",
+      "credentials": {
+        "supabaseApi": {
+          "id": "RMU1A9mNhAl6E751",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\n// Get body from Filter Event Type's raw_body, or fallback to direct webhook reference\nconst body = input.raw_body || $('Post Hook Whatsapp').first().json.body;\nconst value = body?.entry?.[0]?.changes?.[0]?.value;\n\n// Stop status/read/delivery events\nif (!value?.messages || !Array.isArray(value.messages)) {\n  return [];\n}\nconst msg = value.messages[0];\nconst contact = value.contacts?.[0];\n// Only process inbound text\nif (!msg || msg.type !== \"text\" || !msg.from) {\n  return [];\n}\n// Ignore outbound/status-like messages if somehow present\nif (msg.from === value.metadata?.display_phone_number) {\n  return [];\n}\nconst phone_number_id = value.metadata?.phone_number_id || \"wa\";\nconst display_phone_number = value.metadata?.display_phone_number || \"\";\nconst from = msg.from || \"\";\nconst name = contact?.profile?.name || \"\";\nconst message = msg.text?.body || \"\";\nreturn [\n  {\n    json: {\n      session_id: `${phone_number_id}_${from}`,\n      phone_number: from,\n      name,\n      message,\n      conversation_id: from,\n      memory_key: `${phone_number_id}_${from}`,\n      phone_number_id,\n      display_phone_number,\n      message_type: msg.type,\n      message_id: msg.id || \"\",\n      timestamp: msg.timestamp || \"\",\n      message_lower: message.toLowerCase().trim()\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        544
+      ],
+      "id": "4b0bc92e-2361-483d-b7f0-1308823e627e",
+      "name": "Normalize WABA Payload"
+    },
+    {
+      "parameters": {
+        "resource": "calendar",
+        "operation": "getFreeSlots",
+        "calendarId": "LF0PtJfd23ekHo6tr8sJ",
+        "startDate": "={{ Date.now() }}",
+        "endDate": "={{ Date.now() + 30 * 24 * 60 * 60 * 1000 }}",
+        "additionalFields": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.highLevel",
+      "typeVersion": 2,
+      "position": [
+        3344,
+        352
+      ],
+      "id": "07263782-4715-472f-891a-cfd0ae00c37d",
+      "name": "Get free slots of a calendar",
+      "credentials": {
+        "highLevelOAuth2Api": {
+          "id": "1eVhgRUuXGVWZuPB",
+          "name": "HighLevel account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Node: \"Format Available Slots\" — Mode: Run Once for All Items\n\nconst data = $json;\nconst CALENDAR_TIMEZONE = \"America/Mexico_City\";\nconst TIMEZONE_LABEL    = \"hora Ciudad de México\";\n\n// Detect if this is a reschedule (user asked for different options)\nconst previousState = $('State Manager').first().json;\nconst isReschedule = previousState.next_action === 'reschedule';\nconst slotsToShow = isReschedule ? 6 : 3;\n\n// Collect all slots from GHL response\nconst slots = [];\nfor (const [date, value] of Object.entries(data)) {\n  if (date === \"traceId\") continue;\n  if (!value?.slots || !Array.isArray(value.slots)) continue;\n  for (const slot of value.slots) {\n    slots.push(slot);\n  }\n}\n\nfunction getDayKey(iso) {\n  return new Intl.DateTimeFormat(\"en-CA\", {\n    timeZone: CALENDAR_TIMEZONE,\n    year: \"numeric\", month: \"2-digit\", day: \"2-digit\"\n  }).format(new Date(iso));\n}\n\nfunction formatSlot(iso) {\n  return new Intl.DateTimeFormat(\"es-MX\", {\n    weekday: \"long\", month: \"long\", day: \"numeric\",\n    hour: \"numeric\", minute: \"2-digit\",\n    timeZone: CALENDAR_TIMEZONE\n  }).format(new Date(iso));\n}\n\n// Pick slots from different days up to slotsToShow\nconst selectedSlots = [];\nconst usedDays = new Set();\n\nfor (const slot of slots) {\n  const iso = typeof slot === \"string\" ? slot : slot.startTime || slot.start;\n  if (!iso) continue;\n  const dayKey = getDayKey(iso);\n  if (!usedDays.has(dayKey)) {\n    selectedSlots.push(iso);\n    usedDays.add(dayKey);\n  }\n  if (selectedSlots.length === slotsToShow) break;\n}\n\n// Fallback: fill remaining if not enough different days\nif (selectedSlots.length < slotsToShow) {\n  for (const slot of slots) {\n    const iso = typeof slot === \"string\" ? slot : slot.startTime || slot.start;\n    if (!iso || selectedSlots.includes(iso)) continue;\n    selectedSlots.push(iso);\n    if (selectedSlots.length === slotsToShow) break;\n  }\n}\n\nconst formattedSlots = selectedSlots.map((slot, i) =>\n  (i + 1) + \") \" + formatSlot(slot)\n);\n\nconst intro = isReschedule\n  ? \"Claro, aquí tienes más opciones disponibles:\\n\\n\"\n  : \"Aquí tienes opciones reales del calendario:\\n\\n\";\n\nconst message = formattedSlots.length > 0\n  ? intro +\n    formattedSlots.join(\"\\n\") +\n    \"\\n\\nZona horaria: \" + TIMEZONE_LABEL + \".\" +\n    \"\\n\\nResponde con el número de tu opción, o dime si prefieres otro día.\"\n  : \"No encontré horarios disponibles este mes. Alguien del equipo te contactará para coordinar.\";\n\nreturn [{\n  json: {\n    ...previousState,\n    next_action:         \"book_call\",\n    available_slots:     selectedSlots,\n    selected_slot:       null,\n    selected_slot_index: null,\n    latest_ai_response:  message\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3568,
+        352
+      ],
+      "id": "e7ed807b-67d1-43ec-8dbc-a5c798226505",
+      "name": "Format Available Slots"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "lead_sessions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "session_id",
+              "condition": "eq",
+              "keyValue": "={{$json.session_id}}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "available_slots",
+              "fieldValue": "={{ $json.available_slots || [] }}"
+            },
+            {
+              "fieldId": "next_action",
+              "fieldValue": "={{ $json.next_action }}"
+            },
+            {
+              "fieldId": "latest_ai_response",
+              "fieldValue": "={{ $json.latest_ai_response }}"
+            },
+            {
+              "fieldId": "ghl_contact_id",
+              "fieldValue": "={{ $('State Manager').item.json.ghl_contact_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3792,
+        352
+      ],
+      "id": "92c1f7d5-709e-4af3-8410-af0773e8d80e",
+      "name": "Update Slots in DB",
+      "credentials": {
+        "supabaseApi": {
+          "id": "RMU1A9mNhAl6E751",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "=1072161985980185",
+        "recipientPhoneNumber": "={{$node[\"Normalize WABA Payload\"].json.phone_number}}",
+        "textBody": "={{$json.latest_ai_response || \"Gracias por tu mensaje.\"}}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        3120,
+        736
+      ],
+      "id": "6fdb6e66-30d4-4f01-a581-a19cae66bbf6",
+      "name": "Message: continue / ask_contact / close",
+      "webhookId": "5b65d920-d451-4cc7-85f3-a491378da17a",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "rtQxcM3TvqSHWTYs",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "email": "={{$json.email || undefined}}",
+        "phone": "={{$json.phone_number}}",
+        "additionalFields": {
+          "customFields": {
+            "values": [
+              {
+                "fieldId": {
+                  "__rl": true,
+                  "value": "ToZw4fEbybCygAQgiO70",
+                  "mode": "list",
+                  "cachedResultName": "AI_Summary"
+                },
+                "fieldValue": "={{$json.summary}}"
+              },
+              {
+                "fieldId": {
+                  "__rl": true,
+                  "value": "dsitgxXEe157bgwUCReQ",
+                  "mode": "list",
+                  "cachedResultName": "Platform"
+                },
+                "fieldValue": "={{$json.platform}}"
+              },
+              {
+                "fieldId": {
+                  "__rl": true,
+                  "value": "HxVY6oG0VkgyZ209ltSD",
+                  "mode": "list",
+                  "cachedResultName": "Friction Area"
+                },
+                "fieldValue": "={{$json.friction_area}}"
+              },
+              {
+                "fieldId": {
+                  "__rl": true,
+                  "value": "ioEMmLNtMcZEuPkUgjUp",
+                  "mode": "list",
+                  "cachedResultName": "Interes Level"
+                },
+                "fieldValue": "={{$json.interest_level}}"
+              },
+              {
+                "fieldId": {
+                  "__rl": true,
+                  "value": "uvX4F8Qsr3wTcdo5x970",
+                  "mode": "list",
+                  "cachedResultName": "Communication Channels"
+                },
+                "fieldValue": "={{JSON.stringify($json.communication_channels || [])}}"
+              }
+            ]
+          },
+          "name": "={{$json.name || \"Unknown\"}}",
+          "tags": "clickin_ai,human_review,whatsapp",
+          "website": "={{$json.website || undefined}}"
+        },
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.highLevel",
+      "typeVersion": 2,
+      "position": [
+        3120,
+        544
+      ],
+      "id": "a0b051b1-c3fa-4c66-9577-0d95d937681a",
+      "name": "Human Review: Create or update a contact",
+      "credentials": {
+        "highLevelOAuth2Api": {
+          "id": "1eVhgRUuXGVWZuPB",
+          "name": "HighLevel account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "email": "={{$json.email || undefined}}",
+        "phone": "={{$json.phone_number}}",
+        "additionalFields": {
+          "customFields": {
+            "values": [
+              {
+                "fieldId": {
+                  "__rl": true,
+                  "value": "ToZw4fEbybCygAQgiO70",
+                  "mode": "list",
+                  "cachedResultName": "AI_Summary"
+                },
+                "fieldValue": "={{$json.summary}}"
+              },
+              {
+                "fieldId": {
+                  "__rl": true,
+                  "value": "dsitgxXEe157bgwUCReQ",
+                  "mode": "list",
+                  "cachedResultName": "Platform"
+                },
+                "fieldValue": "={{$json.platform}}"
+              },
+              {
+                "fieldId": {
+                  "__rl": true,
+                  "value": "HxVY6oG0VkgyZ209ltSD",
+                  "mode": "list",
+                  "cachedResultName": "Friction Area"
+                },
+                "fieldValue": "={{$json.friction_area}}"
+              },
+              {
+                "fieldId": {
+                  "__rl": true,
+                  "value": "uvX4F8Qsr3wTcdo5x970",
+                  "mode": "list",
+                  "cachedResultName": "Communication Channels"
+                },
+                "fieldValue": "={{JSON.stringify($json.communication_channels || [])}}"
+              },
+              {
+                "fieldId": {
+                  "__rl": true,
+                  "value": "UakZcEt6OV9WnnacSBli",
+                  "mode": "list",
+                  "cachedResultName": "Signals"
+                },
+                "fieldValue": "={{JSON.stringify($('State Manager').item.json.signals || []) }}"
+              }
+            ]
+          },
+          "name": "={{$json.name || \"Unknown\"}}",
+          "source": "N8N Whatsapp",
+          "tags": "clickin_ai, app_booked ,whatsapp"
+        },
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.highLevel",
+      "typeVersion": 2,
+      "position": [
+        3120,
+        224
+      ],
+      "id": "25ba8362-bf09-4456-af9a-ffc0f445ad94",
+      "name": "Book: Create a contact",
+      "credentials": {
+        "highLevelOAuth2Api": {
+          "id": "1eVhgRUuXGVWZuPB",
+          "name": "HighLevel account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "task",
+        "contactId": "={{$json.email || undefined}}",
+        "title": "Contacta a este cliente",
+        "dueDate": "=",
+        "additionalFields": {
+          "assignedTo": "xBCSpibzgwddktLFl9rb",
+          "body": "=Por favor contacta este cliente al: {{ $('State Manager').item.json.phone_number }}\n\nInformacion sobre la conversacion:\n\n{{ $('State Manager').item.json.summary }}"
+        },
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.highLevel",
+      "typeVersion": 2,
+      "position": [
+        3568,
+        544
+      ],
+      "id": "17f085ef-bc8e-4934-8ae9-c52040ca47eb",
+      "name": "Create a task",
+      "credentials": {
+        "highLevelOAuth2Api": {
+          "id": "1eVhgRUuXGVWZuPB",
+          "name": "HighLevel account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "=1072161985980185",
+        "recipientPhoneNumber": "={{$node[\"Normalize WABA Payload\"].json.phone_number}}",
+        "textBody": "={{$json.latest_ai_response}}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        4016,
+        352
+      ],
+      "id": "b5672666-dfde-46c7-9c75-5b267cdbfcbd",
+      "name": "Send Message with Slots",
+      "webhookId": "5b65d920-d451-4cc7-85f3-a491378da17a",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "rtQxcM3TvqSHWTYs",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Node: \"Prepare AI Context\" — Mode: Run Once for All Items\n// Purpose: Assemble complete context for AI agent including history and lead state\n\nconst waba = $('Normalize WABA Payload').first().json || {};\n\n// === GET SESSION ROW ===\nlet row = {};\ntry {\n  const lookup = $('Lookup Lead Session').first().json;\n  if (lookup && lookup.session_id) row = lookup;\n} catch(e) {}\ntry {\n  if (!row.session_id) {\n    const created = $('Create Lead Session').first().json;\n    if (created && created.session_id) row = created;\n  }\n} catch(e) {}\n\n// === LEAD STATE ===\nconst state = {\n  name:                    row.name                    || waba.name || null,\n  email:                   row.email                   || null,\n  email_valid:             row.email_valid              || false,\n  phone_number:            row.phone_number             || waba.phone_number || null,\n  platform:                row.platform                 || null,\n  communication_channels:  row.communication_channels   || [],\n  main_customer_questions: row.main_customer_questions  || [],\n  message_volume:          row.message_volume           || null,\n  friction_area:           row.friction_area            || null,\n  signals:                 row.signals                  || [],\n  temperature:             row.temperature              || \"cold\",\n  next_action:             row.next_action              || \"continue\",\n  pending_field:           row.pending_field            || null,\n  pending_question:        row.pending_question         || null,\n  country:                 row.country                  || null,\n  available_slots:         row.available_slots          || [],\n  selected_slot:           row.selected_slot            || null,\n  summary:                 row.summary                  || \"\"\n};\n\n// === CONVERSATION HISTORY ===\nlet history = [];\ntry {\n  let raw_history = row.conversation_history;\n  if (typeof raw_history === 'string') raw_history = JSON.parse(raw_history);\n  if (raw_history && typeof raw_history === 'object' && !Array.isArray(raw_history)) {\n    raw_history = raw_history.data || raw_history.value || [];\n  }\n  if (Array.isArray(raw_history)) history = raw_history;\n  else history = [];\n} catch(e) {\n  history = [];\n}\n\nconst recentHistory = history.slice(-20);\nconst historyText = recentHistory.length > 0\n  ? recentHistory.map(function(h) {\n      return (h.role === 'user' ? 'Usuario' : 'Andrea') + ': ' + h.content;\n    }).join('\\n')\n  : \"Primera interaccion con este usuario.\";\n\n// === LEAD STATE AS NATURAL LANGUAGE ===\nconst lines = [];\nlines.push(\"- Nombre: \"           + (state.name          || 'No capturado'));\nlines.push(\"- Email: \"            + (state.email\n  ? state.email + (state.email_valid ? ' (verificado)' : ' (sin verificar)')\n  : 'No capturado'));\nlines.push(\"- Telefono: \"         + (state.phone_number   || 'No capturado'));\nif (state.country) lines.push(\"- Pais: \" + state.country);\nlines.push(\"- Plataforma: \"       + (state.platform       || 'No capturada'));\nlines.push(\"- Volumen mensajes: \" + (state.message_volume || 'No capturado'));\nlines.push(\"- Canales: \"          + (\n  state.communication_channels && state.communication_channels.length > 0\n    ? state.communication_channels.join(', ')\n    : 'No capturados'\n));\nlines.push(\"- Friccion: \"         + (state.friction_area  || 'No capturada'));\nlines.push(\"- Temperatura: \"      + state.temperature);\nif (state.signals && state.signals.length > 0) {\n  lines.push(\"- Senales: \" + state.signals.join(', '));\n}\nif (state.main_customer_questions && state.main_customer_questions.length > 0) {\n  lines.push(\"- Preguntas del cliente: \" + state.main_customer_questions.join(', '));\n}\nif (state.summary) lines.push(\"- Resumen: \" + state.summary);\n\nconst stateText = lines.join('\\n');\n\n// === PENDING FIELD CONTEXT ===\nconst pendingText = state.pending_field\n  ? (\n      \"CAMPO PENDIENTE: \\\"\" + state.pending_field + \"\\\"\\n\" +\n      \"PREGUNTA HECHA: \\\"\" + (state.pending_question || 'N/A') + \"\\\"\\n\" +\n      \"El usuario probablemente esta respondiendo esta pregunta ahora. \" +\n      \"Captura el valor y limpia pending_field a null.\"\n    )\n  : \"Sin campo pendiente.\";\n\n// === SLOT SELECTION CONTEXT ===\n// Only shown when user has been presented with slots and we're waiting for their pick\nconst isWaitingForSlot = (\n  Array.isArray(state.available_slots) &&\n  state.available_slots.length > 0 &&\n  state.next_action === 'book_call'\n);\n\nconst slotContext = isWaitingForSlot\n  ? (\n      \"=== SELECCION DE HORARIO ===\\n\" +\n      \"El usuario esta eligiendo un horario de los que se le presentaron.\\n\" +\n      \"Opciones disponibles:\\n\" +\n      state.available_slots.map(function(s, i) {\n        return (i + 1) + \") \" + s;\n      }).join(\"\\n\") + \"\\n\\n\" +\n      \"INSTRUCCIONES:\\n\" +\n      \"- Si el usuario responde 1, 2 o 3 → confirma el horario elegido, \" +\n      \"establece selected_slot_index = numero elegido, next_action = 'confirm_booking'.\\n\" +\n      \"- Si el usuario pide otro dia u horario → next_action = 'reschedule'.\\n\" +\n      \"- Si el usuario cancela o no quiere → next_action = 'close'.\\n\" +\n      \"- No preguntes nada mas. Solo confirma la seleccion y responde con el horario en lenguaje natural.\"\n    )\n  : \"\";\n\n// === ASSEMBLE PROMPT ===\nconst ai_prompt =\n  \"=== HISTORIAL DE CONVERSACION ===\\n\" +\n  historyText + \"\\n\\n\" +\n  \"=== NUEVO MENSAJE DEL USUARIO ===\\n\" +\n  waba.message + \"\\n\\n\" +\n  \"=== LO QUE SABEMOS DEL LEAD ===\\n\" +\n  stateText + \"\\n\\n\" +\n  \"=== CONTEXTO DE TURNO ANTERIOR ===\\n\" +\n  pendingText + \"\\n\\n\" +\n  (slotContext ? slotContext + \"\\n\\n\" : \"\") +\n  \"=== ESTADO ACTUAL DEL FLUJO ===\\n\" +\n  \"- Accion previa: \" + state.next_action + \"\\n\" +\n  \"- Temperatura: \"   + state.temperature;\n\nconsole.log(\n  \"Context ready | \" + state.phone_number +\n  \" | next_action: \" + state.next_action +\n  \" | history: \" + recentHistory.length + \" msgs\" +\n  \" | slots: \" + state.available_slots.length +\n  \" | pending: \" + (state.pending_field || 'none')\n);\n\n// === RETURN ===\nreturn [{\n  json: {\n    ...row,\n    session_id:          row.session_id    || waba.session_id,\n    phone_number:        row.phone_number  || waba.phone_number,\n    latest_user_message: waba.message,\n    webhook_name:        waba.name         || null,\n    state:               state,\n    history:             history,\n    ai_prompt:           ai_prompt\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        544
+      ],
+      "id": "59ed310a-8960-45c1-a181-8f36b47e99e5",
+      "name": "Prepare AI Context"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d9f520bd-278a-418d-8aa3-af975a542ac8",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        544,
+        544
+      ],
+      "id": "f783d860-237b-4004-b6bc-b101c5431a10",
+      "name": "Session Exists?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Node: \"State Manager\" — Mode: Run Once for All Items\n// Purpose: Merge AI output with existing session state and build updated history\n\nconst ai   = $input.first().json.output || $input.first().json;\nconst waba = $('Normalize WABA Payload').first().json;\n\n// === GET EXISTING SESSION ===\nlet row = {};\ntry {\n  const lookup = $('Lookup Lead Session').first().json;\n  if (lookup && lookup.session_id) row = lookup;\n} catch(e) {}\ntry {\n  if (!row.session_id) {\n    const created = $('Create Lead Session').first().json;\n    if (created && created.session_id) row = created;\n  }\n} catch(e) {}\n\n// === REBUILD CONVERSATION HISTORY ===\nlet history = [];\ntry {\n  let raw = row.conversation_history;\n  if (typeof raw === 'string') raw = JSON.parse(raw);\n  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {\n    raw = raw.data || raw.value || [];\n  }\n  if (Array.isArray(raw)) history = raw;\n} catch(e) {\n  history = [];\n}\n\n// Append this turn\nhistory.push({ role: \"user\",      content: waba.message });\nhistory.push({ role: \"assistant\", content: ai.reply_to_user });\n\n// Cap at 40 messages (20 exchanges)\nif (history.length > 40) history = history.slice(-40);\n\n// === RESOLVE SELECTED SLOT ===\n// If AI returned a slot index, resolve the actual ISO datetime from available_slots\nconst availableSlots = Array.isArray(row.available_slots) ? row.available_slots : [];\nconst aiSlotIndex    = (ai.selected_slot_index != null && ai.selected_slot_index !== undefined)\n  ? Number(ai.selected_slot_index)\n  : null;\n\nconst resolvedSlotIndex = aiSlotIndex ?? row.selected_slot_index ?? null;\nconst resolvedSlot      = (aiSlotIndex != null && availableSlots.length > 0)\n  ? (availableSlots[aiSlotIndex - 1] || null)   // user picks 1-based, array is 0-based\n  : (row.selected_slot || null);\n\n// === MERGE STATE ===\n// Rule: only overwrite existing DB value if AI captured something new\nconst merged = {\n  session_id:              row.session_id,\n  phone_number:            row.phone_number               || waba.phone_number,\n\n  // Identity\n  name:                    ai.name                        || row.name            || waba.name || null,\n  email:                   ai.email                       || row.email           || null,\n\n  // eCommerce profile\n  platform:                ai.platform                    || row.platform        || null,\n  communication_channels:  ai.channels && ai.channels.length > 0\n                             ? ai.channels\n                             : (row.communication_channels || []),\n  friction_area:           ai.friction_area               || row.friction_area   || null,\n  main_customer_questions: ai.main_customer_questions && ai.main_customer_questions.length > 0\n                             ? ai.main_customer_questions\n                             : (row.main_customer_questions || []),\n  message_volume:          ai.message_volume              || row.message_volume  || null,\n\n  // Decision layer\n  signals:                 ai.signals && ai.signals.length > 0\n                             ? ai.signals\n                             : (row.signals || []),\n  temperature:             ai.temperature                 || row.temperature     || \"cold\",\n  next_action:             ai.next_action                 || row.next_action     || \"continue\",\n  summary:                 ai.summary                     || row.summary         || null,\n\n  // Pending turn tracking (always use AI's latest values)\n  pending_field:           ai.pending_field               ?? null,\n  pending_question:        ai.pending_question            ?? null,\n\n  // Validation flags (never downgrade) — email_valid wired in Phase 2\n  email_valid:             row.email_valid                || false,\n  phone_valid:             row.phone_valid                || false,\n  contact_valid:           row.contact_valid              || false,\n\n  // Conversation memory\n  conversation_history:    history,\n\n  // Latest turn\n  latest_user_message:     waba.message,\n  latest_ai_response:      ai.reply_to_user,\n\n  // Booking\n  available_slots:         availableSlots,\n  selected_slot:           resolvedSlot,\n  selected_slot_index:     resolvedSlotIndex,\n  booking_confirmed_at:    row.booking_confirmed_at       || null,\n\n  // CRM\n  ghl_contact_id:          row.ghl_contact_id             || null,\n\n  // Location (preserve existing)\n  country:                 row.country                    || null,\n  country_iso:             row.country_iso                || null,\n  country_code:            row.country_code               || null\n};\n\nconsole.log(\n  \"State merged | \" + merged.session_id +\n  \" | temp: \"        + merged.temperature +\n  \" | next: \"        + merged.next_action +\n  \" | signals: \"     + (merged.signals || []).length +\n  \" | pending: \"     + (merged.pending_field || 'none') +\n  \" | history: \"     + history.length + \" msgs\" +\n  \" | slot_index: \"  + (merged.selected_slot_index || 'none') +\n  \" | slot: \"        + (merged.selected_slot || 'none')\n);\n\nreturn [{ json: merged }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2448,
+        544
+      ],
+      "id": "e00eb0b7-0319-4b09-bb85-d037af2e04fd",
+      "name": "State Manager"
+    },
+    {
+      "parameters": {
+        "resource": "calendar",
+        "calendarId": "LF0PtJfd23ekHo6tr8sJ",
+        "locationId": "RHkGaSXt3x7FA3bPqKkN",
+        "contactId": "={{ $json.ghl_contact_id }}",
+        "startTime": "={{$json.selected_slot}}",
+        "additionalFields": {
+          "title": "ClickIn360 Discovery Call",
+          "appointmentStatus": "confirmed"
+        },
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.highLevel",
+      "typeVersion": 2,
+      "position": [
+        3120,
+        928
+      ],
+      "id": "d00f579a-1ecd-4359-9972-1ba244afee25",
+      "name": "Book appointment in a calendar",
+      "credentials": {
+        "highLevelOAuth2Api": {
+          "id": "1eVhgRUuXGVWZuPB",
+          "name": "HighLevel account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "lead_sessions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "session_id",
+              "condition": "eq",
+              "keyValue": "={{ $('State Manager').first().json.session_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "latest_ai_response",
+              "fieldValue": "=Listo, tu llamada quedó agendada. Te esperamos en el horario seleccionado."
+            },
+            {
+              "fieldId": "selected_slot",
+              "fieldValue": "={{$('State Manager').first().json.selected_slot}}"
+            },
+            {
+              "fieldId": "selected_slot_index",
+              "fieldValue": "={{$('State Manager').first().json.selected_slot_index}}"
+            },
+            {
+              "fieldId": "booking_confirmed_at",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            },
+            {
+              "fieldId": "available_slots",
+              "fieldValue": "={{ [] }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3344,
+        928
+      ],
+      "id": "91d508e2-3602-4aca-b541-85c82fa38b73",
+      "name": "Update Session as Booked",
+      "credentials": {
+        "supabaseApi": {
+          "id": "RMU1A9mNhAl6E751",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "=1072161985980185",
+        "recipientPhoneNumber": "={{$node[\"Normalize WABA Payload\"].json.phone_number}}",
+        "textBody": "={{\n  ($json.latest_ai_response || \"Listo, tu llamada quedó agendada. ¡Nos vemos pronto!\") +\n  ($('Update Session as Booked').item.json.selected_slot ?\n    \"\\n\\n📅 \" + new Intl.DateTimeFormat(\"es-MX\", {weekday:\"long\",day:\"numeric\",month:\"long\",hour:\"numeric\",minute:\"2-digit\",timeZone:\"America/Mexico_City\"}).format(new Date($('Update Session as Booked').item.json.selected_slot)).replace(/^(\\w)/, c => c.toUpperCase()).replace(/, (\\w)/, (m, c) => \", \" + c.toUpperCase()) + \"\\n🕐 Hora Ciudad de México\" : \"\")\n}}\n",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        4016,
+        928
+      ],
+      "id": "41cd7a61-33a5-49a4-abd5-b2b0aff1ebe4",
+      "name": "Send Confirmation ",
+      "webhookId": "5b65d920-d451-4cc7-85f3-a491378da17a",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "rtQxcM3TvqSHWTYs",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "opportunity",
+        "pipelineId": "oH3AW2dFgGxew344LpLV",
+        "contactId": "={{ $json.ghl_contact_id }}",
+        "name": "=Campaña - {{ $json.name }}",
+        "additionalFields": {
+          "stageId": "72c7c407-b764-4305-8012-e8eefc803198"
+        },
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.highLevel",
+      "typeVersion": 2,
+      "position": [
+        3568,
+        928
+      ],
+      "id": "db2b8d1a-0e25-483e-87ff-eea9875607bf",
+      "name": "Book: Create an opportunity",
+      "credentials": {
+        "highLevelOAuth2Api": {
+          "id": "1eVhgRUuXGVWZuPB",
+          "name": "HighLevel account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "opportunity",
+        "pipelineId": "oH3AW2dFgGxew344LpLV",
+        "contactId": "={{ $json.id }}",
+        "name": "=Campaña - {{ $json.firstName }}",
+        "additionalFields": {
+          "stageId": "72c7c407-b764-4305-8012-e8eefc803198"
+        },
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.highLevel",
+      "typeVersion": 2,
+      "position": [
+        3344,
+        544
+      ],
+      "id": "059dc134-6bb7-42e2-b19e-327b5f108252",
+      "name": "Human Review: Create an opportunity",
+      "credentials": {
+        "highLevelOAuth2Api": {
+          "id": "1eVhgRUuXGVWZuPB",
+          "name": "HighLevel account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Node: \"Validate Verify Token\"\n// Purpose: Confirms the request is genuinely from Meta\n\nconst VERIFY_TOKEN = \"clickin360_secure_token_2025\"; // CHANGE THIS — store in n8n credentials ideally\n\nconst query = $input.first().json.query || {};\nconst mode = query[\"hub.mode\"];\nconst token = query[\"hub.verify_token\"];\nconst challenge = query[\"hub.challenge\"];\n\n// Log the attempt\nconsole.log(\"Meta verification attempt:\", { mode, token: token ? \"***\" : \"missing\", challenge });\n\nif (mode === \"subscribe\" && token === VERIFY_TOKEN) {\n  // Valid — return challenge to confirm\n  return [{\n    json: {\n      challenge: challenge,\n      status: \"verified\",\n      timestamp: new Date().toISOString()\n    }\n  }];\n} else {\n  // Invalid — return 403\n  throw new Error(`Verification failed: invalid token or mode. Mode: ${mode}`);\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -800,
+        0
+      ],
+      "id": "b412977a-8624-41bf-9fa6-357755854373",
+      "name": "Validate Verify Token"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Node: \"Filter Event Type\" — Mode: Run Once for All Items\n// Purpose: Filter WhatsApp events; parse raw body if Raw Body is enabled\n\nconst webhookData = $('Post Hook Whatsapp').first().json;\n\n// === GET BODY (handles multiple n8n storage formats) ===\nlet body = webhookData?.body;\n\n// If body is missing/empty, try rawBody\nif (!body || (typeof body === 'object' && Object.keys(body).length === 0)) {\n  let rawBody = webhookData?.rawBody;\n  \n  // Handle Buffer-like object\n  if (rawBody && typeof rawBody === 'object') {\n    if (rawBody.type === 'Buffer' && Array.isArray(rawBody.data)) {\n      rawBody = Buffer.from(rawBody.data).toString('utf8');\n    } else if (Buffer.isBuffer(rawBody)) {\n      rawBody = rawBody.toString('utf8');\n    }\n  }\n  \n  // Parse string to JSON\n  if (typeof rawBody === 'string') {\n    try {\n      body = JSON.parse(rawBody);\n    } catch (e) {\n      console.error(\"❌ Failed to parse rawBody as JSON:\", e.message);\n      return [];\n    }\n  }\n}\n\n// Last resort: check binary data\nif (!body) {\n  const binary = $('Post Hook Whatsapp').first().binary;\n  if (binary?.data?.data) {\n    try {\n      const decoded = Buffer.from(binary.data.data, 'base64').toString('utf8');\n      body = JSON.parse(decoded);\n    } catch (e) {\n      console.error(\"❌ Failed to decode binary:\", e.message);\n    }\n  }\n}\n\nif (!body) {\n  console.error(\"❌ Could not find webhook body in any format\");\n  console.error(\"Available keys:\", Object.keys(webhookData || {}));\n  return [];\n}\n\n// === EXTRACT MESSAGE ===\nconst value = body?.entry?.[0]?.changes?.[0]?.value;\n\nif (!value) {\n  console.warn(\"⚠️ No value in payload — skipping\");\n  return [];\n}\n\nconst hasMessages = Array.isArray(value.messages) && value.messages.length > 0;\nconst hasStatuses = Array.isArray(value.statuses) && value.statuses.length > 0;\n\nif (hasStatuses && !hasMessages) {\n  console.log(\"📊 Status update event — skipping\");\n  return [];\n}\n\nif (!hasMessages) {\n  console.warn(\"⚠️ Unknown event type — skipping\");\n  return [];\n}\n\nconst message = value.messages[0];\nconsole.log(`✅ Valid message: type=${message.type}, from=${message.from}`);\n\n// === RETURN CLEAN STRUCTURE ===\nreturn [{\n  json: {\n    validated: true,\n    message_type: message.type,\n    phone_number: message.from,\n    message_id: message.id,\n    timestamp: message.timestamp,\n    text_content: message.text?.body || null,\n    raw_body: body  // Pass parsed body for downstream nodes\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -576,
+        448
+      ],
+      "id": "2510e83b-af52-46b9-9fb4-5061c76390c8",
+      "name": "Filter Event Type"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO processed_messages (message_id, phone_number, workflow_execution_id)\nVALUES (\n  '{{ $json.body.entry[0].changes[0].value.messages[0].id }}',\n  '{{ $json.body.entry[0].changes[0].value.messages[0].from }}',\n  '{{ $execution.id }}'\n)\nON CONFLICT (message_id) DO NOTHING\nRETURNING message_id;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -352,
+        448
+      ],
+      "id": "2107f460-3e71-44c8-9c37-8bdadd6e6eb5",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "KNpM856pA6R8Aabt",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        96,
+        352
+      ],
+      "id": "49424ce1-8d07-4168-9e81-9431f20debc8",
+      "name": "No Operation, do nothing1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Node: \"Validate Meta Signature\" — Mode: Run Once for All Items\n// Purpose: Verify HMAC-SHA256 signature from Meta against raw body\n\nconst crypto = require('crypto');\n\n// === CONFIG ===\nconst APP_SECRET = \"62c3d37026ddc99be48a12e03cce36be\"; // ← Make sure this is set!\n\n// === GET WEBHOOK DATA ===\nconst webhookItem = $('Post Hook Whatsapp').first().json;\nconst headers = webhookItem.headers || {};\nconst receivedSignature = headers[\"x-hub-signature-256\"];\n\n// === DEV MODE: Skip if no signature ===\nif (!receivedSignature) {\n  console.warn(\"⚠️ No x-hub-signature-256 header — skipping validation\");\n  return [{ json: { validated: false, skipped: true, reason: \"no_header\" } }];\n}\n\n// === GET RAW BODY (multiple formats) ===\nlet rawBody = webhookItem.rawBody;\n\n// Handle Buffer-like object\nif (rawBody && typeof rawBody === 'object') {\n  if (rawBody.type === 'Buffer' && Array.isArray(rawBody.data)) {\n    rawBody = Buffer.from(rawBody.data).toString('utf8');\n  } else if (Buffer.isBuffer(rawBody)) {\n    rawBody = rawBody.toString('utf8');\n  }\n}\n\n// Try binary if rawBody not available\nif (!rawBody || typeof rawBody !== 'string') {\n  const binary = $('Post Hook Whatsapp').first().binary;\n  if (binary?.data?.data) {\n    rawBody = Buffer.from(binary.data.data, 'base64').toString('utf8');\n  }\n}\n\nif (!rawBody || typeof rawBody !== 'string') {\n  console.error(\"❌ Could not find raw body in any format\");\n  console.error(\"webhookItem keys:\", Object.keys(webhookItem));\n  throw new Error(\"Raw body unavailable for signature validation\");\n}\n\n// === COMPUTE HMAC ===\nconst computedSignature = \"sha256=\" + crypto\n  .createHmac(\"sha256\", APP_SECRET)\n  .update(rawBody)\n  .digest(\"hex\");\n\n// === COMPARE ===\nif (receivedSignature !== computedSignature) {\n  console.error(\"❌ Signature mismatch\");\n  console.error(\"Computed:\", computedSignature);\n  console.error(\"Received:\", receivedSignature);\n  console.error(\"Body length:\", rawBody.length);\n  console.error(\"Body preview:\", rawBody.substring(0, 200));\n  throw new Error(\"Invalid Meta signature — request rejected\");\n}\n\nconsole.log(\"✅ Signature validated\");\nreturn [{ json: { validated: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -800,
+        448
+      ],
+      "id": "80e535c2-c657-468b-93fd-6d2d2cd395c7",
+      "name": "Validate Meta Signature"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "10b79e33-2a7c-4abb-a97c-7ea8f46101c4",
+              "leftValue": "={{ $json.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -128,
+        448
+      ],
+      "id": "384617f6-9785-4eef-aa2d-09a944d081f5",
+      "name": "If dedup"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"reply_to_user\": \"string\",\n  \"name\": \"string | null\",\n  \"email\": \"string | null\",\n  \"platform\": \"string | null\",\n  \"channels\": [\"array\"],\n  \"friction_area\": \"before_purchase | after_purchase | both | null\",\n  \"main_customer_questions\": [\"array\"],\n  \"message_volume\": \"string | null\",\n  \"signals\": [\"array\"],\n  \"temperature\": \"hot | warm | cold\",\n  \"next_action\": \"continue | ask_contact | offer_booking | book_call | human_review | close | confirm_booking | reschedule\",\n  \"selected_slot_index\": \"string | null\",\n  \"pending_field\": \"string | null\",\n  \"pending_question\": \"string | null\",\n  \"summary\": \"string | null\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        2240,
+        768
+      ],
+      "id": "e3654101-7150-49e1-85c1-da39cf1e5945",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Usar cuando el usuario pregunta qué es ClickIn360, qué hace, cómo funciona en general, o si la IA reemplaza al equipo.",
+        "operation": "get",
+        "documentURL": "https://docs.google.com/document/d/1EUlYj1FoUbYx2Fle-7Amh81viiFKDu1DakKyQ7GVKbg/edit?tab=t.0"
+      },
+      "type": "n8n-nodes-base.googleDocsTool",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        768
+      ],
+      "id": "c096bb80-24ec-496f-873f-69bffce31565",
+      "name": "DESCRIPCION",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "JeqIijDFJDppxrX9",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Usar cuando el usuario pregunta qué servicios ofrece ClickIn360, qué automatizaciones puede hacer, si puede ayudar con devoluciones, carritos abandonados, soporte post-compra, notificaciones, o cualquier capacidad específica del sistema.",
+        "operation": "get",
+        "documentURL": "https://docs.google.com/document/d/1VxUEdkR7ldcLgRGoIoMLOGDFcd18lxDRUTBNVZmlriE/edit?tab=t.0"
+      },
+      "type": "n8n-nodes-base.googleDocsTool",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        768
+      ],
+      "id": "040340f1-d9c9-49de-b141-568eacdddbaa",
+      "name": "SERVICIOS",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "JeqIijDFJDppxrX9",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Usar cuando el usuario pregunta si ClickIn360 funciona con su plataforma eCommerce (Shopify, WooCommerce, etc.), con WhatsApp, o con alguna herramienta específica como un CRM o sistema de envíos.",
+        "operation": "get",
+        "documentURL": "https://docs.google.com/document/d/1So9MyvgGYsIHMg0ACRJ7t0pfBaZ_ZK2CtZF2WTtsky0/edit?tab=t.0"
+      },
+      "type": "n8n-nodes-base.googleDocsTool",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        768
+      ],
+      "id": "6435e52f-b4ae-4bf7-abe9-9f2d6e1aff80",
+      "name": "PLATAFORMAS",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "JeqIijDFJDppxrX9",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Usar cuando necesitas evaluar si el negocio del usuario es buen fit o mal fit para ClickIn360, o cuando el usuario pregunta para qué tipo de tiendas funciona.",
+        "operation": "get",
+        "documentURL": "https://docs.google.com/document/d/1AIyO3cqLE_6PQ3MTvcsXGuWs-ZOcONP_TmGw7aj8Wbs/edit?tab=t.0"
+      },
+      "type": "n8n-nodes-base.googleDocsTool",
+      "typeVersion": 2,
+      "position": [
+        1728,
+        768
+      ],
+      "id": "24cf751c-a3fc-4460-8fbe-c111b39a5ba1",
+      "name": "FIT",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "JeqIijDFJDppxrX9",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": " Usar cuando el usuario pregunta sobre costos, precios, tarifas, o cuánto cuesta el sistema.",
+        "operation": "get",
+        "documentURL": "https://docs.google.com/document/d/1pmo25f4Ap_c0HwGcXfxrQL2PBZjmPHAK8altlSXOPg8/edit?tab=t.0"
+      },
+      "type": "n8n-nodes-base.googleDocsTool",
+      "typeVersion": 2,
+      "position": [
+        1856,
+        768
+      ],
+      "id": "96610c00-2c1e-442b-816b-4ebbc20ce52e",
+      "name": "PRECIOS",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "JeqIijDFJDppxrX9",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Usar cuando el usuario hace una pregunta frecuente sobre el sistema que no está cubierta por las otras secciones: implementación, seguridad, datos, tiempo, equipo técnico, canales múltiples, mensajes outbound, etc.",
+        "operation": "get",
+        "documentURL": "https://docs.google.com/document/d/15RxXb_lNx1v-UCN4A1E7mKJq5eg28f_R6y_uTka6-ig/edit?tab=t.0"
+      },
+      "type": "n8n-nodes-base.googleDocsTool",
+      "typeVersion": 2,
+      "position": [
+        1984,
+        768
+      ],
+      "id": "00362573-943a-484b-baa6-3bd4068782f5",
+      "name": "FAQS",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "JeqIijDFJDppxrX9",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Usar cuando el usuario expresa una objeción, duda o resistencia como \"ya tenemos un chatbot\", \"no queremos reemplazar al equipo\", \"no sé si funciona con nuestra plataforma\", o \"ya lo intentamos antes\".",
+        "operation": "get",
+        "documentURL": "https://docs.google.com/document/d/1nWo1e97JEs9c2rCEL4yTY7RQ_RyrD6ibBHXzQW24xzw/edit?tab=t.0"
+      },
+      "type": "n8n-nodes-base.googleDocsTool",
+      "typeVersion": 2,
+      "position": [
+        2112,
+        768
+      ],
+      "id": "6cf4f41b-fddf-4148-b669-2e8b5264d65a",
+      "name": "OBJECIONES",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "JeqIijDFJDppxrX9",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://services.leadconnectorhq.com/contacts/{{ $json.opportunity.contact.id }}/notes",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "highLevelOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer <TOKEN>"
+            },
+            {
+              "name": "Version",
+              "value": "2023-02-21"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "userId",
+              "value": "GCs5KuzPqTls7vWclkEV"
+            },
+            {
+              "name": "body",
+              "value": "={{ $('State Manager').item.json.conversation_history.map(m => (m.role === 'user' ? 'Usuario' : 'Andrea') + ': ' + m.content).join('\\n\\n') }}"
+            },
+            {
+              "name": "title",
+              "value": "AI conversation transcript"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3792,
+        928
+      ],
+      "id": "f35ed272-6a71-4e0a-85a9-adf172935a86",
+      "name": "Add Notes",
+      "credentials": {
+        "highLevelOAuth2Api": {
+          "id": "1eVhgRUuXGVWZuPB",
+          "name": "HighLevel account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-6",
+          "cachedResultName": "Claude Sonnet 4.6"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        1216,
+        768
+      ],
+      "id": "16f9a051-5709-41ed-8b50-1e9e910151c7",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "ev08r7wh8gQBYJRR",
+          "name": "Anthropic account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Post Hook Whatsapp": {
+      "main": [
+        [
+          {
+            "node": "Validate Meta Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meta Verification": {
+      "main": [
+        [
+          {
+            "node": "Validate Verify Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Intake Agent": {
+      "main": [
+        [
+          {
+            "node": "State Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Book: Create a contact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Human Review: Create or update a contact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Book appointment in a calendar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get free slots of a calendar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Message: continue / ask_contact / close",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead Session": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup Lead Session": {
+      "main": [
+        [
+          {
+            "node": "Session Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Lead Session": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize WABA Payload": {
+      "main": [
+        [
+          {
+            "node": "Lookup Lead Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get free slots of a calendar": {
+      "main": [
+        [
+          {
+            "node": "Format Available Slots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Available Slots": {
+      "main": [
+        [
+          {
+            "node": "Update Slots in DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Slots in DB": {
+      "main": [
+        [
+          {
+            "node": "Send Message with Slots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Book: Create a contact": {
+      "main": [
+        [
+          {
+            "node": "Get free slots of a calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human Review: Create or update a contact": {
+      "main": [
+        [
+          {
+            "node": "Human Review: Create an opportunity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Message with Slots": {
+      "main": [
+        []
+      ]
+    },
+    "Prepare AI Context": {
+      "main": [
+        [
+          {
+            "node": "AI Intake Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session Exists?": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Lead Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "State Manager": {
+      "main": [
+        [
+          {
+            "node": "Update Lead Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Book appointment in a calendar": {
+      "main": [
+        [
+          {
+            "node": "Update Session as Booked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Session as Booked": {
+      "main": [
+        [
+          {
+            "node": "Book: Create an opportunity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Book: Create an opportunity": {
+      "main": [
+        [
+          {
+            "node": "Add Notes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human Review: Create an opportunity": {
+      "main": [
+        [
+          {
+            "node": "Create a task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Verify Token": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Event Type": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "If dedup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Meta Signature": {
+      "main": [
+        [
+          {
+            "node": "Filter Event Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If dedup": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalize WABA Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Intake Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DESCRIPCION": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Intake Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SERVICIOS": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Intake Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PLATAFORMAS": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Intake Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FIT": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Intake Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PRECIOS": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Intake Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FAQS": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Intake Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OBJECIONES": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Intake Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Notes": {
+      "main": [
+        [
+          {
+            "node": "Send Confirmation ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Intake Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "8a73a114-c02f-427c-8347-1ca700849e9c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d3fa9cdd620dd2c6b69b121e71ddbcc9471c89fa2a348af4786bfb8119fd5402"
+  },
+  "nodeGroups": [],
+  "id": "wbtGNYW1VQTnj76W",
+  "tags": []
+}

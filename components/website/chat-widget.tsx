@@ -160,6 +160,8 @@ export function ChatWidget({
   const [sessionId, setSessionId] = useState("");
   const [profile, setProfile] = useState<{ name?: string; email?: string }>({});
   const [welcomed, setWelcomed] = useState(false);
+  const [lastHumanMsgId, setLastHumanMsgId] = useState<string | null>(null);
+  const [humanMode, setHumanMode] = useState(false);
 
   useEffect(() => {
     setSessionId(getOrCreateChatSessionId());
@@ -204,7 +206,6 @@ export function ChatWidget({
   }, [messages, loading, variant]);
 
   useEffect(() => {
-    // Inline chat sits mid-page — autofocus scrolls the viewport to #chat on load.
     if (variant === "inline") return;
     if (open && !minimized) {
       const timer = window.setTimeout(
@@ -214,6 +215,46 @@ export function ChatWidget({
       return () => window.clearTimeout(timer);
     }
   }, [open, minimized, variant]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    if (variant === "floating" && !open) return;
+
+    const poll = async () => {
+      try {
+        const params = new URLSearchParams({ session_id: sessionId });
+        if (lastHumanMsgId) params.set("after", lastHumanMsgId);
+        const res = await fetch(`/api/website/chat/messages?${params}`);
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          handler?: string;
+          messages?: Array<{ id: string; body: string }>;
+        };
+        if (data.handler === "human") setHumanMode(true);
+        if (data.handler === "ai") setHumanMode(false);
+        for (const msg of data.messages ?? []) {
+          setLastHumanMsgId(msg.id);
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === msg.id)) return prev;
+            return [
+              ...prev,
+              {
+                id: msg.id,
+                role: "assistant" as const,
+                content: msg.body,
+              },
+            ];
+          });
+        }
+      } catch {
+        /* ignore poll errors */
+      }
+    };
+
+    void poll();
+    const interval = window.setInterval(() => void poll(), 3000);
+    return () => window.clearInterval(interval);
+  }, [sessionId, open, variant, lastHumanMsgId]);
 
   const postMessage = useCallback(
     async (text: string, userMessageId?: string) => {
@@ -254,6 +295,13 @@ export function ChatWidget({
           );
         }
 
+        if (!displayText && !rawReply) {
+          setHumanMode(true);
+          setLoading(false);
+          return;
+        }
+
+        setHumanMode(false);
         setMessages((prev) => [
           ...prev,
           {

@@ -17,12 +17,18 @@ export function getNotificationHref(
       return `/tickets/${id}`;
     case "opportunity":
       return "/opportunities";
+    case "conversation":
+      return `/conversations?highlight=${id}`;
     default:
       break;
   }
 
   if (notification.type === "task_reminder") {
     return `/contacts/${id}`;
+  }
+
+  if (notification.type === "conversation_review") {
+    return `/conversations?highlight=${id}`;
   }
 
   return null;
