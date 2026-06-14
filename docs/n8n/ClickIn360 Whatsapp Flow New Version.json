@@ -1109,7 +1109,7 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ contact_info: { name: $('State Manager').item.json.name || 'Visitor', email: $('State Manager').item.json.email, phone: $('State Manager').item.json.phone_number }, slot_index: $('State Manager').item.json.selected_slot_index, offered_slots: $('State Manager').item.json.available_slots, ai_insights: { platform: $('State Manager').item.json.platform, ai_summary: $('State Manager').item.json.summary }, conversation_transcript: $('State Manager').item.json.conversation_history.map(h => (h.role === 'user' ? 'Usuario' : 'Andrea') + ': ' + h.content).join(' | '), source: 'whatsapp', language: 'es' }) }}",
+        "jsonBody": "={{ JSON.stringify({ contact_info: { name: $('State Manager').item.json.name || 'Visitor', email: $('State Manager').item.json.email, phone: $('State Manager').item.json.phone_number }, slot_index: $('State Manager').item.json.selected_slot_index, offered_slots: $('State Manager').item.json.available_slots, ai_insights: { platform: $('State Manager').item.json.platform || undefined, ai_summary: $('State Manager').item.json.summary || undefined }, conversation_transcript: $('State Manager').item.json.conversation_history.map(h => (h.role === 'user' ? 'Usuario' : 'Andrea') + ': ' + h.content).join(' | '), source: 'whatsapp', language: 'es', reschedule: $('State Manager').item.json.next_action === 'reschedule' }) }}",
         "options": {}
       },
       "id": "37f545bb-38f3-4f7c-8be8-b116dc823d68",

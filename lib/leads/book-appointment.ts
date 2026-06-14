@@ -13,6 +13,7 @@ export type BookDiscoveryCallInput = {
   conversation_transcript?: string | null;
   source?: "webchat" | "whatsapp" | "form";
   ga_client_id?: string | null;
+  reschedule?: boolean;
 };
 
 export type BookDiscoveryCallResult = {
@@ -90,6 +91,7 @@ export async function bookDiscoveryCall(
     conversation_transcript: input.conversation_transcript ?? null,
     ga_client_id: input.ga_client_id ?? null,
     language: options?.lang ?? "es",
+    reschedule: input.reschedule ?? false,
   });
 
   return {

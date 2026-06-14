@@ -6,6 +6,8 @@ import { FormLabel } from "@/components/ui/form-label";
 import { formatApiError } from "@/lib/validation-errors";
 import { useWorkspace } from "@/components/crm/workspace-provider";
 import axios from "axios";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 type MemberRole = "sales" | "viewer" | "admin";
 
@@ -42,6 +44,7 @@ export function TeamSettings() {
 
   const { ctx } = useWorkspace();
   const isOwner = ctx?.isWorkspaceOwner ?? false;
+  const { confirm, dialogProps } = useConfirmDialog();
 
   const loadMembers = useCallback(async () => {
     setMembersLoading(true);
@@ -117,9 +120,12 @@ export function TeamSettings() {
   }
 
   async function handleDelete(member: TeamMember) {
-    const confirmed = window.confirm(
-      `Remove ${member.email} from this workspace? They will lose access immediately.`
-    );
+    const confirmed = await confirm({
+      title: `Remove ${member.email}?`,
+      description: "They will lose access to this workspace immediately.",
+      confirmLabel: "Remove teammate",
+      destructive: true,
+    });
     if (!confirmed) return;
 
     setDeletingId(member.id);
@@ -150,6 +156,7 @@ export function TeamSettings() {
 
   return (
     <div className="space-y-8 max-w-2xl">
+      <ConfirmDialog {...dialogProps} />
       {teammates.length > 0 || membersLoading ? (
         <section className="space-y-3">
           <div>

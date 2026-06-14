@@ -1,33 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { bookDiscoveryCall } from "@/lib/leads/book-appointment";
+import {
+  leadContactInfoSchema,
+  leadQualificationSchema,
+  type LeadQualificationPayload,
+} from "@/lib/leads/lead-schemas";
 import { resolveSlotStart } from "@/lib/website/booking-slots-core";
 import { requireWebsiteLeadAuth } from "@/lib/website/lead-api-auth";
 
-const contactInfoSchema = z.object({
-  name: z.string().min(1),
-  email: z.string().email(),
-  phone: z.string().min(5),
-  company: z.string().optional(),
-});
-
-const qualificationSchema = z
-  .object({
-    platform: z.string().optional(),
-    friction_area: z.union([z.array(z.string()), z.string()]).optional(),
-    communication_channels: z.union([z.array(z.string()), z.string()]).optional(),
-    signals: z.string().optional(),
-    ai_summary: z.string().optional(),
-    recommended_offer: z.string().optional(),
-    qualified: z.boolean().optional(),
-    confidence_score: z.number().optional(),
-  })
-  .optional();
-
 const bookingSchema = z.object({
-  contact_info: contactInfoSchema,
-  qualification: qualificationSchema,
-  ai_insights: qualificationSchema,
+  contact_info: leadContactInfoSchema,
+  qualification: leadQualificationSchema,
+  ai_insights: leadQualificationSchema,
   /** ISO 8601 start (GHL selected_slot) */
   slot_start: z.string().optional(),
   /** 1-based index into offered_slots (N8N session available_slots) */
@@ -40,6 +25,7 @@ const bookingSchema = z.object({
   language: z.string().optional(),
   ga_client_id: z.string().optional(),
   visitor_id: z.string().optional(),
+  reschedule: z.boolean().optional(),
 });
 
 /**
@@ -84,7 +70,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const q = parsed.data.qualification ?? parsed.data.ai_insights ?? {};
+    const q = (parsed.data.qualification ??
+      parsed.data.ai_insights ??
+      {}) as LeadQualificationPayload;
     const source =
       parsed.data.source ??
       (parsed.data.channel === "whatsapp" ? "whatsapp" : "webchat");
@@ -106,6 +94,7 @@ export async function POST(req: NextRequest) {
         conversation_transcript: parsed.data.conversation_transcript ?? null,
         source,
         ga_client_id: parsed.data.ga_client_id ?? parsed.data.visitor_id ?? null,
+        reschedule: parsed.data.reschedule ?? false,
       },
       { lang: requestLang }
     );

@@ -3,7 +3,8 @@ import { requireAuth, requireWorkspaceWrite } from "@/lib/api/auth";
 import { deleteContactWithDependents } from "@/lib/contacts/delete-contact";
 import { createServerSideClient } from "@/lib/supabase";
 import { contactPatchSchema } from "@/lib/validators";
-import { buildContactUpdate } from "@/lib/contact-payload";
+import { buildContactPatchUpdates } from "@/lib/contacts/patch-contact-updates";
+import { enrichContactsCompanyNamesFromDb } from "@/lib/contacts/resolve-company-display";
 import { triggerN8NWebhook } from "@/lib/n8n";
 import { logContactActivity } from "@/lib/activities/log-contact-activity";
 import {
@@ -36,7 +37,13 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Contact not found" }, { status: 404 });
     }
 
-    return NextResponse.json(data);
+    const [enriched] = await enrichContactsCompanyNamesFromDb(
+      supabase,
+      workspaceOwnerId!,
+      [data]
+    );
+
+    return NextResponse.json(enriched);
   } catch (err) {
     console.error("GET /api/contacts/[id] error:", err);
     return NextResponse.json(
@@ -95,7 +102,11 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     const baseUpdates = {
-      ...buildContactUpdate(parsed.data),
+      ...(await buildContactPatchUpdates(
+        supabase,
+        workspaceOwnerId!,
+        parsed.data
+      )),
       updated_at: new Date().toISOString(),
     };
 
@@ -165,7 +176,13 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       });
     }
 
-    return NextResponse.json(data);
+    const [enriched] = await enrichContactsCompanyNamesFromDb(
+      supabase,
+      workspaceOwnerId!,
+      [data]
+    );
+
+    return NextResponse.json(enriched);
   } catch (err) {
     console.error("PATCH /api/contacts/[id] error:", err);
     return NextResponse.json(

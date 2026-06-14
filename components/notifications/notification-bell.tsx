@@ -11,6 +11,8 @@ import {
 } from "@/hooks/useNotifications";
 import { getNotificationHref } from "@/lib/notifications/notification-link";
 import { formatNotificationMessage } from "@/lib/notifications/format-message";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 export function NotificationBell() {
   const router = useRouter();
@@ -18,6 +20,7 @@ export function NotificationBell() {
   const { data, isLoading } = useNotifications();
   const markRead = useMarkNotificationRead();
   const clearAll = useClearAllNotifications();
+  const { confirm, dialogProps } = useConfirmDialog();
 
   async function handleNotificationClick(
     id: string,
@@ -40,6 +43,7 @@ export function NotificationBell() {
 
   return (
     <div className="relative">
+      <ConfirmDialog {...dialogProps} />
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -70,14 +74,16 @@ export function NotificationBell() {
                   type="button"
                   disabled={clearAll.isPending}
                   onClick={() => {
-                    if (
-                      !window.confirm(
-                        "Clear all notifications? This cannot be undone."
-                      )
-                    ) {
-                      return;
-                    }
-                    void clearAll.mutateAsync();
+                    void (async () => {
+                      const ok = await confirm({
+                        title: "Clear all notifications?",
+                        description: "This cannot be undone.",
+                        confirmLabel: "Clear all",
+                        destructive: true,
+                      });
+                      if (!ok) return;
+                      await clearAll.mutateAsync();
+                    })();
                   }}
                   className="text-xs font-medium text-body-muted hover:text-heading disabled:opacity-50"
                 >

@@ -23,6 +23,8 @@ import type {
 } from "@/lib/conversations/types";
 import { formatApiError } from "@/lib/validation-errors";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 type FilterTab = "all" | "review" | "whatsapp" | "webchat" | "closed";
 
@@ -255,6 +257,7 @@ export function ConversationsInbox() {
   const release = useReleaseConversation();
   const deleteConversation = useDeleteConversation();
   const sendMessage = useSendConversationMessage(selectedId ?? "");
+  const { confirm, dialogProps } = useConfirmDialog();
 
   useEffect(() => {
     if (highlightId) setSelectedId(highlightId);
@@ -270,9 +273,12 @@ export function ConversationsInbox() {
       (detail.qualification as ConversationQualification)?.name ??
       detail.external_session_id;
     if (
-      !window.confirm(
-        `Delete this conversation with ${label}? All messages will be removed permanently.`
-      )
+      !(await confirm({
+        title: "Delete conversation?",
+        description: `Delete this conversation with ${label}? All messages will be removed permanently.`,
+        confirmLabel: "Delete",
+        destructive: true,
+      }))
     ) {
       return;
     }
@@ -301,6 +307,7 @@ export function ConversationsInbox() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)] min-h-[480px] border border-[var(--card-border)] rounded-xl overflow-hidden bg-[var(--card)]">
+      <ConfirmDialog {...dialogProps} />
       <div className="flex flex-1 min-h-0">
         <div className="w-full sm:w-80 shrink-0 border-r border-[var(--card-border)] flex flex-col min-h-0">
           <div className="p-3 border-b border-[var(--card-border)] space-y-2">

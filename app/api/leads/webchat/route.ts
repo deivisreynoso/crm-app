@@ -1,27 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createLeadFromWebsite } from "@/lib/leads/website-leads";
+import {
+  leadContactInfoSchema,
+  leadQualificationSchema,
+  type LeadQualificationPayload,
+} from "@/lib/leads/lead-schemas";
 import { requireWebsiteLeadAuth } from "@/lib/website/lead-api-auth";
 
 const webchatSchema = z.object({
-  contact_info: z.object({
-    name: z.string().min(1),
-    email: z.string().email(),
-    phone: z.string().min(5),
-    company: z.string().optional(),
-  }),
-  ai_insights: z
-    .object({
-      platform: z.string().optional(),
-      friction_area: z.union([z.array(z.string()), z.string()]).optional(),
-      communication_channels: z.union([z.array(z.string()), z.string()]).optional(),
-      signals: z.string().optional(),
-      ai_summary: z.string().optional(),
-      recommended_offer: z.string().optional(),
-      qualified: z.boolean().optional(),
-      confidence_score: z.number().optional(),
-    })
-    .optional(),
+  contact_info: leadContactInfoSchema,
+  ai_insights: leadQualificationSchema,
   conversation_transcript: z.string().optional(),
   calendar_selection: z
     .object({
@@ -34,6 +23,7 @@ const webchatSchema = z.object({
   source: z.literal("webchat").optional(),
   ga_client_id: z.string().optional(),
   visitor_id: z.string().optional(),
+  reschedule: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -50,7 +40,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const q = parsed.data.ai_insights ?? {};
+    const q = (parsed.data.ai_insights ?? {}) as LeadQualificationPayload;
 
     const requestLang = parsed.data.language === "en" ? "en" : "es";
 
@@ -71,6 +61,7 @@ export async function POST(req: NextRequest) {
       ga_client_id: parsed.data.ga_client_id ?? parsed.data.visitor_id ?? null,
       conversation_transcript: parsed.data.conversation_transcript ?? null,
       language: requestLang,
+      reschedule: parsed.data.reschedule ?? false,
     });
 
     return NextResponse.json(result, { status: 201 });

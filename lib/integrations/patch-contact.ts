@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { buildContactUpdate } from "@/lib/contact-payload";
+import { buildContactPatchUpdates } from "@/lib/contacts/patch-contact-updates";
+import { enrichContactsCompanyNamesFromDb } from "@/lib/contacts/resolve-company-display";
 import { logContactActivity } from "@/lib/activities/log-contact-activity";
 import {
   duplicateContactMessage,
@@ -62,7 +63,11 @@ export async function patchContactForIntegration(
   }
 
   const baseUpdates = {
-    ...buildContactUpdate(parsed.data),
+    ...(await buildContactPatchUpdates(
+      supabase,
+      workspaceOwnerId,
+      parsed.data
+    )),
     updated_at: new Date().toISOString(),
   };
 
@@ -117,5 +122,11 @@ export async function patchContactForIntegration(
     });
   }
 
-  return { ok: true, data: data as Record<string, unknown> };
+  const [enriched] = await enrichContactsCompanyNamesFromDb(
+    supabase,
+    workspaceOwnerId,
+    [data as { company_id?: string | null; company?: string | null }]
+  );
+
+  return { ok: true, data: enriched as Record<string, unknown> };
 }

@@ -23,6 +23,8 @@ import {
 } from "@/hooks/useFinances";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
 import { useWorkspace } from "@/components/crm/workspace-provider";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { formatApiError } from "@/lib/validation-errors";
 import { formatCurrency } from "@/lib/utils";
 import type { InvoiceLineItem } from "@/types";
@@ -60,6 +62,7 @@ export function InvoiceEditor({ invoiceId }: Props) {
   const updateInvoice = useUpdateInvoice(invoiceId);
   const duplicateInvoice = useDuplicateInvoice();
   const deleteInvoice = useDeleteInvoice();
+  const { confirm, dialogProps } = useConfirmDialog();
 
   const [contactId, setContactId] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -153,7 +156,12 @@ export function InvoiceEditor({ invoiceId }: Props) {
   }
 
   async function voidInvoice() {
-    const ok = window.confirm("Void this invoice?");
+    const ok = await confirm({
+      title: "Void this invoice?",
+      description: "This cannot be undone.",
+      confirmLabel: "Void invoice",
+      destructive: true,
+    });
     if (!ok) return;
     try {
       await axios.post(`/api/finances/invoices/${invoiceId}/void`);
@@ -166,9 +174,13 @@ export function InvoiceEditor({ invoiceId }: Props) {
 
   async function deletePermanently() {
     if (!invoice) return;
-    const ok = window.confirm(
-      `Permanently delete invoice ${invoice.invoice_number}? Related payment records will also be removed. This cannot be undone.`
-    );
+    const ok = await confirm({
+      title: `Delete invoice ${invoice.invoice_number}?`,
+      description:
+        "Related payment records will also be removed. This cannot be undone.",
+      confirmLabel: "Delete permanently",
+      destructive: true,
+    });
     if (!ok) return;
     await deleteInvoice.mutateAsync(invoiceId);
     router.push("/finances/invoices");
@@ -209,6 +221,7 @@ export function InvoiceEditor({ invoiceId }: Props) {
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)] min-h-[520px] -m-6 lg:-m-8">
+      <ConfirmDialog {...dialogProps} />
       <header className="shrink-0 flex flex-wrap items-center gap-3 px-4 lg:px-6 py-3 border-b border-[var(--card-border)] bg-[var(--card)]">
         <Link href="/finances/invoices" className="text-xs text-body-muted hover:text-[var(--primary)]">
           ← Invoices

@@ -24,7 +24,6 @@ import {
   useCreateContact,
   useDeleteContact,
 } from "@/hooks/useContacts";
-import { useCompanies } from "@/hooks/useCompanies";
 import type { ContactFormInput } from "@/types";
 import { formatDate } from "@/lib/utils";
 import { formatApiError } from "@/lib/validation-errors";
@@ -77,8 +76,6 @@ function ContactsPageContent() {
     createdFrom: createdFrom || undefined,
     createdTo: createdTo || undefined,
   });
-  const { data: companies = [] } = useCompanies();
-  const companyMap = Object.fromEntries(companies.map((c) => [c.id, c.name]));
   const { canWrite } = useWorkspaceCapabilities();
   const createContact = useCreateContact();
   const deleteContact = useDeleteContact();
@@ -285,9 +282,7 @@ function ContactsPageContent() {
                   </DataTableCell>
                   <DataTableCell>
                     <span className="text-body-muted">
-                      {contact.company_id
-                        ? companyMap[contact.company_id] ?? "—"
-                        : contact.company || "—"}
+                      {contact.company || "—"}
                     </span>
                   </DataTableCell>
                   <DataTableCell>

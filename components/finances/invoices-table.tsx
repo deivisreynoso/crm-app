@@ -24,6 +24,8 @@ import {
   useInvoices,
 } from "@/hooks/useFinances";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useWorkspace } from "@/components/crm/workspace-provider";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -85,6 +87,7 @@ export function InvoicesTable() {
   const duplicateInvoice = useDuplicateInvoice();
   const deleteInvoice = useDeleteInvoice();
   const bulkDelete = useBulkDeleteInvoices();
+  const { confirm, dialogProps } = useConfirmDialog();
 
   useEffect(() => {
     if (searchParams.get("create") === "1") {
@@ -138,7 +141,12 @@ export function InvoicesTable() {
   }
 
   async function voidInvoice(id: string) {
-    const ok = window.confirm("Void this invoice? This cannot be undone.");
+    const ok = await confirm({
+      title: "Void this invoice?",
+      description: "This cannot be undone.",
+      confirmLabel: "Void invoice",
+      destructive: true,
+    });
     if (!ok) return;
     setBusyId(id);
     try {
@@ -150,9 +158,13 @@ export function InvoicesTable() {
   }
 
   async function deleteInvoiceRow(id: string, invoiceNumber: string) {
-    const ok = window.confirm(
-      `Permanently delete invoice ${invoiceNumber}? Related payment records will also be removed. This cannot be undone.`
-    );
+    const ok = await confirm({
+      title: `Delete invoice ${invoiceNumber}?`,
+      description:
+        "Related payment records will also be removed. This cannot be undone.",
+      confirmLabel: "Delete permanently",
+      destructive: true,
+    });
     if (!ok) return;
     setBusyId(id);
     try {
@@ -166,9 +178,12 @@ export function InvoicesTable() {
   async function bulkDeleteSelected() {
     const ids = [...selectedIds];
     if (!ids.length) return;
-    const ok = window.confirm(
-      `Permanently delete ${ids.length} invoice(s)? Related payment records will also be removed.`
-    );
+    const ok = await confirm({
+      title: `Delete ${ids.length} invoice(s)?`,
+      description: "Related payment records will also be removed.",
+      confirmLabel: "Delete permanently",
+      destructive: true,
+    });
     if (!ok) return;
     setBusyId("bulk");
     try {
@@ -192,6 +207,7 @@ export function InvoicesTable() {
 
   return (
     <div className="space-y-4">
+      <ConfirmDialog {...dialogProps} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
           {["", "pending", "partially_paid", "draft", "sent", "overdue", "paid", "voided"].map((s) => (

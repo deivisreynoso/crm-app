@@ -10,6 +10,7 @@ import {
 } from "@/lib/identity/contact-duplicate";
 import { contactWriteErrorMessage } from "@/lib/identity/duplicate-errors";
 import { ilikePattern } from "@/lib/api/sanitize-search";
+import { enrichContactsCompanyNamesFromDb } from "@/lib/contacts/resolve-company-display";
 import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
 
 export async function GET(req: NextRequest) {
@@ -62,8 +63,14 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    const enriched = await enrichContactsCompanyNamesFromDb(
+      supabase,
+      workspaceOwnerId!,
+      data ?? []
+    );
+
     return NextResponse.json({
-      data,
+      data: enriched,
       pagination: {
         page,
         limit,

@@ -136,6 +136,7 @@ function patchWhatsappNewVersion() {
   const wf = load(file);
   applySessionLookupFix(wf, "Normalize WABA Payload", "whatsapp-new");
   applyWhatsappOutboundSyncFix(wf, "whatsapp-new");
+  patchBookAppointmentNode(wf, "whatsapp");
   const out = save(file, wf);
   console.log("WhatsApp New Version patched:", out, "nodes:", wf.nodes.length);
 }
@@ -255,12 +256,26 @@ function patchWebchat() {
   strengthenLeadSessionLookup(wf);
   fixSessionExistsCheck(wf);
 
+  patchBookAppointmentNode(wf, "webchat");
+
   const out = save("ClickIn360_Web_Chat_Qualification_Flow_Updated.json", wf);
   console.log("Webchat updated:", out, "nodes:", wf.nodes.length);
 }
 
 function crmFormatSlotsJs() {
   return `// Node: "Format Available Slots" — CRM booking-offers response\n\nconst crm = $json;\nconst previousState = $('State Manager').first().json;\n\nreturn [{\n  json: {\n    ...previousState,\n    next_action: crm.next_action || 'book_call',\n    available_slots: crm.available_slots || [],\n    selected_slot: null,\n    selected_slot_index: null,\n    latest_ai_response: crm.message || previousState.latest_ai_response\n  }\n}];`;
+}
+
+const BOOK_APPOINTMENT_JSON_BODY = `={{ JSON.stringify({ contact_info: { name: $('State Manager').item.json.name || 'Visitor', email: $('State Manager').item.json.email, phone: $('State Manager').item.json.phone_number }, slot_index: $('State Manager').item.json.selected_slot_index, offered_slots: $('State Manager').item.json.available_slots, ai_insights: { platform: $('State Manager').item.json.platform || undefined, ai_summary: $('State Manager').item.json.summary || undefined }, conversation_transcript: $('State Manager').item.json.conversation_history.map(h => (h.role === 'user' ? 'Usuario' : 'Andrea') + ': ' + h.content).join(' | '), source: 'whatsapp', language: 'es', reschedule: $('State Manager').item.json.next_action === 'reschedule' }) }}`;
+
+function patchBookAppointmentNode(workflow, source = "whatsapp") {
+  const node = nodeByName(workflow, "CRM: Book Appointment");
+  if (!node) return;
+  const body =
+    source === "webchat"
+      ? `={{ JSON.stringify({ contact_info: { name: $('State Manager').first().json.name || 'Visitor', email: $('State Manager').first().json.email, phone: $('State Manager').first().json.phone_number }, slot_index: $('State Manager').first().json.selected_slot_index, offered_slots: $('State Manager').first().json.available_slots, ai_insights: { platform: $('State Manager').first().json.platform || undefined, ai_summary: $('State Manager').first().json.summary || undefined }, conversation_transcript: $('State Manager').first().json.conversation_history.map(h => (h.role === 'user' ? 'Usuario' : 'Andrea') + ': ' + h.content).join(' | '), source: 'webchat', language: 'es', reschedule: $('State Manager').first().json.next_action === 'reschedule' }) }}`
+      : BOOK_APPOINTMENT_JSON_BODY;
+  node.parameters.jsonBody = body;
 }
 
 function syncTurnAiReplyExpression() {
@@ -569,6 +584,7 @@ function patchWhatsapp() {
   strengthenLeadSessionLookup(wf);
   fixSessionExistsCheck(wf);
   applyWhatsappOutboundSyncFix(wf, "whatsapp");
+  patchBookAppointmentNode(wf, "whatsapp");
 
   const out = save("ClickIn360_Whatsapp_Flow_Updated.json", wf);
   const text = JSON.stringify(wf);
@@ -587,7 +603,7 @@ function validateWebchat() {
   for (const n of src.nodes) {
     const u = upd.nodes.find((x) => x.id === n.id);
     if (!u) throw new Error(`Missing original node ${n.name}`);
-    if (n.name === "Lookup Lead Session" || n.name === "Session Exists?") continue;
+    if (n.name === "Lookup Lead Session" || n.name === "Session Exists?" || n.name === "CRM: Book Appointment") continue;
     if (JSON.stringify(u) !== JSON.stringify(n)) {
       throw new Error(`Modified original node ${n.name}`);
     }

@@ -15,6 +15,8 @@ import {
 } from "@/lib/email/merge-fields";
 import { formatApiError } from "@/lib/validation-errors";
 import type { Contact } from "@/types";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 type Props = {
   contact?: Pick<
@@ -45,6 +47,7 @@ export function TemplateActionsMenu({
   const [saveOpen, setSaveOpen] = useState(false);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const { confirm, dialogProps } = useConfirmDialog();
 
   const ctx = contact
     ? buildTemplateContext({
@@ -64,6 +67,7 @@ export function TemplateActionsMenu({
 
   return (
     <>
+      <ConfirmDialog {...dialogProps} />
       <Button
         type="button"
         size="sm"
@@ -103,7 +107,13 @@ export function TemplateActionsMenu({
               variant="outline"
               disabled={updateTemplate.isPending}
               onClick={async () => {
-                if (!window.confirm("Overwrite the loaded template with current content?")) return;
+                const ok = await confirm({
+                  title: "Overwrite template?",
+                  description: "Replace the loaded template with the current subject and body.",
+                  confirmLabel: "Overwrite",
+                  destructive: true,
+                });
+                if (!ok) return;
                 try {
                   await updateTemplate.mutateAsync({
                     id: templateId,

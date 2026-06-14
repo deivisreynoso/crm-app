@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { RichTextEditor } from "@/components/email/rich-text-editor";
 import { EmailPreviewModal } from "@/components/email/email-preview-modal";
 import { MergeFieldPicker } from "@/components/email/merge-field-picker";
@@ -112,6 +113,7 @@ export function EmailComposer({
   const [clearOpen, setClearOpen] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { confirm, dialogProps } = useConfirmDialog();
 
   const templateContext = useMemo(() => {
     const base = contact
@@ -422,11 +424,14 @@ export function EmailComposer({
             body={bodyHtml}
             templateId={templateId}
             onTemplateIdChange={onTemplateIdChange ?? (() => undefined)}
-            onApply={(s, b, id) => {
+            onApply={async (s, b, id) => {
               if (subject.trim() || bodyHtml.replace(/<[^>]+>/g, "").trim()) {
-                if (!window.confirm("Replace current subject and body with this template?")) {
-                  return;
-                }
+                const ok = await confirm({
+                  title: "Replace email content?",
+                  description: "Replace the current subject and body with this template?",
+                  confirmLabel: "Replace",
+                });
+                if (!ok) return;
               }
               setSubject(s);
               setBodyHtml(b.startsWith("<") ? b : `<p>${b.replace(/\n/g, "<br/>")}</p>`);
@@ -494,6 +499,8 @@ export function EmailComposer({
         to={resolveTo()}
       />
 
+      <ConfirmDialog {...dialogProps} />
+      <ConfirmDialog {...dialogProps} />
       <ConfirmDialog
         open={clearOpen}
         title="Clear email?"

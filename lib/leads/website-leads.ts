@@ -4,7 +4,7 @@ import { triggerN8NWebhook } from "@/lib/n8n";
 import { findDuplicateContact } from "@/lib/identity/contact-duplicate";
 import { getWorkspaceWebsiteLeadsConfig } from "@/lib/team/workspace";
 import type { WebsiteCalendarSelection } from "@/lib/leads/booking-calendar-event";
-import { upsertBookingCalendarEvent } from "@/lib/leads/reschedule-booking";
+import { upsertBookingCalendarEvent, findContactDiscoveryAppointment } from "@/lib/leads/reschedule-booking";
 import { notifyWebsiteLeadAssignee } from "@/lib/leads/website-lead-notify";
 import type { CrmLocale } from "@/lib/crm/i18n";
 
@@ -151,25 +151,54 @@ async function appendToExistingContact(
     conversation_transcript?: string | null;
     calendar_selection?: WebsiteCalendarSelection | null;
     language?: string | null;
+    reschedule?: boolean;
   },
   defaultSalesAssignee: string | null
 ): Promise<WebsiteLeadResult> {
   const q = input.qualification ?? {};
   const phone = input.contact_info.phone?.trim() || null;
+  const email = input.contact_info.email.trim().toLowerCase();
   const company = input.contact_info.company?.trim() || null;
   const { first_name, last_name } = splitName(input.contact_info.name);
   const companyLabel = company ?? `${first_name} ${last_name}`;
 
-  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  const patch: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+    first_name,
+    last_name,
+    email,
+  };
   if (phone) patch.phone = phone;
   if (company) patch.company = company;
   if (q.platform) patch.platform = q.platform;
   if (q.ai_summary) patch.ai_summary = q.ai_summary;
+  const friction = frictionToString(q.friction_area);
+  if (friction) patch.friction_area = friction;
+  if (q.communication_channels) {
+    patch.communication_channels = Array.isArray(q.communication_channels)
+      ? q.communication_channels.join(", ")
+      : q.communication_channels;
+  }
+  const signals = q.signals ?? q.friction_point;
+  if (signals) patch.signals = signals;
   if (defaultSalesAssignee) patch.assigned_to = defaultSalesAssignee;
 
   await supabase.from("contacts").update(patch).eq("id", contactId);
 
   const noteContent = buildNoteContent(input, true);
+
+  let isReschedule = Boolean(input.reschedule);
+  if (!isReschedule && input.calendar_selection?.date && input.calendar_selection?.time) {
+    const existingAppt = await findContactDiscoveryAppointment(
+      supabase,
+      workspaceOwnerId,
+      contactId
+    );
+    if (existingAppt?.start_time) {
+      isReschedule = new Date(existingAppt.start_time as string) > new Date();
+    }
+  }
+
   await supabase.from("notes").insert([
     {
       user_id: workspaceOwnerId,
@@ -179,8 +208,6 @@ async function appendToExistingContact(
       activity_type: "note",
     },
   ]);
-
-  const isReschedule = Boolean(input.calendar_selection?.date && input.calendar_selection?.time);
 
   const opportunityId = isReschedule
     ? null
@@ -257,6 +284,7 @@ export async function createLeadFromWebsite(input: {
   ga_client_id?: string | null;
   conversation_transcript?: string | null;
   language?: string | null;
+  reschedule?: boolean;
 }): Promise<WebsiteLeadResult> {
   const envOwner = process.env.WEBSITE_LEADS_USER_ID?.trim();
   if (!envOwner) {
@@ -285,7 +313,10 @@ export async function createLeadFromWebsite(input: {
       supabase,
       workspaceOwnerId,
       duplicate.contact.id,
-      input,
+      {
+        ...input,
+        reschedule: input.reschedule ?? false,
+      },
       defaultSalesAssignee
     );
   }

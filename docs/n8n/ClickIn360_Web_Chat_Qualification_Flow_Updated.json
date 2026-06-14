@@ -666,7 +666,7 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\"contact_info\":{\"name\":\"{{$json.name || 'Visitor'}}\",\"email\":\"{{$json.email}}\",\"phone\":\"{{$json.phone_number}}\"},\"slot_index\":{{$json.selected_slot_index}},\"offered_slots\":{{JSON.stringify($json.available_slots)}},\"ai_insights\":{\"platform\":\"{{$json.platform}}\",\"ai_summary\":\"{{$json.summary}}\"},\"conversation_transcript\":\"{{$json.conversation_history.map(h => (h.role === 'user' ? 'Usuario' : 'Andrea') + ': ' + h.content).join(' | ')}}\",\"source\":\"webchat\",\"language\":\"es\"}\n",
+        "jsonBody": "={{ JSON.stringify({ contact_info: { name: $('State Manager').first().json.name || 'Visitor', email: $('State Manager').first().json.email, phone: $('State Manager').first().json.phone_number }, slot_index: $('State Manager').first().json.selected_slot_index, offered_slots: $('State Manager').first().json.available_slots, ai_insights: { platform: $('State Manager').first().json.platform || undefined, ai_summary: $('State Manager').first().json.summary || undefined }, conversation_transcript: $('State Manager').first().json.conversation_history.map(h => (h.role === 'user' ? 'Usuario' : 'Andrea') + ': ' + h.content).join(' | '), source: 'webchat', language: 'es', reschedule: $('State Manager').first().json.next_action === 'reschedule' }) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
