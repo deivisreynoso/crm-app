@@ -1,24 +1,28 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import axios from "axios";
 import Link from "next/link";
 import {
   ChevronRight,
   ExternalLink,
   Folder,
+  FolderPlus,
   HardDrive,
   Link2,
   Loader2,
   RefreshCw,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { ContactSearchCombobox } from "@/components/forms/contact-search-combobox";
 import {
+  useCreateGoogleDriveFolder,
   useGoogleDriveFiles,
   useGoogleDriveStatus,
   useLinkGoogleDriveFile,
+  useUploadGoogleDriveFile,
 } from "@/hooks/useGoogleDrive";
 import type { DriveFileItem } from "@/lib/google/drive";
 import { formatApiError } from "@/lib/validation-errors";
@@ -35,7 +39,8 @@ function formatFileSize(size?: string) {
 }
 
 export function GoogleDriveBrowser() {
-  const { canManage } = useWorkspaceCapabilities();
+  const { canWrite, canManage } = useWorkspaceCapabilities();
+  const uploadInputRef = useRef<HTMLInputElement>(null);
   const { data: status, isLoading: statusLoading, refetch: refetchStatus } =
     useGoogleDriveStatus();
   const [folderStack, setFolderStack] = useState<{ id: string; name: string }[]>(
@@ -52,9 +57,15 @@ export function GoogleDriveBrowser() {
   } = useGoogleDriveFiles(currentFolderId, { enabled: !!status?.connected });
 
   const linkFile = useLinkGoogleDriveFile();
+  const createFolder = useCreateGoogleDriveFolder();
+  const uploadFile = useUploadGoogleDriveFile();
   const [linkTarget, setLinkTarget] = useState<DriveFileItem | null>(null);
   const [linkContactId, setLinkContactId] = useState("");
   const [linkError, setLinkError] = useState<string | null>(null);
+  const [folderModalOpen, setFolderModalOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [folderError, setFolderError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const breadcrumbs = useMemo(
     () => [{ id: "root", name: "My Drive" }, ...folderStack],
@@ -157,6 +168,57 @@ export function GoogleDriveBrowser() {
           </nav>
         </div>
         <div className="flex items-center gap-2">
+          {canWrite && (
+            <>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setNewFolderName("");
+                  setFolderError(null);
+                  setFolderModalOpen(true);
+                }}
+              >
+                <FolderPlus className="h-4 w-4 mr-1.5" />
+                New folder
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={uploadFile.isPending}
+                onClick={() => uploadInputRef.current?.click()}
+              >
+                <Upload className="h-4 w-4 mr-1.5" />
+                {uploadFile.isPending ? "Uploading…" : "Upload"}
+              </Button>
+              <input
+                ref={uploadInputRef}
+                type="file"
+                className="hidden"
+                multiple
+                onChange={async (e) => {
+                  const selected = Array.from(e.target.files ?? []);
+                  if (!selected.length) return;
+                  setUploadError(null);
+                  try {
+                    for (const file of selected) {
+                      await uploadFile.mutateAsync({
+                        file,
+                        folder_id: currentFolderId,
+                      });
+                    }
+                    void refetchFiles();
+                  } catch (err) {
+                    setUploadError(formatApiError(err, "Upload failed"));
+                  } finally {
+                    e.target.value = "";
+                  }
+                }}
+              />
+            </>
+          )}
           <Button
             type="button"
             size="sm"
@@ -189,6 +251,17 @@ export function GoogleDriveBrowser() {
       {loadError && (
         <p className="mx-4 text-sm text-[var(--error)] bg-red-500/10 border border-red-200 rounded-lg px-3 py-2">
           {loadError}
+        </p>
+      )}
+      {uploadError && (
+        <p className="mx-4 text-sm text-[var(--error)] bg-red-500/10 border border-red-200 rounded-lg px-3 py-2">
+          {uploadError}
+        </p>
+      )}
+      {canWrite && (
+        <p className="mx-4 text-xs text-body-muted">
+          Upload and create folders in the current directory. If actions fail, disconnect
+          and reconnect Google Drive to grant full Drive access.
         </p>
       )}
 
@@ -336,6 +409,61 @@ export function GoogleDriveBrowser() {
             </p>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        open={folderModalOpen}
+        onClose={() => setFolderModalOpen(false)}
+        title="New folder"
+      >
+        <form
+          className="space-y-4"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const name = newFolderName.trim();
+            if (!name) return;
+            setFolderError(null);
+            try {
+              await createFolder.mutateAsync({
+                name,
+                folder_id: currentFolderId,
+              });
+              setFolderModalOpen(false);
+              setNewFolderName("");
+              void refetchFiles();
+            } catch (err) {
+              setFolderError(formatApiError(err, "Could not create folder"));
+            }
+          }}
+        >
+          <div>
+            <label className="text-sm font-medium text-heading block mb-1.5">
+              Folder name
+            </label>
+            <input
+              className="input-field w-full"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              placeholder="e.g. Client assets"
+              autoFocus
+            />
+          </div>
+          {folderError && (
+            <p className="text-sm text-[var(--error)]">{folderError}</p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setFolderModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!newFolderName.trim() || createFolder.isPending}>
+              {createFolder.isPending ? "Creating…" : "Create folder"}
+            </Button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

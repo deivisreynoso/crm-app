@@ -72,3 +72,29 @@ export function useDisconnectGoogleDrive() {
     },
   });
 }
+
+export function useCreateGoogleDriveFolder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { name: string; folder_id?: string | null }) =>
+      axios.post("/api/integrations/google-drive/folders", input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["google-drive-files"] });
+    },
+  });
+}
+
+export function useUploadGoogleDriveFile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { file: File; folder_id?: string | null }) => {
+      const form = new FormData();
+      form.append("file", input.file);
+      if (input.folder_id) form.append("folder_id", input.folder_id);
+      return axios.post("/api/integrations/google-drive/upload", form);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["google-drive-files"] });
+    },
+  });
+}

@@ -16,25 +16,42 @@ function MediaPageContent() {
   const [banner, setBanner] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const driveParam = searchParams.get("google_drive");
+  const driveReason = searchParams.get("reason");
+
   useEffect(() => {
-    const param = searchParams.get("google_drive");
-    if (param === "connected") {
+    if (driveParam === "connected") {
       setBanner(m?.connectedBanner ?? "Google Drive connected for this workspace.");
+      setError(null);
       void queryClient.invalidateQueries({
         queryKey: ["integration-google-drive-status"],
       });
       void queryClient.invalidateQueries({ queryKey: ["google-drive-files"] });
-    } else if (param === "forbidden") {
-      setError("Only workspace admins can connect Google Drive.");
-    } else if (param === "error") {
-      const reason = searchParams.get("reason");
-      setError(
-        reason === "migration"
-          ? "Drive authorized but tokens could not be saved. Run migration 069_google_drive_integration.sql, then reconnect."
-          : (m?.connectError ?? "Google Drive connection failed. Check OAuth settings and try again.")
-      );
+      return;
     }
-  }, [searchParams, m?.connectedBanner, m?.connectError, queryClient]);
+
+    if (driveParam === "forbidden") {
+      setBanner(null);
+      setError("Only workspace admins can connect Google Drive.");
+      return;
+    }
+
+    if (driveParam === "error") {
+      setBanner(null);
+      setError(
+        driveReason === "migration"
+          ? "Drive authorized but tokens could not be saved. Run migration 069_google_drive_integration.sql, then reconnect."
+          : (m?.connectError ??
+              "Google Drive connection failed. Check OAuth settings and try again.")
+      );
+      return;
+    }
+
+    setBanner(null);
+    setError(null);
+    // queryClient is stable; intentionally omitted from deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [driveParam, driveReason, m?.connectedBanner, m?.connectError]);
 
   return (
     <div className="space-y-6 w-full">

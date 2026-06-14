@@ -9,7 +9,7 @@ import {
 export { getGoogleDriveRedirectUri, isGoogleDriveConfigured };
 
 export const DRIVE_OAUTH_SCOPES = [
-  "https://www.googleapis.com/auth/drive.readonly",
+  "https://www.googleapis.com/auth/drive",
   "https://www.googleapis.com/auth/userinfo.email",
 ] as const;
 
@@ -233,4 +233,149 @@ export async function getGoogleDriveFileMeta(
     size: file.size,
     isFolder: folderMimeType(file.mimeType),
   };
+}
+
+async function resolveParentFolderId(
+  workspaceOwnerId: string,
+  folderId?: string | null
+): Promise<string> {
+  const connection = await getGoogleDriveConnection(workspaceOwnerId);
+  return folderId?.trim() || connection.root_folder_id || "root";
+}
+
+function mapDriveFile(file: {
+  id: string;
+  name: string;
+  mimeType: string;
+  modifiedTime?: string;
+  webViewLink?: string;
+  iconLink?: string;
+  size?: string;
+}): DriveFileItem {
+  return {
+    id: file.id,
+    name: file.name,
+    mimeType: file.mimeType,
+    modifiedTime: file.modifiedTime,
+    webViewLink: file.webViewLink,
+    iconLink: file.iconLink,
+    size: file.size,
+    isFolder: folderMimeType(file.mimeType),
+  };
+}
+
+export async function createGoogleDriveFolder(
+  workspaceOwnerId: string,
+  name: string,
+  folderId?: string | null
+): Promise<DriveFileItem> {
+  const accessToken = await getGoogleDriveAccessToken(workspaceOwnerId);
+  if (!accessToken) {
+    throw new Error("Google Drive is not connected for this workspace");
+  }
+
+  const parentId = await resolveParentFolderId(workspaceOwnerId, folderId);
+  const params = new URLSearchParams({
+    fields: "id,name,mimeType,modifiedTime,webViewLink,iconLink,size",
+    supportsAllDrives: "true",
+  });
+
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files?${params.toString()}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: name.trim(),
+        mimeType: "application/vnd.google-apps.folder",
+        parents: [parentId],
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("Drive create folder failed:", text);
+    throw new Error("Could not create folder in Google Drive");
+  }
+
+  const file = (await res.json()) as {
+    id: string;
+    name: string;
+    mimeType: string;
+    modifiedTime?: string;
+    webViewLink?: string;
+    iconLink?: string;
+    size?: string;
+  };
+
+  return mapDriveFile(file);
+}
+
+export async function uploadGoogleDriveFile(
+  workspaceOwnerId: string,
+  input: {
+    name: string;
+    mimeType: string;
+    buffer: Buffer;
+    folderId?: string | null;
+  }
+): Promise<DriveFileItem> {
+  const accessToken = await getGoogleDriveAccessToken(workspaceOwnerId);
+  if (!accessToken) {
+    throw new Error("Google Drive is not connected for this workspace");
+  }
+
+  const parentId = await resolveParentFolderId(workspaceOwnerId, input.folderId);
+  const metadata = JSON.stringify({
+    name: input.name.trim(),
+    parents: [parentId],
+  });
+  const boundary = `crm_drive_${Date.now()}`;
+  const body = Buffer.concat([
+    Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`),
+    Buffer.from(metadata),
+    Buffer.from(`\r\n--${boundary}\r\nContent-Type: ${input.mimeType || "application/octet-stream"}\r\n\r\n`),
+    input.buffer,
+    Buffer.from(`\r\n--${boundary}--`),
+  ]);
+
+  const params = new URLSearchParams({
+    uploadType: "multipart",
+    fields: "id,name,mimeType,modifiedTime,webViewLink,iconLink,size",
+    supportsAllDrives: "true",
+  });
+
+  const res = await fetch(
+    `https://www.googleapis.com/upload/drive/v3/files?${params.toString()}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": `multipart/related; boundary=${boundary}`,
+      },
+      body,
+    }
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("Drive upload failed:", text);
+    throw new Error("Could not upload file to Google Drive");
+  }
+
+  const file = (await res.json()) as {
+    id: string;
+    name: string;
+    mimeType: string;
+    modifiedTime?: string;
+    webViewLink?: string;
+    iconLink?: string;
+    size?: string;
+  };
+
+  return mapDriveFile(file);
 }
