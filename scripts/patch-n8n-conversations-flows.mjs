@@ -67,11 +67,33 @@ function httpNode(name, id, position, method, url, jsonBody, continueOnFail = tr
   };
 }
 
-function fixLookupSessionId(workflow, normalizeNodeName) {
+function passSessionNode(id, position, normalizeNodeName) {
+  return {
+    id,
+    name: "Pass Session Context",
+    type: "n8n-nodes-base.code",
+    typeVersion: 2,
+    position,
+    parameters: {
+      jsCode: `return [{ json: $('${normalizeNodeName}').first().json }];`,
+    },
+  };
+}
+
+/** Restore original lookup input + explicit eq filter after CRM nodes were inserted upstream. */
+function strengthenLeadSessionLookup(workflow) {
   const lookup = nodeByName(workflow, "Lookup Lead Session");
   const cond = lookup?.parameters?.filters?.conditions?.[0];
   if (!cond) return;
-  cond.keyValue = `={{ $('${normalizeNodeName}').first().json.session_id }}`;
+  cond.condition = "eq";
+  cond.keyValue = "={{$json.session_id}}";
+}
+
+function fixSessionExistsCheck(workflow) {
+  const node = nodeByName(workflow, "Session Exists?");
+  const cond = node?.parameters?.conditions?.conditions?.[0];
+  if (!cond) return;
+  cond.leftValue = "={{ $json.session_id }}";
 }
 
 function patchWebchat() {
@@ -80,6 +102,7 @@ function patchWebchat() {
     check: uuid(),
     branch: uuid(),
     branchCond: uuid(),
+    passSession: uuid(),
     syncInbound: uuid(),
     respondHuman: uuid(),
     syncTurn: uuid(),
@@ -152,7 +175,14 @@ function patchWebchat() {
     "={{ JSON.stringify({ session_id: $('State Manager').first().json.session_id, channel: 'webchat', phone_number: $('State Manager').first().json.phone_number, name: $('State Manager').first().json.name, inbound_message: $('Normalize Web Payload').first().json.message, ai_reply: $('State Manager').first().json.latest_ai_response, next_action: $('State Manager').first().json.next_action, qualification: { name: $('State Manager').first().json.name, email: $('State Manager').first().json.email, platform: $('State Manager').first().json.platform, channels: $('State Manager').first().json.communication_channels || [], friction_area: $('State Manager').first().json.friction_area, signals: $('State Manager').first().json.signals || [], temperature: $('State Manager').first().json.temperature, summary: $('State Manager').first().json.summary, message_volume: $('State Manager').first().json.message_volume, main_customer_questions: $('State Manager').first().json.main_customer_questions || [] }, contact_id: $('CRM UPDATE').first().json.contact_id || null, human_review_requested: $('State Manager').first().json.next_action === 'human_review' }) }}"
   );
 
-  wf.nodes.push(check, branch, syncInbound, respondHuman, syncTurn);
+  wf.nodes.push(
+    check,
+    branch,
+    passSessionNode(ids.passSession, [448, 208], "Normalize Web Payload"),
+    syncInbound,
+    respondHuman,
+    syncTurn
+  );
 
   wf.connections["Normalize Web Payload"] = {
     main: [[{ node: "CRM: Check Session State", type: "main", index: 0 }]],
@@ -163,8 +193,11 @@ function patchWebchat() {
   wf.connections["CRM: Human Handler Branch"] = {
     main: [
       [{ node: "CRM: Sync Inbound Only", type: "main", index: 0 }],
-      [{ node: "Lookup Lead Session", type: "main", index: 0 }],
+      [{ node: "Pass Session Context", type: "main", index: 0 }],
     ],
+  };
+  wf.connections["Pass Session Context"] = {
+    main: [[{ node: "Lookup Lead Session", type: "main", index: 0 }]],
   };
   wf.connections["CRM: Sync Inbound Only"] = {
     main: [[{ node: "Respond: Human Handler", type: "main", index: 0 }]],
@@ -175,7 +208,8 @@ function patchWebchat() {
     updateLead.main[0].push({ node: "CRM: Sync Turn", type: "main", index: 0 });
   }
 
-  fixLookupSessionId(wf, "Normalize Web Payload");
+  strengthenLeadSessionLookup(wf);
+  fixSessionExistsCheck(wf);
 
   const out = save("ClickIn360_Web_Chat_Qualification_Flow_Updated.json", wf);
   console.log("Webchat updated:", out, "nodes:", wf.nodes.length);
@@ -191,6 +225,7 @@ function patchWhatsapp() {
     check: uuid(),
     branch: uuid(),
     branchCond: uuid(),
+    passSession: uuid(),
     syncInbound: uuid(),
     syncTurn: uuid(),
     bookingOffers: uuid(),
@@ -314,6 +349,7 @@ function patchWhatsapp() {
   wf.nodes.push(
     check,
     branch,
+    passSessionNode(ids.passSession, [544, 544], "Normalize WABA Payload"),
     syncInbound,
     syncTurn,
     bookingOffers,
@@ -354,8 +390,11 @@ function patchWhatsapp() {
   wf.connections["CRM: Human Handler Branch"] = {
     main: [
       [{ node: "CRM: Sync Inbound Only", type: "main", index: 0 }],
-      [{ node: "Lookup Lead Session", type: "main", index: 0 }],
+      [{ node: "Pass Session Context", type: "main", index: 0 }],
     ],
+  };
+  wf.connections["Pass Session Context"] = {
+    main: [[{ node: "Lookup Lead Session", type: "main", index: 0 }]],
   };
   wf.connections["CRM: Sync Inbound Only"] = { main: [[]] };
 
@@ -387,7 +426,8 @@ function patchWhatsapp() {
     updateLead.main[0].push({ node: "CRM: Sync Turn", type: "main", index: 0 });
   }
 
-  fixLookupSessionId(wf, "Normalize WABA Payload");
+  strengthenLeadSessionLookup(wf);
+  fixSessionExistsCheck(wf);
 
   const out = save("ClickIn360_Whatsapp_Flow_Updated.json", wf);
   const text = JSON.stringify(wf);
@@ -406,7 +446,7 @@ function validateWebchat() {
   for (const n of src.nodes) {
     const u = upd.nodes.find((x) => x.id === n.id);
     if (!u) throw new Error(`Missing original node ${n.name}`);
-    if (n.name === "Lookup Lead Session") continue;
+    if (n.name === "Lookup Lead Session" || n.name === "Session Exists?") continue;
     if (JSON.stringify(u) !== JSON.stringify(n)) {
       throw new Error(`Modified original node ${n.name}`);
     }
@@ -414,6 +454,7 @@ function validateWebchat() {
   const newNames = [
     "CRM: Check Session State",
     "CRM: Human Handler Branch",
+    "Pass Session Context",
     "CRM: Sync Inbound Only",
     "CRM: Sync Turn",
     "Respond: Human Handler",

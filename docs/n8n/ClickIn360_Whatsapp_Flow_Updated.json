@@ -342,7 +342,8 @@
           "conditions": [
             {
               "keyName": "session_id",
-              "keyValue": "={{ $('Normalize WABA Payload').first().json.session_id }}"
+              "keyValue": "={{$json.session_id}}",
+              "condition": "eq"
             }
           ]
         }
@@ -558,7 +559,7 @@
           "conditions": [
             {
               "id": "d9f520bd-278a-418d-8aa3-af975a542ac8",
-              "leftValue": "={{ $json.id }}",
+              "leftValue": "={{ $json.session_id }}",
               "rightValue": "",
               "operator": {
                 "type": "string",
@@ -968,7 +969,7 @@
       }
     },
     {
-      "id": "6620dfef-0adf-47fb-9899-889cc08d03fb",
+      "id": "25b51a6d-486f-4675-9303-744286b19dbe",
       "name": "CRM: Check Session State",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -996,7 +997,7 @@
       }
     },
     {
-      "id": "bac013cd-e080-42af-bf86-63b0459a24f2",
+      "id": "66764822-d427-49a6-af1a-457276324313",
       "name": "CRM: Human Handler Branch",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
@@ -1013,7 +1014,7 @@
           },
           "conditions": [
             {
-              "id": "cc64c381-85d7-4823-8790-2a087efd7c45",
+              "id": "547eb6a4-1779-45fe-bc9d-42cf6d9963d9",
               "leftValue": "={{ $json.handler }}",
               "rightValue": "human",
               "operator": {
@@ -1028,7 +1029,20 @@
       }
     },
     {
-      "id": "7551c621-35f3-4d31-9b59-88bd7c479915",
+      "id": "b2c00d08-1667-4c97-adb6-08fcf308cb77",
+      "name": "Pass Session Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        544
+      ],
+      "parameters": {
+        "jsCode": "return [{ json: $('Normalize WABA Payload').first().json }];"
+      }
+    },
+    {
+      "id": "939938f7-135d-42d7-aea0-4eae3be82e5e",
       "name": "CRM: Sync Inbound Only",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -1056,7 +1070,7 @@
       }
     },
     {
-      "id": "6c368534-b7f6-4b5d-aaf9-c69b63edd670",
+      "id": "d1f36958-94dc-4b64-a6e8-50ec5f3c4be6",
       "name": "CRM: Sync Turn",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -1084,7 +1098,7 @@
       }
     },
     {
-      "id": "dad43d27-489a-4930-a752-b16fce093ee1",
+      "id": "2a7b9821-e59a-4722-818b-50439fe6851a",
       "name": "CRM: Get Booking Offers",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -1107,7 +1121,7 @@
       }
     },
     {
-      "id": "e726be16-8b7c-4c4f-bb19-f5edc1977a09",
+      "id": "48ecef5e-63eb-40a1-8e33-39cf151d96f9",
       "name": "CRM: Book Appointment",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -1133,7 +1147,7 @@
       }
     },
     {
-      "id": "3b0bc64b-a05c-4c00-a134-5f68897ea2f6",
+      "id": "1501691c-8777-4e51-959a-77575e9a3cce",
       "name": "CRM: Sync Human Review",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -1161,7 +1175,7 @@
       }
     },
     {
-      "id": "7cb0930c-04d2-4952-a9d9-5c0689a5b669",
+      "id": "c4dc9af0-b031-40cc-b0fe-0e20fc938df0",
       "name": "Send: Human Review Reply",
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
@@ -1566,6 +1580,17 @@
             "index": 0
           }
         ],
+        [
+          {
+            "node": "Pass Session Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pass Session Context": {
+      "main": [
         [
           {
             "node": "Lookup Lead Session",

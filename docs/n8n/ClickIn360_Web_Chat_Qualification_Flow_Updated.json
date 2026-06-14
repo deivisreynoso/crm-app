@@ -280,7 +280,8 @@
           "conditions": [
             {
               "keyName": "session_id",
-              "keyValue": "={{ $('Normalize Web Payload').first().json.session_id }}"
+              "keyValue": "={{$json.session_id}}",
+              "condition": "eq"
             }
           ]
         }
@@ -377,7 +378,7 @@
           "conditions": [
             {
               "id": "d9f520bd-278a-418d-8aa3-af975a542ac8",
-              "leftValue": "={{ $json.id }}",
+              "leftValue": "={{ $json.session_id }}",
               "rightValue": "",
               "operator": {
                 "type": "string",
@@ -901,7 +902,7 @@
       "name": "If"
     },
     {
-      "id": "dfe9e0ef-4141-43ed-836a-843ec604ecdc",
+      "id": "34da3d68-65ea-4222-b9b2-8e8da911106c",
       "name": "CRM: Check Session State",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -929,7 +930,7 @@
       }
     },
     {
-      "id": "8cb03510-df6b-4576-b4bb-0482667acca7",
+      "id": "950f3c0f-d02f-4248-bbd8-b44aa1f8a3f5",
       "name": "CRM: Human Handler Branch",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
@@ -946,7 +947,7 @@
           },
           "conditions": [
             {
-              "id": "ec240da8-1723-40b7-ac5a-a0e35b5119a2",
+              "id": "6b4837b6-bdfe-446b-a6ed-0b3f1cfe5e59",
               "leftValue": "={{ $json.handler }}",
               "rightValue": "human",
               "operator": {
@@ -961,7 +962,20 @@
       }
     },
     {
-      "id": "f4716035-3614-4c0d-9289-ffa5d838457d",
+      "id": "0f0bba5d-63f7-4674-b3c3-7d3e7c160681",
+      "name": "Pass Session Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        208
+      ],
+      "parameters": {
+        "jsCode": "return [{ json: $('Normalize Web Payload').first().json }];"
+      }
+    },
+    {
+      "id": "5d8aa4df-6e13-450f-8283-5a5479f1024b",
       "name": "CRM: Sync Inbound Only",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -989,7 +1003,7 @@
       }
     },
     {
-      "id": "d222dfbe-ceb0-4b84-a0ab-52c3b5919669",
+      "id": "7e60a66a-d075-4079-bbc8-e5524d126e3a",
       "name": "Respond: Human Handler",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
@@ -1006,7 +1020,7 @@
       }
     },
     {
-      "id": "93a36560-cad9-4a01-b7f4-5696de68b7f8",
+      "id": "14a9e4d9-6a5b-47cb-9958-491d72438c0d",
       "name": "CRM: Sync Turn",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -1427,6 +1441,17 @@
             "index": 0
           }
         ],
+        [
+          {
+            "node": "Pass Session Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pass Session Context": {
+      "main": [
         [
           {
             "node": "Lookup Lead Session",

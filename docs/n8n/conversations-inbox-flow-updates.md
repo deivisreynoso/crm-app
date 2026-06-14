@@ -46,9 +46,9 @@ Expected: `{"handler":"ai","conversation_id":null,"human_review_requested":false
 
 ## Webchat — 4 new nodes only
 
-**Required fix:** After inserting CRM nodes, update **Lookup Lead Session** → filter `session_id` to `$('Normalize Web Payload').first().json.session_id` (not `$json.session_id`). The patch script applies this automatically.
+**Required fix:** After CRM session-state nodes, insert **Pass Session Context** (code node) on the AI branch so **Lookup Lead Session** receives the normalize payload again (`session_id`, etc.). Also set lookup filter `condition: eq` and change **Session Exists?** to check `$json.session_id` (not `$json.id`). The patch script applies all of this automatically.
 
-1. **CRM: Check Session State** — after `Normalize Web Payload`, before `Session Exists?`
+1. **CRM: Check Session State** — after normalize, before session lookup
 2. **CRM: Human Handler Branch** — IF `handler === 'human'`
    - true → **CRM: Sync Inbound Only** → **Respond to Webhook** (200 empty)
    - false → existing `Session Exists?`
