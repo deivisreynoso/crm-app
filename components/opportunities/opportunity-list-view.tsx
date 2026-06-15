@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/page-shell";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import { getPipelineStageAccentById } from "@/lib/constants/pipeline-stage-accent";
+import { ProjectStageBadge } from "@/components/opportunities/project-stage-badge";
 import type { OpportunityWithContact, PipelineStage } from "@/types";
 
 interface OpportunityListViewProps {
@@ -84,18 +85,23 @@ export function OpportunityListView({
               )}
             </DataTableCell>
             <DataTableCell>
-              {stages.length > 0 ? (
-                <span
-                  className={cn(
-                    "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize",
-                    getPipelineStageAccentById(opp.stage, stages).badgeClass
-                  )}
-                >
-                  {opp.stage.replace(/_/g, " ")}
-                </span>
-              ) : (
-                <Badge variant="info">{opp.stage.replace(/_/g, " ")}</Badge>
-              )}
+              <div className="flex flex-col gap-1">
+                {stages.length > 0 ? (
+                  <span
+                    className={cn(
+                      "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize w-fit",
+                      getPipelineStageAccentById(opp.stage, stages).badgeClass
+                    )}
+                  >
+                    {opp.stage.replace(/_/g, " ")}
+                  </span>
+                ) : (
+                  <Badge variant="info">{opp.stage.replace(/_/g, " ")}</Badge>
+                )}
+                {opp.project_stage ? (
+                  <ProjectStageBadge stage={opp.project_stage} />
+                ) : null}
+              </div>
             </DataTableCell>
             <DataTableCell>
               {opp.value != null

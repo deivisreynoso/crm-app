@@ -27,7 +27,9 @@ export function buildOpportunityRecord(
   };
 }
 
-export function buildOpportunityUpdate(data: Partial<OpportunityFormData>) {
+export function buildOpportunityUpdate(
+  data: Partial<OpportunityFormData> & { project_feedback_token?: string }
+) {
   const record: Record<string, unknown> = {};
 
   if (data.contact_id !== undefined) record.contact_id = data.contact_id;
@@ -52,6 +54,11 @@ export function buildOpportunityUpdate(data: Partial<OpportunityFormData>) {
   }
   if (data.custom_fields !== undefined) {
     record.custom_fields = data.custom_fields ?? {};
+  }
+  if (data.project_feedback_token !== undefined) {
+    record.project_feedback_token = data.project_feedback_token?.trim()
+      ? data.project_feedback_token.trim()
+      : null;
   }
 
   return record;

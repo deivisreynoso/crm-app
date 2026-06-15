@@ -140,6 +140,13 @@ export interface User {
     notes?: string;
     tags?: string[];
     custom_fields?: Record<string, any>;
+    project_stage?: string | null;
+    project_stage_updated_at?: string | null;
+    project_completed_at?: string | null;
+    project_feedback_token?: string | null;
+    feedback_score?: number | null;
+    feedback_notes?: Record<string, unknown> | null;
+    feedback_received_at?: string | null;
     created_at: string;
     updated_at: string;
   }

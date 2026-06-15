@@ -7,6 +7,9 @@ export const OUTBOUND_WEBHOOK_EVENTS = [
   "appointment.created",
   "appointment.updated",
   "appointment.cancelled",
+  "project.stage_changed",
+  "project.completed",
+  "project.feedback_received",
 ] as const;
 
 export type OutboundWebhookEvent = (typeof OUTBOUND_WEBHOOK_EVENTS)[number];

@@ -12,6 +12,7 @@ const PUBLIC_API_PREFIXES = [
   "/api/quotes/public/",
   "/api/public/onboarding/",
   "/api/public/feedback/",
+  "/api/public/project-feedback/",
   "/api/webhooks/stripe",
   "/api/integrations/n8n/",
   "/api/integrations/conversations/",
@@ -71,6 +72,9 @@ export function requiresWorkspaceManage(pathname: string, method: string) {
   if (pathname.startsWith("/api/settings/quote-logo")) return true;
   if (pathname === "/api/settings" && m === "PATCH") return true;
   if (pathname === "/api/settings/automations" && m === "PATCH") return true;
+  if (/^\/api\/opportunities\/[^/]+\/project-stage$/.test(pathname) && m === "PATCH") {
+    return true;
+  }
   if (pathname === "/api/team/members" && m === "POST") return true;
   if (/^\/api\/team\/members\/[^/]+$/.test(pathname) && m === "PATCH") return true;
   if (pathname === "/api/pipelines/seed" && m === "POST") return false;

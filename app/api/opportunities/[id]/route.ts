@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import {
-  opportunitySchema,
+  opportunityPatchSchema,
   moveOpportunityStageSchema,
 } from "@/lib/validators";
 import {
@@ -11,6 +11,10 @@ import {
 } from "@/lib/api/assert-workspace-parents";
 import { buildOpportunityUpdate } from "@/lib/opportunity-payload";
 import { attachContactToOpportunity } from "@/lib/opportunity-queries";
+import {
+  applyWonProjectStageInit,
+  fetchPipelineStages,
+} from "@/lib/opportunities/patch-helpers";
 import { triggerN8NWebhook } from "@/lib/n8n";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -22,7 +26,7 @@ function isStageOnlyUpdate(body: Record<string, unknown>) {
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
-    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
+    const { workspaceOwnerId, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;
@@ -54,7 +58,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
-    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
+    const { workspaceOwnerId, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;
@@ -69,7 +73,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
       updates = { stage: parsed.data.stage };
     } else {
-      const parsed = opportunitySchema.partial().safeParse(body);
+      const parsed = opportunityPatchSchema.safeParse(body);
       if (!parsed.success) {
         return NextResponse.json(
           { error: "Validation failed", details: parsed.error.flatten() },
@@ -80,6 +84,21 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     const supabase = createServerSideClient();
+
+    const { data: before } = await supabase
+      .from("opportunities")
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", workspaceOwnerId!)
+      .maybeSingle();
+
+    if (!before) {
+      return NextResponse.json(
+        { error: "Opportunity not found" },
+        { status: 404 }
+      );
+    }
+
     if (!isStageOnlyUpdate(body)) {
       const parentCheck = await assertParentsInWorkspace(supabase, workspaceOwnerId!, {
         contact_id: updates.contact_id as string | null | undefined,
@@ -109,9 +128,22 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       );
     }
 
-    let enriched = data;
+    const pipelineStages = await fetchPipelineStages(
+      supabase,
+      workspaceOwnerId!,
+      (data.pipeline_id as string | null) ?? (before.pipeline_id as string | null)
+    );
+
+    const withProjectStage = await applyWonProjectStageInit(
+      supabase,
+      before as Record<string, unknown>,
+      data as Record<string, unknown>,
+      pipelineStages
+    );
+
+    let enriched = withProjectStage;
     try {
-      enriched = await attachContactToOpportunity(data);
+      enriched = await attachContactToOpportunity(withProjectStage);
     } catch (enrichErr) {
       console.error("PATCH opportunity enrich error:", enrichErr);
     }
@@ -129,7 +161,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
 export async function DELETE(_req: NextRequest, context: RouteContext) {
   try {
-    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
+    const { workspaceOwnerId, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;

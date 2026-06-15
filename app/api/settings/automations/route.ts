@@ -10,6 +10,10 @@ import {
   resolveAppointmentReminderSettings,
   resolveOnboardingTaskTemplate,
 } from "@/lib/onboarding/defaults";
+import {
+  DEFAULT_PROJECT_STAGES_SETTINGS,
+  resolveProjectStagesSettings,
+} from "@/lib/project-stages/defaults";
 import { OUTBOUND_WEBHOOK_EVENTS } from "@/lib/webhooks/events";
 
 const automationsPatchSchema = z.object({
@@ -29,10 +33,22 @@ const automationsPatchSchema = z.object({
   quote_default_expiry_days: z.number().int().min(1).max(365).optional(),
   loss_reason_options: z.array(z.record(z.string(), z.unknown())).optional(),
   session_timeout_hours: z.number().int().min(1).max(168).nullable().optional(),
+  project_stages_settings: z
+    .object({
+      stage_labels: z.record(
+        z.string(),
+        z.object({ en: z.string().max(120), es: z.string().max(120) })
+      ).optional(),
+      maintenance_enabled: z.boolean().optional(),
+      review_score_threshold: z.number().int().min(1).max(5).optional(),
+      google_review_delay_hours: z.number().int().min(0).max(168).optional(),
+      automatic_google_review_enabled: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 const AUTOMATIONS_SELECT =
-  "outbound_webhook_url, outbound_webhook_secret, outbound_webhook_events, onboarding_enabled, onboarding_task_template, appointment_reminder_settings, quote_default_expiry_days, loss_reason_options, session_timeout_hours, updated_at";
+  "outbound_webhook_url, outbound_webhook_secret, outbound_webhook_events, onboarding_enabled, onboarding_task_template, appointment_reminder_settings, quote_default_expiry_days, loss_reason_options, session_timeout_hours, project_stages_settings, updated_at";
 
 export async function GET() {
   try {
@@ -72,6 +88,10 @@ export async function GET() {
       quote_default_expiry_days: data?.quote_default_expiry_days ?? 30,
       loss_reason_options: data?.loss_reason_options ?? [],
       session_timeout_hours: data?.session_timeout_hours ?? null,
+      project_stages_settings: resolveProjectStagesSettings(
+        data?.project_stages_settings
+      ),
+      default_project_stages_settings: DEFAULT_PROJECT_STAGES_SETTINGS,
     });
   } catch (err) {
     console.error("GET /api/settings/automations:", err);
@@ -102,6 +122,8 @@ export async function PATCH(req: NextRequest) {
     };
 
     const body = parsed.data;
+    const supabase = createServerSideClient();
+
     if (body.outbound_webhook_url !== undefined) {
       patch.outbound_webhook_url = body.outbound_webhook_url.trim() || null;
     }
@@ -132,8 +154,19 @@ export async function PATCH(req: NextRequest) {
     if (body.session_timeout_hours !== undefined) {
       patch.session_timeout_hours = body.session_timeout_hours;
     }
+    if (body.project_stages_settings !== undefined) {
+      const { data: existing } = await supabase
+        .from("user_settings")
+        .select("project_stages_settings")
+        .eq("user_id", workspaceOwnerId!)
+        .maybeSingle();
 
-    const supabase = createServerSideClient();
+      patch.project_stages_settings = resolveProjectStagesSettings({
+        ...resolveProjectStagesSettings(existing?.project_stages_settings),
+        ...body.project_stages_settings,
+      });
+    }
+
     const { data, error: dbError } = await supabase
       .from("user_settings")
       .upsert(patch, { onConflict: "user_id" })
@@ -164,6 +197,9 @@ export async function PATCH(req: NextRequest) {
       ),
       appointment_reminder_settings: resolveAppointmentReminderSettings(
         data?.appointment_reminder_settings
+      ),
+      project_stages_settings: resolveProjectStagesSettings(
+        data?.project_stages_settings
       ),
     });
   } catch (err) {

@@ -12,6 +12,7 @@ import {
 import { cn, formatCurrency } from "@/lib/utils";
 import { getStageName, sortStages } from "@/lib/constants/pipelines";
 import { getPipelineStageAccent } from "@/lib/constants/pipeline-stage-accent";
+import { ProjectStageBadge } from "@/components/opportunities/project-stage-badge";
 import type {
   ContactRelatedCounts,
   OpportunityWithContact,
@@ -267,6 +268,11 @@ export function PipelineBoard({
                     <p className="font-medium text-sm text-heading">
                       {opp.title}
                     </p>
+                    {opp.project_stage ? (
+                      <div className="mt-1">
+                        <ProjectStageBadge stage={opp.project_stage} />
+                      </div>
+                    ) : null}
                     <p className="text-xs text-[var(--primary)] mt-1">
                       {contactName(opp)}
                     </p>

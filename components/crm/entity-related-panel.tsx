@@ -13,6 +13,7 @@ import { TicketForm } from "@/components/tickets/ticket-form";
 import { DocumentUploadForm } from "@/components/documents/document-upload-form";
 import { ContactForm } from "@/components/forms/ContactForm";
 import { OpportunityForm } from "@/components/opportunities/opportunity-form";
+import { ProjectStageBadge } from "@/components/opportunities/project-stage-badge";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { formatCurrency } from "@/lib/utils";
@@ -176,9 +177,12 @@ export function EntityRelatedPanel({
                 title={o.title}
                 subtitle={o.contact ? `${o.contact.first_name} ${o.contact.last_name}` : undefined}
                 meta={
-                  o.value != null && Number(o.value) > 0
-                    ? formatCurrency(Number(o.value), o.currency)
-                    : undefined
+                  <span className="flex flex-wrap items-center gap-2">
+                    {o.project_stage ? <ProjectStageBadge stage={o.project_stage} /> : null}
+                    {o.value != null && Number(o.value) > 0
+                      ? formatCurrency(Number(o.value), o.currency)
+                      : null}
+                  </span>
                 }
               />
             ))}
