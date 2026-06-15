@@ -2,6 +2,8 @@ ClickIn 360 — marketing site + CRM (Next.js, Supabase, Docker on VPS).
 
 **Documentation**
 
+- [User manual (English)](./docs/user-manual/USER-MANUAL-EN.md) — day-to-day CRM guide for owners, admins, and sales
+- [Manual de usuario (Español)](./docs/user-manual/USER-MANUAL-ES.md) — guía de uso del CRM
 - [CRM features & roadmap](./docs/CRM-FEATURES.md) — living feature list and phase status
 - [CRM API guide](./docs/CLICKIN360-CRM-API.md) — Lead API, integrations, session CRM routes
 - [Auth roadmap](./docs/AUTH-ROADMAP.md) — login methods, Google SSO, dual-email owner mapping
