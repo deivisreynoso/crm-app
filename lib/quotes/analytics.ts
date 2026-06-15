@@ -13,13 +13,6 @@ export type QuoteAnalytics = {
   sentValue: number;
   conversionRate: number;
   avgDaysToAccept: number | null;
-  recentAccepted: {
-    id: string;
-    title: string;
-    quote_reference: string | null;
-    total_amount: number;
-    accepted_at: string;
-  }[];
 };
 
 export async function getQuoteAnalytics(
@@ -76,17 +69,6 @@ export async function getQuoteAnalytics(
         ) / 10
       : null;
 
-  const recentAccepted = docs
-    .filter((d) => d.status === "accepted" && d.accepted_at)
-    .slice(0, 5)
-    .map((d) => ({
-      id: d.id as string,
-      title: d.title as string,
-      quote_reference: (d.quote_reference as string | null) ?? null,
-      total_amount: Number(d.total_amount) || 0,
-      accepted_at: d.accepted_at as string,
-    }));
-
   return {
     total: docs.length,
     ...counts,
@@ -95,7 +77,6 @@ export async function getQuoteAnalytics(
     sentValue,
     conversionRate,
     avgDaysToAccept,
-    recentAccepted,
   };
 }
 
@@ -112,6 +93,5 @@ function emptyAnalytics(): QuoteAnalytics {
     sentValue: 0,
     conversionRate: 0,
     avgDaysToAccept: null,
-    recentAccepted: [],
   };
 }

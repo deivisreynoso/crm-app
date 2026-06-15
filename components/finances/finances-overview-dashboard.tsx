@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import type { AnalyticsDateRange } from "@/components/analytics/analytics-date-filters";
 import {
   Bar,
   BarChart,
@@ -25,12 +25,17 @@ import { useFinanceOverview } from "@/hooks/useFinances";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
 import { formatCurrency } from "@/lib/utils";
 
-type Period = "month" | "quarter" | "year";
-
-export function FinancesOverviewDashboard() {
-  const [period, setPeriod] = useState<Period>("month");
+export function FinancesOverviewDashboard({
+  dateRange,
+}: {
+  dateRange: AnalyticsDateRange;
+}) {
   const { canManage } = useWorkspaceCapabilities();
-  const { data, isLoading, error } = useFinanceOverview(period);
+  const { data, isLoading, error } = useFinanceOverview(
+    "custom",
+    dateRange.start_date,
+    dateRange.end_date
+  );
 
   if (isLoading) return <AnalyticsLoadingGrid count={4} />;
   if (error || !data) {
@@ -41,23 +46,6 @@ export function FinancesOverviewDashboard() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap gap-2">
-        {(["month", "quarter", "year"] as const).map((p) => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => setPeriod(p)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${
-              period === p
-                ? "border-[var(--secondary)] bg-[var(--secondary)]/10 text-[var(--primary)]"
-                : "border-[var(--card-border)] text-body-muted"
-            }`}
-          >
-            {p === "month" ? "This Month" : p === "quarter" ? "This Quarter" : "This Year"}
-          </button>
-        ))}
-      </div>
-
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <AnalyticsKpiCard
           label="Total Revenue"

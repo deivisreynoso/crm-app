@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
-import { fetchGa4Dashboard, isGa4DataConfigured } from "@/lib/google/analytics-data";
+import {
+  fetchGa4Dashboard,
+  isGa4DataConfigured,
+  resolveGa4DateRange,
+  type Ga4ReportRange,
+} from "@/lib/google/analytics-data";
 import { z } from "zod";
 
 const querySchema = z.object({
+  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   days: z.enum(["7", "30", "90"]).optional(),
 });
 
@@ -21,10 +28,18 @@ export async function GET(req: NextRequest) {
   const parsed = querySchema.safeParse(
     Object.fromEntries(req.nextUrl.searchParams.entries())
   );
-  const days = parsed.success && parsed.data.days ? parsed.data.days : "30";
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid date range." }, { status: 400 });
+  }
+
+  const range = resolveGa4DateRange({
+    start_date: parsed.data.start_date,
+    end_date: parsed.data.end_date,
+    days: parsed.data.days as Ga4ReportRange | undefined,
+  });
 
   try {
-    const data = await fetchGa4Dashboard(days);
+    const data = await fetchGa4Dashboard(range);
     return NextResponse.json({ data });
   } catch (err) {
     console.error("GET /api/analytics/ga4:", err);

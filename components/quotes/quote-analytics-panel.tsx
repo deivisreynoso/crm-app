@@ -5,10 +5,9 @@ import axios from "axios";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { useQuoteAnalytics } from "@/hooks/useQuoteAnalytics";
 import { formatCurrency } from "@/lib/utils";
-import { formatQuoteDate } from "@/lib/crm/format-date";
 
 export function QuoteAnalyticsPanel() {
-  const { dict, locale } = useCrmLocale();
+  const { dict } = useCrmLocale();
   const q = dict.quotes;
   const { data, isLoading } = useQuoteAnalytics();
   const { data: lossReasons } = useQuery({
@@ -100,34 +99,6 @@ export function QuoteAnalyticsPanel() {
           </ul>
         </div>
       ) : null}
-
-      {data.recentAccepted.length > 0 && (
-        <div className="surface-card p-4 border border-[var(--card-border)]">
-          <h3 className="text-sm font-semibold text-heading mb-3">
-            {q?.analyticsRecentAccepted ?? "Recently accepted"}
-          </h3>
-          <ul className="space-y-2 text-sm">
-            {data.recentAccepted.map((row) => (
-              <li
-                key={row.id}
-                className="flex justify-between gap-2 border-b border-[var(--card-border)] pb-2 last:border-0 last:pb-0"
-              >
-                <span className="font-medium text-heading truncate">
-                  {row.quote_reference ? `${row.quote_reference} — ` : ""}
-                  {row.title}
-                </span>
-                <span className="text-body-muted shrink-0 text-right">
-                  {formatCurrency(row.total_amount)}
-                  <br />
-                  <span className="text-xs">
-                    {formatQuoteDate(row.accepted_at, locale)}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }
