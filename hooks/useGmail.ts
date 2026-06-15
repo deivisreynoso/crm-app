@@ -10,7 +10,7 @@ export type GmailStatus = {
   read_access?: boolean;
 };
 
-export function useGmailStatus() {
+export function useGmailStatus(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["gmail-status"],
     queryFn: async () => {
@@ -20,6 +20,7 @@ export function useGmailStatus() {
       return data;
     },
     staleTime: 60_000,
+    enabled: options?.enabled ?? true,
   });
 }
 

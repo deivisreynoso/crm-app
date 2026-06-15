@@ -44,7 +44,7 @@ type IconConfig = {
 
 function getIconConfig(item: ActivityFeedItem): IconConfig {
   if (item.is_system) {
-    if (item.type === "review_request") {
+    if (item.type === "review_request" || item.type === "project_feedback") {
       return {
         Icon: Star,
         boxClass: "bg-amber-50 border-amber-200",

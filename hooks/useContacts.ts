@@ -178,7 +178,7 @@ export function useDeleteContactNote(contactId: string) {
   });
 }
 
-export function useContactTasks(contactId: string) {
+export function useContactTasks(contactId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["contact-tasks", contactId],
     queryFn: async () => {
@@ -187,7 +187,7 @@ export function useContactTasks(contactId: string) {
       );
       return data.data;
     },
-    enabled: !!contactId,
+    enabled: !!contactId && (options?.enabled ?? true),
   });
 }
 

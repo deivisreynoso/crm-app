@@ -31,7 +31,10 @@ export type InvoiceListFilters = {
   summary?: boolean;
 };
 
-export function useInvoices(filters?: InvoiceListFilters | string) {
+export function useInvoices(
+  filters?: InvoiceListFilters | string,
+  options?: { enabled?: boolean }
+) {
   const resolved: InvoiceListFilters =
     typeof filters === "string" ? { status: filters } : (filters ?? {});
 
@@ -49,6 +52,7 @@ export function useInvoices(filters?: InvoiceListFilters | string) {
       );
       return data.data;
     },
+    enabled: options?.enabled ?? true,
   });
 }
 
