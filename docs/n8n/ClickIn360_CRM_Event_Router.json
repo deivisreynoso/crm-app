@@ -262,6 +262,52 @@
               },
               "renameOutput": true,
               "outputKey": "appointment.cancelled"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "rightValue": "project.completed",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "project.completed"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "rightValue": "project.feedback_received",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "project.feedback_received"
             }
           ]
         },
@@ -429,6 +475,44 @@
       "id": "64e3717c-d687-4d24-a57d-e3d45d0fd578",
       "name": "Forward: Appointments (cancel)",
       "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.n8n_webhook_base }}/f3a8c2d1-4e5b-6a7f-8c9d-0e1f2a3b4c5d",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2384,
+        1088
+      ],
+      "id": "7a8b9c0d-project-completed-forward",
+      "name": "Forward: Project Advocacy (completed)",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.n8n_webhook_base }}/f3a8c2d1-4e5b-6a7f-8c9d-0e1f2a3b4c5d",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2384,
+        1216
+      ],
+      "id": "8b9c0d1e-project-feedback-forward",
+      "name": "Forward: Project Advocacy (feedback)",
+      "continueOnFail": true
     }
   ],
   "pinData": {
@@ -559,6 +643,20 @@
         [
           {
             "node": "Forward: Appointments (cancel)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Forward: Project Advocacy (completed)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Forward: Project Advocacy (feedback)",
             "type": "main",
             "index": 0
           }

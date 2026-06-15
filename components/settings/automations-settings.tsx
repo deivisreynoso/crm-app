@@ -9,6 +9,7 @@ import {
   DEFAULT_ONBOARDING_TASK_TEMPLATE,
 } from "@/lib/onboarding/defaults";
 import { OUTBOUND_WEBHOOK_EVENTS } from "@/lib/webhooks/events";
+import { ProjectStagesSettingsPanel } from "@/components/settings/project-stages-settings";
 
 type AutomationsSettings = {
   outbound_webhook_url: string;
@@ -437,13 +438,14 @@ export function SessionTimeoutSettingsPanel() {
 }
 
 export function AutomationsSettingsSection() {
-  const [tab, setTab] = useState<"webhooks" | "onboarding" | "reminders" | "quotes" | "session">(
-    "webhooks"
-  );
+  const [tab, setTab] = useState<
+    "webhooks" | "onboarding" | "reminders" | "quotes" | "session" | "project-stages"
+  >("webhooks");
 
   const tabs = [
     { id: "webhooks" as const, label: "Webhooks" },
     { id: "onboarding" as const, label: "Onboarding" },
+    { id: "project-stages" as const, label: "Project stages" },
     { id: "reminders" as const, label: "Appointment reminders" },
     { id: "quotes" as const, label: "Quotes & loss reasons" },
     { id: "session" as const, label: "Session timeout" },
@@ -469,6 +471,7 @@ export function AutomationsSettingsSection() {
       </div>
       {tab === "webhooks" ? <WebhooksSettingsPanel /> : null}
       {tab === "onboarding" ? <OnboardingSettingsPanel /> : null}
+      {tab === "project-stages" ? <ProjectStagesSettingsPanel /> : null}
       {tab === "reminders" ? <AppointmentRemindersSettingsPanel /> : null}
       {tab === "quotes" ? (
         <div className="space-y-6">

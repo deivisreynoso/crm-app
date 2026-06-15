@@ -4,9 +4,14 @@ import {
   attachContactToOpportunity,
   listOpportunitiesWithContacts,
 } from "@/lib/opportunity-queries";
+import {
+  applyWonProjectStageInit,
+  fetchPipelineStages,
+} from "@/lib/opportunities/patch-helpers";
 import { triggerN8NWebhook } from "@/lib/n8n";
 import {
   moveOpportunityStageSchema,
+  opportunityPatchSchema,
   opportunitySchema,
 } from "@/lib/validators";
 import { formatValidationDetails } from "@/lib/validation-errors";
@@ -101,7 +106,7 @@ export async function patchOpportunityForIntegration(
     }
     updates = { stage: parsed.data.stage };
   } else {
-    const parsed = opportunitySchema.partial().safeParse(raw);
+    const parsed = opportunityPatchSchema.safeParse(raw);
     if (!parsed.success) {
       return {
         ok: false,
@@ -111,6 +116,17 @@ export async function patchOpportunityForIntegration(
       };
     }
     updates = buildOpportunityUpdate(parsed.data);
+  }
+
+  const { data: before } = await supabase
+    .from("opportunities")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", workspaceOwnerId)
+    .maybeSingle();
+
+  if (!before) {
+    return { ok: false, status: 404, error: "Opportunity not found" };
   }
 
   const { data, error: dbError } = await supabase
@@ -128,9 +144,25 @@ export async function patchOpportunityForIntegration(
     return { ok: false, status: 404, error: "Opportunity not found" };
   }
 
-  let enriched = data as Record<string, unknown>;
+  const pipelineStages = await fetchPipelineStages(
+    supabase,
+    workspaceOwnerId,
+    (data.pipeline_id as string | null) ?? (before.pipeline_id as string | null)
+  );
+
+  const withProjectStage = await applyWonProjectStageInit(
+    supabase,
+    before as Record<string, unknown>,
+    data as Record<string, unknown>,
+    pipelineStages
+  );
+
+  let enriched = withProjectStage;
   try {
-    enriched = (await attachContactToOpportunity(data)) as Record<string, unknown>;
+    enriched = (await attachContactToOpportunity(withProjectStage)) as Record<
+      string,
+      unknown
+    >;
   } catch {
     /* keep raw */
   }

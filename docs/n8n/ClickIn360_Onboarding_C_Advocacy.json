@@ -1,19 +1,16 @@
 {
-  "name": "ClickIn360 Onboarding C \u2014 Advocacy",
+  "name": "ClickIn360 Onboarding C — Advocacy",
   "nodes": [
     {
       "parameters": {
-        "content": "## Self-hosted n8n Community Edition\n\n**No Settings \u2192 Variables** on the free plan. Edit the **Config: Edit These Values** Set node (yellow fields) in each workflow instead.\n\nOptional: you can also set OS/Docker env vars on the n8n container \u2014 not required if you use the Config node.\n\n**NOT the CRM manual Request review button** \u2014 this is automatic on onboarding.complete.\n\nEdit Config: `google_reviews_url` (same as CRM Settings \u2192 Google review invitations).",
-        "height": 340,
+        "content": "## Self-hosted n8n Community Edition\n\n**No Settings → Variables** on the free plan. Edit the **Config: Edit These Values** Set node (yellow fields) in each workflow instead.\n\nOptional: you can also set OS/Docker env vars on the n8n container — not required if you use the Config node.\n\n**Trigger:** onboarding.complete only.\n\nGoogle review emails moved to **ClickIn360_Project_Advocacy.json** (after positive project feedback). This flow tags the contact onboarded.",
+        "height": 300,
         "width": 540,
         "color": 4
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [
-        -640,
-        -80
-      ],
+      "position": [-640, -80],
       "id": "433f9063-ae43-43bd-af33-54b3737ed725",
       "name": "INSTRUCTIONS: Advocacy"
     },
@@ -25,10 +22,7 @@
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [
-        0,
-        0
-      ],
+      "position": [0, 0],
       "id": "43c002cc-7f15-4daa-8984-4cd6b131e491",
       "name": "Onboarding C Webhook",
       "webhookId": "ae1e67a5-a991-40e2-ae74-9ab817f73d57"
@@ -44,38 +38,24 @@
               "name": "crm_base_url",
               "value": "https://www.clickin360.com",
               "type": "string"
-            },
-            {
-              "id": "b8528949-9e74-472f-a745-ad14ab090cc0",
-              "name": "google_reviews_url",
-              "value": "https://share.google/CZL2ZHAKEqVgdIEuJ",
-              "type": "string"
             }
           ]
         },
-        "options": {
-          "includeOtherFields": true
-        }
+        "options": { "includeOtherFields": true }
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [
-        260,
-        0
-      ],
+      "position": [260, 0],
       "id": "61b8245d-08ac-4e3a-9ef3-24cf444371e6",
       "name": "Config: Edit These Values"
     },
     {
       "parameters": {
-        "jsCode": "const root = $input.first().json;\nconst payload = root.payload || {};\nconst contact = payload.contact || {};\nconst locale = contact.preferred_language === 'en' ? 'en' : 'es';\nconst reviewUrl = root.google_reviews_url || 'https://share.google/CZL2ZHAKEqVgdIEuJ';\nconst crmBase = (root.crm_base_url || 'https://www.clickin360.com').replace(/\\/$/, '');\nconst feedbackUrl = contact.feedback_token ? `${crmBase}/feedback/${contact.feedback_token}` : null;\nreturn [{ json: { contact, locale, reviewUrl, feedbackUrl, contactEmail: contact.email, firstName: contact.first_name || 'there', contactId: contact.id, optOut: contact.review_request_opt_out === true, crm_base_url: root.crm_base_url } }];"
+        "jsCode": "const root = $input.first().json;\nconst payload = root.payload || {};\nconst contact = payload.contact || {};\nreturn [{ json: { contact, contactEmail: contact.email, firstName: contact.first_name || 'there', contactId: contact.id, optOut: contact.review_request_opt_out === true, crm_base_url: root.crm_base_url } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        520,
-        0
-      ],
+      "position": [520, 0],
       "id": "c89f366e-f59a-4549-b743-710392a30533",
       "name": "Parse Advocacy Payload"
     },
@@ -93,10 +73,7 @@
               "id": "a2fc64bc-d02d-4473-b44a-e180c86d890a",
               "leftValue": "={{ $json.optOut }}",
               "rightValue": "false",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
+              "operator": { "type": "string", "operation": "equals" }
             }
           ],
           "combinator": "and"
@@ -105,49 +82,9 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [
-        780,
-        0
-      ],
+      "position": [780, 0],
       "id": "0c344a97-165f-49f1-ac96-b522d5a519ee",
       "name": "IF Opted Out?"
-    },
-    {
-      "parameters": {
-        "jsCode": "const d = $input.first().json;\nconst isEn = d.locale === 'en';\nconst subject = isEn ? `Would you leave us a Google review, ${d.firstName}?` : `\u00bfNos dejas una rese\u00f1a en Google, ${d.firstName}?`;\nconst text = isEn\n  ? `Hi ${d.firstName},\\n\\nThank you for completing onboarding with ClickIn 360. If you had a good experience, a quick Google review would mean a lot:\\n\\n${d.reviewUrl}\\n\\nIt only takes a minute. Thank you!${d.feedbackUrl ? `\\n\\nPrivate feedback: ${d.feedbackUrl}` : ''}`\n  : `Hola ${d.firstName},\\n\\nGracias por completar la incorporaci\u00f3n con ClickIn 360. Si tuviste una buena experiencia, nos ayudar\u00eda mucho una rese\u00f1a breve en Google:\\n\\n${d.reviewUrl}\\n\\nSolo toma un minuto. \u00a1Gracias!${d.feedbackUrl ? `\\n\\nComentarios privados: ${d.feedbackUrl}` : ''}`;\nreturn [{ json: { ...d, subject, text, toEmail: d.contactEmail } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1040,
-        0
-      ],
-      "id": "637a01a6-36a4-43bf-ad11-055cff9a2c69",
-      "name": "Build Google Review Email"
-    },
-    {
-      "parameters": {
-        "fromEmail": "no-reply@clickin360.com",
-        "toEmail": "={{ $json.toEmail }}",
-        "subject": "={{ $json.subject }}",
-        "text": "={{ $json.text }}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.mailgun",
-      "typeVersion": 1,
-      "position": [
-        1300,
-        0
-      ],
-      "id": "61e03dcc-dc28-412d-b082-2a071e5cc46f",
-      "name": "Mailgun: Google Review Request",
-      "credentials": {
-        "mailgunApi": {
-          "id": "686871dc-7fb6-4452-8499-05cb780996e0",
-          "name": "Mailgun"
-        }
-      },
-      "continueOnFail": true
     },
     {
       "parameters": {
@@ -162,10 +99,7 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
-      "position": [
-        1560,
-        0
-      ],
+      "position": [1040, 0],
       "id": "64acaa93-7dc3-46b7-96c6-9b7f56a2fe75",
       "name": "CRM: Tag Contact Onboarded",
       "continueOnFail": true,
@@ -179,78 +113,19 @@
   ],
   "connections": {
     "Onboarding C Webhook": {
-      "main": [
-        [
-          {
-            "node": "Config: Edit These Values",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Config: Edit These Values", "type": "main", "index": 0 }]]
     },
     "Config: Edit These Values": {
-      "main": [
-        [
-          {
-            "node": "Parse Advocacy Payload",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Parse Advocacy Payload", "type": "main", "index": 0 }]]
     },
     "Parse Advocacy Payload": {
-      "main": [
-        [
-          {
-            "node": "IF Opted Out?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "IF Opted Out?", "type": "main", "index": 0 }]]
     },
     "IF Opted Out?": {
-      "main": [
-        [
-          {
-            "node": "Build Google Review Email",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        []
-      ]
-    },
-    "Build Google Review Email": {
-      "main": [
-        [
-          {
-            "node": "Mailgun: Google Review Request",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Mailgun: Google Review Request": {
-      "main": [
-        [
-          {
-            "node": "CRM: Tag Contact Onboarded",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "CRM: Tag Contact Onboarded", "type": "main", "index": 0 }], []]
     }
   },
   "pinData": {},
-  "meta": {
-    "templateCredsSetupCompleted": true
-  },
-  "settings": {
-    "executionOrder": "v1"
-  }
+  "meta": { "templateCredsSetupCompleted": true },
+  "settings": { "executionOrder": "v1" }
 }

@@ -163,6 +163,36 @@ export const moveOpportunityStageSchema = z.object({
 
 export type MoveOpportunityStageData = z.infer<typeof moveOpportunityStageSchema>;
 
+export const projectStageValues = [
+  'onboarding',
+  'design',
+  'setup',
+  'launch',
+  'optimization',
+  'complete',
+  'maintenance',
+] as const;
+
+export const updateProjectStageSchema = z.object({
+  stage: z.enum(projectStageValues),
+});
+
+export type UpdateProjectStageData = z.infer<typeof updateProjectStageSchema>;
+
+export const opportunityPatchSchema = opportunitySchema
+  .partial()
+  .extend({
+    project_feedback_token: z.string().min(16).optional(),
+  });
+
+export const projectFeedbackSchema = z.object({
+  score: z.number().int().min(1).max(5),
+  what_worked: z.string().max(4000).optional(),
+  what_to_improve: z.string().max(4000).optional(),
+  would_recommend: z.enum(['yes', 'maybe', 'no']),
+  locale: z.enum(['en', 'es']).optional(),
+});
+
 export const ticketSchema = z
   .object({
     contact_id: z.string().uuid("Select a contact"),
