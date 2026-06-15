@@ -6,6 +6,10 @@ import { resolveAuthorNames } from "@/lib/activities/resolve-author-names";
 import { selectWithColumnFallback } from "@/lib/api/select-column-fallback";
 import { parseStoredTimestamp } from "@/lib/utils/datetime";
 import { emailBodyPlainText } from "@/lib/email/html-body";
+import {
+  formatProjectFeedbackActivityContent,
+  parseProjectFeedbackMetadata,
+} from "@/lib/project-stages/format-feedback-activity";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -49,6 +53,15 @@ function mapActivityContent(
   ActivityFeedItem,
   "content" | "email_subject" | "email_body" | "email_direction"
 > {
+  const feedback = parseProjectFeedbackMetadata(metadata);
+  if (type === "project_feedback" || feedback) {
+    if (feedback) {
+      return {
+        content: formatProjectFeedbackActivityContent(feedback.score, feedback.notes),
+      };
+    }
+  }
+
   if (type !== "email" || !metadata) {
     return { content: description ?? "" };
   }
@@ -177,7 +190,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     ).map((a) => {
       const meta = (a.metadata as Record<string, unknown> | null) ?? null;
       const emailFields = mapActivityContent(a.type, a.description, meta);
-      const isSystem = ["system", "update", "created", "review_request"].includes(
+      const isSystem = ["system", "update", "created", "review_request", "project_feedback"].includes(
         a.type
       );
       return {

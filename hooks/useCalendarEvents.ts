@@ -2,13 +2,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import type { CalendarEvent, CalendarEventFormInput } from "@/types";
 
-export function useCalendarEvents(filters?: {
-  contact_id?: string;
-  company_id?: string;
-  opportunity_id?: string;
-  start_date?: string;
-  end_date?: string;
-}) {
+export function useCalendarEvents(
+  filters?: {
+    contact_id?: string;
+    company_id?: string;
+    opportunity_id?: string;
+    start_date?: string;
+    end_date?: string;
+  },
+  options?: { enabled?: boolean }
+) {
   return useQuery({
     queryKey: ["calendar-events", filters],
     queryFn: async () => {
@@ -18,6 +21,7 @@ export function useCalendarEvents(filters?: {
       );
       return data.data;
     },
+    enabled: options?.enabled ?? true,
   });
 }
 

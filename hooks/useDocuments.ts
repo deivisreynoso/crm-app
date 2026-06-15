@@ -8,13 +8,16 @@ export function uploadErrorMessage(err: unknown): string {
   return formatApiError(err, "Upload failed");
 }
 
-export function useDocuments(filters?: {
-  contact_id?: string;
-  company_id?: string;
-  opportunity_id?: string;
-  kind?: "quotes" | "attachments";
-  resolve_file_urls?: boolean;
-}) {
+export function useDocuments(
+  filters?: {
+    contact_id?: string;
+    company_id?: string;
+    opportunity_id?: string;
+    kind?: "quotes" | "attachments";
+    resolve_file_urls?: boolean;
+  },
+  options?: { enabled?: boolean }
+) {
   return useQuery({
     queryKey: ["documents", filters],
     queryFn: async () => {
@@ -26,6 +29,7 @@ export function useDocuments(filters?: {
       });
       return data.data;
     },
+    enabled: options?.enabled ?? true,
   });
 }
 

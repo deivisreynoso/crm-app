@@ -66,30 +66,45 @@ export default function ContactDetailPage({ params }: PageProps) {
   const c = dict.contacts;
   const act = dict.actions;
 
+  const activityTabActive = workTab === "activity" || mobileTab === "activity";
+  const relatedTabActive = workTab === "related" || mobileTab === "related";
+  const tasksTabActive = workTab === "tasks" || mobileTab === "tasks";
+
   const { data: contact, isLoading, error } = useContact(id);
   const updateContact = useUpdateContact(id);
   const { data: activityItems = [], isLoading: activityLoading } =
     useContactActivityFeed(id);
   const createNote = useCreateContactNote(id);
   const sendContactEmail = useSendContactEmail(id);
-  const { data: gmailStatus } = useGmailStatus();
-  const { data: tasks = [] } = useContactTasks(id);
+  const { data: gmailStatus } = useGmailStatus({ enabled: activityTabActive });
+  const { data: tasks = [], isFetched: tasksFetched } = useContactTasks(id, {
+    enabled: tasksTabActive,
+  });
   const createTask = useCreateContactTask(id);
   const deleteTask = useDeleteContactTask(id);
   const q = dict.quickActions;
   const { data: contactOpportunities = [] } = useOpportunities(undefined, id);
   const { data: pipelines = [] } = usePipelines();
-  const { data: contactTickets = [] } = useTickets({ contact_id: id });
-  const { data: contactQuotes = [] } = useDocuments({
-    contact_id: id,
-    kind: "quotes",
-  });
-  const { data: contactAttachments = [] } = useDocuments({
-    contact_id: id,
-    kind: "attachments",
-  });
-  const { data: contactEvents = [] } = useCalendarEvents({ contact_id: id });
-  const { data: contactInvoices = [] } = useInvoices({ contact_id: id });
+  const { data: contactTickets = [], isFetched: ticketsFetched } = useTickets(
+    { contact_id: id },
+    { enabled: relatedTabActive }
+  );
+  const { data: contactQuotes = [], isFetched: quotesFetched } = useDocuments(
+    { contact_id: id, kind: "quotes" },
+    { enabled: relatedTabActive }
+  );
+  const { data: contactAttachments = [], isFetched: attachmentsFetched } = useDocuments(
+    { contact_id: id, kind: "attachments" },
+    { enabled: relatedTabActive }
+  );
+  const { data: contactEvents = [], isFetched: eventsFetched } = useCalendarEvents(
+    { contact_id: id },
+    { enabled: relatedTabActive }
+  );
+  const { data: contactInvoices = [], isFetched: invoicesFetched } = useInvoices(
+    { contact_id: id },
+    { enabled: relatedTabActive }
+  );
   const createTicket = useCreateTicket();
   const uploadDocument = useUploadDocument();
 
@@ -136,13 +151,21 @@ export default function ContactDetailPage({ params }: PageProps) {
     START_ONBOARDING_CHIP_CLASS
   );
 
-  const relatedCount =
-    contactOpportunities.length +
-    contactTickets.length +
-    contactQuotes.length +
-    contactInvoices.length +
-    contactAttachments.length +
-    contactEvents.length;
+  const relatedCount = relatedTabActive
+    ? contactOpportunities.length +
+      contactTickets.length +
+      contactQuotes.length +
+      contactInvoices.length +
+      contactAttachments.length +
+      contactEvents.length
+    : undefined;
+
+  const relatedLoaded =
+    ticketsFetched &&
+    quotesFetched &&
+    attachmentsFetched &&
+    eventsFetched &&
+    invoicesFetched;
 
   const relatedPanel = (
     <EntityRelatedPanel
@@ -239,8 +262,16 @@ export default function ContactDetailPage({ params }: PageProps) {
 
   const workTabs = [
     { id: "activity" as const, label: c.logActivityTab, count: activityItems.length },
-    { id: "related" as const, label: c.relatedTab, count: relatedCount },
-    { id: "tasks" as const, label: c.tasksTab, count: tasks.length },
+    {
+      id: "related" as const,
+      label: c.relatedTab,
+      count: relatedLoaded ? relatedCount : undefined,
+    },
+    {
+      id: "tasks" as const,
+      label: c.tasksTab,
+      count: tasksFetched ? tasks.length : undefined,
+    },
   ];
 
   const workPanelContent =

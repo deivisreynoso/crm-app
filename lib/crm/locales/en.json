@@ -266,6 +266,7 @@
       "created": "Created",
       "task": "Task",
       "review_request": "Review invitation",
+      "project_feedback": "Project feedback",
       "meeting": "Meeting",
       "activity": "Activity"
     },

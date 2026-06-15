@@ -7,6 +7,7 @@ import { buildProjectWebhookContact } from "@/lib/project-stages/webhook-contact
 import { resolveProjectStagesSettings } from "@/lib/project-stages/defaults";
 import { sendProjectFeedbackThankYou } from "@/lib/project-stages/feedback-email";
 import { fireWebhook } from "@/lib/webhooks/outbound";
+import { formatProjectFeedbackActivityContent } from "@/lib/project-stages/format-feedback-activity";
 import { resolveContactCommunicationLocale } from "@/lib/contacts/communication-locale";
 import { CLICKIN360_BRAND } from "@/lib/brand";
 
@@ -130,11 +131,18 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
+    const locale = resolveContactCommunicationLocale(contact.preferred_language);
+    const feedbackContent = formatProjectFeedbackActivityContent(
+      parsed.data.score,
+      feedbackNotes,
+      locale
+    );
+
     await logContactActivity(supabase, {
       userId: opportunity.user_id as string,
       contactId: opportunity.contact_id as string,
-      type: "system",
-      description: `Project feedback submitted (${parsed.data.score}/5)`,
+      type: "project_feedback",
+      description: feedbackContent,
       metadata: {
         opportunity_id: opportunity.id,
         feedback_score: parsed.data.score,
@@ -171,8 +179,6 @@ export async function POST(req: NextRequest, context: RouteContext) {
       feedback_notes: feedbackNotes,
       project_stages_settings: projectSettings,
     });
-
-    const locale = resolveContactCommunicationLocale(contact.preferred_language);
 
     try {
       await sendProjectFeedbackThankYou({

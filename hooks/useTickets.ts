@@ -2,13 +2,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import type { Ticket, TicketFormInput } from "@/types";
 
-export function useTickets(filters?: {
-  contact_id?: string;
-  company_id?: string;
-  status?: string;
-  created_from?: string;
-  created_to?: string;
-}) {
+export function useTickets(
+  filters?: {
+    contact_id?: string;
+    company_id?: string;
+    status?: string;
+    created_from?: string;
+    created_to?: string;
+  },
+  options?: { enabled?: boolean }
+) {
   return useQuery({
     queryKey: ["tickets", filters],
     queryFn: async () => {
@@ -17,6 +20,7 @@ export function useTickets(filters?: {
       });
       return data.data;
     },
+    enabled: options?.enabled ?? true,
   });
 }
 
