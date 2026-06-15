@@ -26,7 +26,12 @@ function getAnalyticsClient() {
 
 export type Ga4ReportRange = "7" | "30" | "90";
 
-function rangeToDates(days: Ga4ReportRange) {
+export type Ga4DateRange = {
+  startDate: string;
+  endDate: string;
+};
+
+function rangeToDates(days: Ga4ReportRange): Ga4DateRange {
   const end = new Date();
   const start = new Date();
   start.setDate(end.getDate() - Number(days));
@@ -34,6 +39,21 @@ function rangeToDates(days: Ga4ReportRange) {
     startDate: start.toISOString().slice(0, 10),
     endDate: end.toISOString().slice(0, 10),
   };
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+export function resolveGa4DateRange(input: {
+  start_date?: string | null;
+  end_date?: string | null;
+  days?: Ga4ReportRange | null;
+}): Ga4DateRange {
+  const start = input.start_date?.trim();
+  const end = input.end_date?.trim();
+  if (start && end && DATE_RE.test(start) && DATE_RE.test(end) && start <= end) {
+    return { startDate: start, endDate: end };
+  }
+  return rangeToDates(input.days ?? "30");
 }
 
 function formatGa4Date(raw: string): string {
@@ -89,10 +109,13 @@ export type Ga4DashboardData = {
   catalogEventNames: string[];
 };
 
-export async function fetchGa4Dashboard(days: Ga4ReportRange = "30"): Promise<Ga4DashboardData> {
+export async function fetchGa4Dashboard(
+  range: Ga4DateRange | Ga4ReportRange = "30"
+): Promise<Ga4DashboardData> {
   const propertyId = process.env.GA4_PROPERTY_ID!.trim();
   const client = getAnalyticsClient();
-  const { startDate, endDate } = rangeToDates(days);
+  const { startDate, endDate } =
+    typeof range === "string" ? rangeToDates(range) : range;
 
   const [summary, daily, eventsReport, pages, sources, countriesReport] = await Promise.all([
     client.runReport({

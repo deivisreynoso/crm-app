@@ -37,6 +37,7 @@ import {
   AnalyticsSectionHeader,
   analyticsChartTooltipStyle,
 } from "@/components/analytics/analytics-ui";
+import type { AnalyticsDateRange } from "@/components/analytics/analytics-date-filters";
 
 type Ga4Data = {
   startDate: string;
@@ -75,7 +76,7 @@ type Ga4Data = {
 };
 
 type Props = {
-  days: "7" | "30" | "90";
+  dateRange: AnalyticsDateRange;
 };
 
 function pct(value: number) {
@@ -97,7 +98,7 @@ function CategoryBadge({ category }: { category: Ga4EventCategory }) {
   );
 }
 
-export function WebsiteAnalyticsDashboard({ days }: Props) {
+export function WebsiteAnalyticsDashboard({ dateRange }: Props) {
   const [data, setData] = useState<Ga4Data | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -106,8 +107,12 @@ export function WebsiteAnalyticsDashboard({ days }: Props) {
   useEffect(() => {
     setLoading(true);
     setError(null);
+    const params = new URLSearchParams({
+      start_date: dateRange.start_date,
+      end_date: dateRange.end_date,
+    });
     void axios
-      .get<{ data: Ga4Data }>(`/api/analytics/ga4?days=${days}`)
+      .get<{ data: Ga4Data }>(`/api/analytics/ga4?${params}`)
       .then((res) => setData(res.data.data))
       .catch((err) => {
         const msg =
@@ -118,7 +123,7 @@ export function WebsiteAnalyticsDashboard({ days }: Props) {
         setData(null);
       })
       .finally(() => setLoading(false));
-  }, [days]);
+  }, [dateRange.end_date, dateRange.start_date]);
 
   const filteredEvents = useMemo(() => {
     if (!data) return [];
@@ -228,7 +233,7 @@ export function WebsiteAnalyticsDashboard({ days }: Props) {
         <div className="flex items-center justify-between gap-2 mb-4">
           <h3 className="text-sm font-semibold text-heading">Sessions & conversions over time</h3>
           <span className="text-xs text-body-muted flex items-center gap-1">
-            <ArrowUpRight className="h-3.5 w-3.5" /> Last {days} days
+            <ArrowUpRight className="h-3.5 w-3.5" /> {data.startDate} — {data.endDate}
           </span>
         </div>
         <div className="h-64">

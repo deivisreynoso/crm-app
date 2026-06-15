@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { differenceInCalendarDays, parseISO } from "date-fns";
 import { AnalyticsDashboard } from "@/components/analytics/analytics-dashboard";
 import { OperationsDashboard } from "@/components/analytics/operations-dashboard";
 import { WebsiteAnalyticsDashboard } from "@/components/analytics/website-analytics-dashboard";
@@ -37,13 +36,6 @@ function parseTab(value: string | null): Tab {
   return "overview";
 }
 
-function ga4DaysFromRange(startDate: string, endDate: string): "7" | "30" | "90" {
-  const days = differenceInCalendarDays(parseISO(endDate), parseISO(startDate)) + 1;
-  if (days <= 7) return "7";
-  if (days <= 30) return "30";
-  return "90";
-}
-
 export function DashboardAnalyticsPanel({ stats }: { stats: DashboardStats }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -51,11 +43,6 @@ export function DashboardAnalyticsPanel({ stats }: { stats: DashboardStats }) {
   const [tab, setTab] = useState<Tab>(() => parseTab(searchParams.get("tab")));
   const [pipelineId, setPipelineId] = useState("");
   const [dateRange, setDateRange] = useState(getDefaultAnalyticsRange);
-
-  const ga4Days = useMemo(
-    () => ga4DaysFromRange(dateRange.start_date, dateRange.end_date),
-    [dateRange.end_date, dateRange.start_date]
-  );
 
   function selectTab(next: Tab) {
     setTab(next);
@@ -89,16 +76,14 @@ export function DashboardAnalyticsPanel({ stats }: { stats: DashboardStats }) {
         <DashboardOverviewStats stats={stats} />
       ) : (
         <>
-          {tab !== "finances" && tab !== "website" && (
-            <AnalyticsDateFilters value={dateRange} onChange={setDateRange} />
-          )}
+          <AnalyticsDateFilters value={dateRange} onChange={setDateRange} />
 
           {tab === "finances" ? (
-            <FinancesOverviewDashboard />
+            <FinancesOverviewDashboard dateRange={dateRange} />
           ) : tab === "operations" ? (
             <OperationsDashboard dateRange={dateRange} />
           ) : tab === "website" ? (
-            <WebsiteAnalyticsDashboard days={ga4Days} />
+            <WebsiteAnalyticsDashboard dateRange={dateRange} />
           ) : (
             <>
               {pipelines.length > 0 && (
