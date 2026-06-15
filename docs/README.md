@@ -1,5 +1,11 @@
 # ClickIn 360 CRM — Documentation
 
+Project documentation lives in this repo under `docs/` and is versioned with the code. After `git pull`, the same files appear locally and on GitHub — including the user manuals in `user-manual/`.
+
+**Workflow:** edit docs locally → `git add` → `git commit` → `git push origin main`. On another machine, run `git pull origin main` to get the latest copies.
+
+Excluded from git (local only): `.env*`, `node_modules/`, `.next/`, `.cursor/`, `test-results/`.
+
 ## User manuals
 
 | Language | Guide |

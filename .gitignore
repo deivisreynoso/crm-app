@@ -12,6 +12,10 @@
 
 # testing
 /coverage
+/test-results
+
+# cursor (local IDE state — not part of the app)
+/.cursor
 
 # next.js
 /.next/
