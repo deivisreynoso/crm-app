@@ -1,19 +1,10 @@
 import { test, expect } from "@playwright/test";
-
-const email = process.env.E2E_EMAIL;
-const password = process.env.E2E_PASSWORD;
+import { e2eCredentials, loginAsE2EUser } from "./helpers/auth";
 
 test.describe("Conversations inbox smoke", () => {
   test.beforeEach(async ({ page }) => {
-    test.skip(!email || !password, "Set E2E_EMAIL and E2E_PASSWORD to run authenticated smoke tests");
-
-    await page.goto("/login");
-    await page.getByLabel(/email/i).fill(email!);
-    await page.getByLabel(/password/i).fill(password!);
-    await page.getByRole("button", { name: /sign in|log in/i }).click();
-    await page.waitForURL(/\/(dashboard|finances|contacts|conversations)/, {
-      timeout: 30_000,
-    });
+    test.skip(!e2eCredentials().configured, "Set E2E_EMAIL and E2E_PASSWORD in .env.local");
+    await loginAsE2EUser(page);
   });
 
   test("conversations page loads", async ({ page }) => {

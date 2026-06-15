@@ -73,6 +73,29 @@ Status: **done** | **todo**
 | F6 | Storage object cleanup on document/contact delete | **done** — `lib/storage/cleanup-document.ts` |
 | F7 | Migrations 036–037 in Supabase | **done** (035–037) |
 
+## QA Sprint — 2026-06-10
+
+| ID | Item | Status |
+|----|------|--------|
+| QA-1 | `ContactSelect` bulk `useContacts(1,200)` regression | **done** — uses `ContactSearchCombobox` |
+| QA-2 | Public form rate limiting (onboarding, feedback, quote) | **done** — `checkRateLimit` on POST handlers |
+| QA-3 | Day-14 feedback full content in timeline | **done** |
+| QA-4 | E2E smoke harness + `.env.local.example` | **done** |
+| QA-5 | `docs/n8n/README.md` | **done** |
+| QA-6 | Migration 074 in production Supabase | **pending** — manual apply |
+| QA-7 | Full role-matrix E2E (Admin/Sales/Viewer) | **pending** — needs credentials |
+| QA-8 | Mobile 390px audit | **pending** — Sprint 6 |
+| QA-9 | Production RLS cross-tenant test | **pending** |
+| QA-10 | Webchat poll data leak (P1) | **done** — `session_secret` + HMAC in qualification |
+| QA-11 | Duplicate-reviews API viewer bypass (P1) | **done** — `requireWorkspaceManage()` on all routes |
+| QA-12 | Conversations list message over-fetch | **done** — per-conversation last message query |
+| QA-13 | AcceptedQuoteSelect bulk document load | **done** — lazy on focus + single preset fetch |
+| QA-14 | Opportunities unbounded query | **done** — `.limit(1000)` |
+| QA-15 | Custom fields mutating routes auth | **done** — `requireWorkspaceManage()` |
+| QA-16 | Auth/lead/health rate limiting | **done** — `checkRateLimit` on form-submission, forgot-password, verify-recovery, health |
+| QA-17 | Deprecated `usePayments` export | **done** — removed |
+| QA-18 | Full CRM E2E route matrix | **done** — `e2e/crm-full.spec.ts` |
+
 ## Dead code removed (2026-05-27)
 
 `sign-out-header.tsx`, `quick-action-buttons.tsx`, `account-overview.tsx`, `contact-related-lists.tsx`, `upcoming-events.tsx`, `app-launcher.tsx`

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSideClient } from "@/lib/supabase";
+import { checkRateLimit, clientIpFromRequest } from "@/lib/api/rate-limit";
 import { loadPublicQuoteByToken } from "@/lib/quotes/load-public-quote";
 import { createQuoteCheckoutSession } from "@/lib/integrations/stripe/checkout-session";
 import { isStripeConfigured } from "@/lib/integrations/stripe/client";
@@ -14,6 +15,20 @@ const bodySchema = z.object({
 export async function POST(req: NextRequest, context: RouteContext) {
   if (!isStripeConfigured()) {
     return NextResponse.json({ error: "Payments are not configured." }, { status: 503 });
+  }
+
+  const ip = clientIpFromRequest(req);
+  const limit = checkRateLimit(`quote-checkout:${ip}`, 10, 3_600_000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      {
+        status: 429,
+        headers: limit.retryAfterSec
+          ? { "Retry-After": String(limit.retryAfterSec) }
+          : undefined,
+      }
+    );
   }
 
   const { token } = await context.params;

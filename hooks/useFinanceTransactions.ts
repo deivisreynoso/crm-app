@@ -74,6 +74,3 @@ export function useVoidFinanceTransaction() {
     },
   });
 }
-
-/** @deprecated Use useFinanceTransactions */
-export { useFinanceTransactions as usePayments };

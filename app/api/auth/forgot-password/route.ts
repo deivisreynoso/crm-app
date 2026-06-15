@@ -3,6 +3,7 @@ import {
   buildPasswordResetLinkWithTokenHash,
   buildPasswordResetRedirectTo,
 } from "@/lib/auth/password-reset";
+import { checkRateLimit, clientIpFromRequest } from "@/lib/api/rate-limit";
 import { requireTransactionalEmailForAuth } from "@/lib/email/auth-email-policy";
 import { passwordResetEmailHtml } from "@/lib/email/transactional-templates";
 import { createServerSideClient } from "@/lib/supabase";
@@ -15,6 +16,20 @@ const bodySchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = clientIpFromRequest(req);
+    const limit = checkRateLimit(`forgot-password:${ip}`, 10, 3_600_000);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        {
+          status: 429,
+          headers: limit.retryAfterSec
+            ? { "Retry-After": String(limit.retryAfterSec) }
+            : undefined,
+        }
+      );
+    }
+
     requireTransactionalEmailForAuth();
 
     const body = await req.json();

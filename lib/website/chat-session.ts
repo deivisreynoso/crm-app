@@ -1,4 +1,5 @@
 const SESSION_KEY = "clickin360_chat_session_id";
+const SECRET_KEY = "clickin360_chat_session_secret";
 const PROFILE_KEY = "clickin360_chat_profile";
 
 export type ChatProfile = {
@@ -23,8 +24,19 @@ export function getOrCreateChatSessionId(): string {
   if (!id) {
     id = randomUuid();
     localStorage.setItem(SESSION_KEY, id);
+    localStorage.removeItem(SECRET_KEY);
   }
   return id;
+}
+
+export function getOrCreateChatSessionSecret(): string {
+  if (typeof window === "undefined") return "";
+  let secret = localStorage.getItem(SECRET_KEY);
+  if (!secret) {
+    secret = randomUuid() + randomUuid().replace(/-/g, "");
+    localStorage.setItem(SECRET_KEY, secret);
+  }
+  return secret;
 }
 
 export function getChatProfile(): ChatProfile {

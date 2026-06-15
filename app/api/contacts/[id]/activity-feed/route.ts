@@ -62,6 +62,17 @@ function mapActivityContent(
     }
   }
 
+  if (metadata && typeof metadata.rating === "number") {
+    const lines = [`Rating: ${metadata.rating}/5`];
+    if (typeof metadata.comment === "string" && metadata.comment.trim()) {
+      lines.push(`Comment:\n${metadata.comment.trim()}`);
+    }
+    if (typeof metadata.would_recommend === "boolean") {
+      lines.push(`Would recommend: ${metadata.would_recommend ? "Yes" : "No"}`);
+    }
+    return { content: lines.join("\n\n") };
+  }
+
   if (type !== "email" || !metadata) {
     return { content: description ?? "" };
   }
