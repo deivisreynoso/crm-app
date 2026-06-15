@@ -1,10 +1,9 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { User } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Pencil, User } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ContactForm } from "@/components/forms/ContactForm";
@@ -29,6 +28,7 @@ import {
 } from "@/hooks/useContacts";
 import type { ContactEmailMessage } from "@/hooks/useGmail";
 import { useOpportunities } from "@/hooks/useOpportunities";
+import { usePipelines } from "@/hooks/usePipelines";
 import { useTickets, useCreateTicket } from "@/hooks/useTickets";
 import { useDocuments, useUploadDocument } from "@/hooks/useDocuments";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
@@ -40,8 +40,10 @@ import { QuickActionBar } from "@/components/quick-actions/quick-action-bar";
 import { SendEmailModal } from "@/components/contact/send-email-modal";
 import { RequestReviewModal } from "@/components/contact/request-review-modal";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
-import { StartOnboardingButton } from "@/components/contact/start-onboarding-button";
-import { getInitials } from "@/lib/utils";
+import { StartOnboardingButton, START_ONBOARDING_CHIP_CLASS } from "@/components/contact/start-onboarding-button";
+import { ProjectStageStepper } from "@/components/opportunities/project-stage-stepper";
+import { findContactProjectOpportunity } from "@/lib/project-stages/contact-opportunity";
+import { getInitials, cn } from "@/lib/utils";
 
 type PageProps = { params: Promise<{ id: string }> };
 type WorkTab = "activity" | "related" | "tasks";
@@ -74,7 +76,9 @@ export default function ContactDetailPage({ params }: PageProps) {
   const { data: tasks = [] } = useContactTasks(id);
   const createTask = useCreateContactTask(id);
   const deleteTask = useDeleteContactTask(id);
+  const q = dict.quickActions;
   const { data: contactOpportunities = [] } = useOpportunities(undefined, id);
+  const { data: pipelines = [] } = usePipelines();
   const { data: contactTickets = [] } = useTickets({ contact_id: id });
   const { data: contactQuotes = [] } = useDocuments({
     contact_id: id,
@@ -104,6 +108,11 @@ export default function ContactDetailPage({ params }: PageProps) {
     await updateContact.mutateAsync(patch);
   }
 
+  const projectContext = useMemo(
+    () => findContactProjectOpportunity(contactOpportunities, pipelines),
+    [contactOpportunities, pipelines]
+  );
+
   if (isLoading) {
     return <p className="text-body-muted text-sm">{c.loading}</p>;
   }
@@ -121,6 +130,11 @@ export default function ContactDetailPage({ params }: PageProps) {
 
   const initials = getInitials(contact.first_name, contact.last_name);
   const companyLabel = contact.company?.trim() || "—";
+
+  const editChipCls = cn(
+    "inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium border transition-colors",
+    START_ONBOARDING_CHIP_CLASS
+  );
 
   const relatedCount =
     contactOpportunities.length +
@@ -310,76 +324,113 @@ export default function ContactDetailPage({ params }: PageProps) {
         }}
       />
 
-      <header className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div className="flex items-start gap-3 min-w-0 flex-1">
+      <header className="space-y-3">
+        <Link
+          href="/contacts"
+          className="inline-flex text-xs text-body-muted hover:text-[var(--primary)]"
+        >
+          {c.backToAll}
+        </Link>
+
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 min-w-0">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-semibold">
             {initials}
           </div>
-          <div className="min-w-0 flex-1">
-            <Link
-              href="/contacts"
-              className="text-xs text-body-muted hover:text-[var(--primary)]"
-            >
-              {c.backToAll}
-            </Link>
-            <h1 className="text-xl sm:text-2xl font-bold text-heading tracking-tight mt-0.5">
+
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0 flex-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-heading tracking-tight shrink-0">
               {contact.first_name} {contact.last_name}
             </h1>
-            <p className="text-sm text-body-muted mt-0.5 truncate">
-              {contact.title && <span>{contact.title} · </span>}
-              {companyLabel}
-            </p>
-            <div className="flex flex-wrap items-center gap-2 mt-2">
-              <Badge variant="info">{contact.status}</Badge>
-              {contact.email && (
-                <Badge variant="neutral" className="max-w-[200px] truncate">
-                  {contact.email}
-                </Badge>
-              )}
-            </div>
-            <QuickActionBar
-              email={contact.email}
-              phone={contact.phone}
-              className="mt-3"
-              onSendEmail={
-                contact.email?.trim() && canWrite
-                  ? () => setEmailModalOpen(true)
-                  : undefined
-              }
-              onRequestReview={
-                contact.email?.trim() &&
-                canWrite &&
-                !contact.review_request_opt_out
-                  ? () => setReviewModalOpen(true)
-                  : undefined
-              }
-              noteLoading={createNote.isPending}
-              taskLoading={createTask.isPending}
-              onAddNote={async (content) => {
-                await createNote.mutateAsync({ content, activity_type: "note" });
-              }}
-              onAddTask={async (input) => {
-                const task = await createTask.mutateAsync({
-                  title: input.title,
-                  due_at: input.due_at,
-                  priority: input.priority,
-                  assigned_to: input.assigned_to,
-                });
-                handleOpenTask(task);
-              }}
-            />
+            {(contact.title || companyLabel !== "—") && (
+              <>
+                <span className="hidden sm:inline text-body-muted/50" aria-hidden>
+                  ·
+                </span>
+                <p className="text-sm text-body-muted truncate max-w-full">
+                  {contact.title && <span>{contact.title}</span>}
+                  {contact.title && companyLabel !== "—" && (
+                    <span className="text-body-muted/50"> · </span>
+                  )}
+                  {companyLabel !== "—" && <span>{companyLabel}</span>}
+                </p>
+              </>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto sm:ml-auto">
+            <Badge variant="info" className="capitalize">
+              {contact.status}
+            </Badge>
+            {contact.email ? (
+              <Badge variant="neutral" className="max-w-[min(100%,220px)] truncate">
+                {contact.email}
+              </Badge>
+            ) : null}
           </div>
         </div>
-        <div className="flex flex-col gap-2 shrink-0 self-start">
-          {canManage ? <StartOnboardingButton contactId={id} /> : null}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsEditing((v) => !v)}
-          >
-            {isEditing ? act.cancel : act.edit}
-          </Button>
-        </div>
+
+        <QuickActionBar
+          email={contact.email}
+          phone={contact.phone}
+          onSendEmail={
+            contact.email?.trim() && canWrite
+              ? () => setEmailModalOpen(true)
+              : undefined
+          }
+          onRequestReview={
+            contact.email?.trim() &&
+            canWrite &&
+            !contact.review_request_opt_out
+              ? () => setReviewModalOpen(true)
+              : undefined
+          }
+          noteLoading={createNote.isPending}
+          taskLoading={createTask.isPending}
+          onAddNote={async (content) => {
+            await createNote.mutateAsync({ content, activity_type: "note" });
+          }}
+          onAddTask={async (input) => {
+            const task = await createTask.mutateAsync({
+              title: input.title,
+              due_at: input.due_at,
+              priority: input.priority,
+              assigned_to: input.assigned_to,
+            });
+            handleOpenTask(task);
+          }}
+          trailing={
+            <>
+              {canManage ? (
+                <StartOnboardingButton
+                  contactId={id}
+                  variant="chip"
+                  label={q.startOnboarding}
+                  loadingLabel={q.startingOnboarding}
+                />
+              ) : null}
+              <button
+                type="button"
+                className={editChipCls}
+                onClick={() => setIsEditing((v) => !v)}
+              >
+                <Pencil className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
+                {isEditing ? act.cancel : q.edit}
+              </button>
+            </>
+          }
+        />
+
+        {projectContext?.opportunity.project_stage ? (
+          <ProjectStageStepper
+            opportunity={projectContext.opportunity}
+            pipelineStages={projectContext.pipelineStages}
+            canManage={canManage}
+            onUpdated={() => {
+              void queryClient.invalidateQueries({ queryKey: ["opportunities"] });
+              void queryClient.invalidateQueries({ queryKey: ["contact", id] });
+            }}
+          />
+        ) : null}
       </header>
 
       {isEditing ? (

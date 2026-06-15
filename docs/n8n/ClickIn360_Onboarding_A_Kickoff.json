@@ -379,7 +379,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "no-reply@clickin360.com",
+        "fromEmail": "ClickIn 360 <no-reply@mail.clickin360.com>",
         "toEmail": "={{ $('Build Welcome Email').first().json.toEmail }}",
         "subject": "={{ $('Build Welcome Email').first().json.subject }}",
         "text": "={{ $('Build Welcome Email').first().json.text }}"

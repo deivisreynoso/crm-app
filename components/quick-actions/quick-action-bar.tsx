@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Copy, ListTodo, Mail, Phone, Star, StickyNote } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,8 @@ interface QuickActionBarProps {
   onTaskCreated?: () => void;
   noteLoading?: boolean;
   taskLoading?: boolean;
+  /** Trailing toolbar items (e.g. Start onboarding, Edit) rendered after standard chips */
+  trailing?: ReactNode;
 }
 
 /** Compact chips with subtle color cues per action type */
@@ -57,6 +59,7 @@ export function QuickActionBar({
   onTaskCreated,
   noteLoading,
   taskLoading,
+  trailing,
 }: QuickActionBarProps) {
   const { dict } = useCrmLocale();
   const q = dict.quickActions;
@@ -168,6 +171,7 @@ export function QuickActionBar({
             </button>
           );
         })}
+        {trailing}
         {copyToast}
       </div>
 

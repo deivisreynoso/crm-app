@@ -2,9 +2,9 @@ import {
   getMailgunApiBase,
   getMailgunApiKey,
   getMailgunDomain,
-  getMailgunFrom,
   isMailgunConfigured,
 } from "@/lib/email/mailgun-config";
+import { resolveMailgunFromAddress } from "@/lib/email/mailgun-from";
 import type { SendEmailOptions } from "@/lib/email/send";
 
 export type MailgunSendResult = {
@@ -23,7 +23,7 @@ export async function sendMailgunEmail(
 
   const apiKey = getMailgunApiKey()!;
   const domain = getMailgunDomain()!;
-  const from = getMailgunFrom()!;
+  const from = resolveMailgunFromAddress();
   const url = `${getMailgunApiBase()}/v3/${encodeURIComponent(domain)}/messages`;
 
   const body = new URLSearchParams();
@@ -79,7 +79,7 @@ export async function sendMailgunEmailWithAttachment(
 
   const apiKey = getMailgunApiKey()!;
   const domain = getMailgunDomain()!;
-  const from = getMailgunFrom()!;
+  const from = resolveMailgunFromAddress();
   const url = `${getMailgunApiBase()}/v3/${encodeURIComponent(domain)}/messages`;
 
   const form = new FormData();

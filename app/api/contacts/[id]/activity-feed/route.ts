@@ -89,7 +89,7 @@ function resolveAuthorName(
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
-    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
+    const { workspaceOwnerId, error } = await requireAuth();
     if (error) return error;
 
     const { id: contactId } = await context.params;
@@ -99,52 +99,52 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
     const supabase = createServerSideClient();
 
-    const notesRes = await selectWithColumnFallback<NoteRow>(
-      async (select) => {
-        const result = await supabase
-          .from("notes")
-          .select(select)
-          .eq("user_id", workspaceOwnerId!)
-          .eq("entity_type", "contact")
-          .eq("entity_id", contactId)
-          .order("created_at", { ascending: false });
-        return result as { data: NoteRow[] | null; error: { message: string } | null };
-      },
-      [
-        "id, content, activity_type, created_at, created_by, created_by_display_name",
-        "id, content, activity_type, created_at, created_by",
-        "id, content, activity_type, created_at",
-      ]
-    );
+    const [notesRes, activitiesRes, eventsRes] = await Promise.all([
+      selectWithColumnFallback<NoteRow>(
+        async (select) => {
+          const result = await supabase
+            .from("notes")
+            .select(select)
+            .eq("user_id", workspaceOwnerId!)
+            .eq("entity_type", "contact")
+            .eq("entity_id", contactId)
+            .order("created_at", { ascending: false });
+          return result as { data: NoteRow[] | null; error: { message: string } | null };
+        },
+        [
+          "id, content, activity_type, created_at, created_by, created_by_display_name",
+          "id, content, activity_type, created_at, created_by",
+          "id, content, activity_type, created_at",
+        ]
+      ),
+      selectWithColumnFallback<ActivityRow>(
+        async (select) => {
+          const result = await supabase
+            .from("activities")
+            .select(select)
+            .eq("user_id", workspaceOwnerId!)
+            .eq("contact_id", contactId)
+            .order("created_at", { ascending: false });
+          return result as {
+            data: ActivityRow[] | null;
+            error: { message: string } | null;
+          };
+        },
+        [
+          "id, type, description, metadata, created_at, created_by, created_by_display_name",
+          "id, type, description, metadata, created_at, created_by",
+          "id, type, description, metadata, created_at",
+        ]
+      ),
+      supabase
+        .from("calendar_events")
+        .select("id, title, description, start_time, event_kind, created_at")
+        .eq("user_id", workspaceOwnerId!)
+        .eq("contact_id", contactId)
+        .order("start_time", { ascending: false }),
+    ]);
 
     if (notesRes.error) throw notesRes.error;
-
-    const activitiesRes = await selectWithColumnFallback<ActivityRow>(
-      async (select) => {
-        const result = await supabase
-          .from("activities")
-          .select(select)
-          .eq("user_id", workspaceOwnerId!)
-          .eq("contact_id", contactId)
-          .order("created_at", { ascending: false });
-        return result as {
-          data: ActivityRow[] | null;
-          error: { message: string } | null;
-        };
-      },
-      [
-        "id, type, description, metadata, created_at, created_by, created_by_display_name",
-        "id, type, description, metadata, created_at, created_by",
-        "id, type, description, metadata, created_at",
-      ]
-    );
-
-    const eventsRes = await supabase
-      .from("calendar_events")
-      .select("id, title, description, start_time, event_kind, created_at")
-      .eq("user_id", workspaceOwnerId!)
-      .eq("contact_id", contactId)
-      .order("start_time", { ascending: false });
 
     const authorIds = [
       ...(notesRes.data ?? []).map((n) => n.created_by ?? null),
@@ -152,7 +152,9 @@ export async function GET(_req: NextRequest, context: RouteContext) {
         (a) => a.created_by ?? null
       ),
     ].filter((id): id is string => typeof id === "string" && id.length > 0);
-    const authorNames = await resolveAuthorNames(supabase, authorIds);
+    const authorNames = await resolveAuthorNames(supabase, authorIds, {
+      skipAuthAdminLookup: true,
+    });
 
     const noteItems: ActivityFeedItem[] = (notesRes.data ?? []).map((n) => ({
       id: `note-${n.id}`,

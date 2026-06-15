@@ -231,7 +231,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "no-reply@clickin360.com",
+        "fromEmail": "ClickIn 360 <no-reply@mail.clickin360.com>",
         "toEmail": "={{ $json.toEmail }}",
         "subject": "={{ $json.subject }}",
         "text": "={{ $json.text }}",
@@ -283,7 +283,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "no-reply@clickin360.com",
+        "fromEmail": "ClickIn 360 <no-reply@mail.clickin360.com>",
         "toEmail": "={{ $json.toEmail }}",
         "subject": "={{ $json.subject }}",
         "text": "={{ $json.text }}",

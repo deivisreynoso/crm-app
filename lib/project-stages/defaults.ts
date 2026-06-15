@@ -22,7 +22,7 @@ export const DEFAULT_PROJECT_STAGE_LABELS: ProjectStageLabels = {
 
 export const DEFAULT_PROJECT_STAGES_SETTINGS: ProjectStagesSettings = {
   stage_labels: DEFAULT_PROJECT_STAGE_LABELS,
-  maintenance_enabled: true,
+  maintenance_enabled: false,
   review_score_threshold: 4,
   google_review_delay_hours: 24,
   automatic_google_review_enabled: true,

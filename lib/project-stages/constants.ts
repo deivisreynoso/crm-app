@@ -8,7 +8,22 @@ export const PROJECT_STAGES = [
   "maintenance",
 ] as const;
 
+/** Post-sale delivery path shown in UI (excludes maintenance). */
+export const DELIVERY_PROJECT_STAGES = [
+  "onboarding",
+  "design",
+  "setup",
+  "launch",
+  "optimization",
+  "complete",
+] as const;
+
 export type ProjectStage = (typeof PROJECT_STAGES)[number];
+export type DeliveryProjectStage = (typeof DELIVERY_PROJECT_STAGES)[number];
+
+export function isDeliveryProjectStage(value: string): value is DeliveryProjectStage {
+  return (DELIVERY_PROJECT_STAGES as readonly string[]).includes(value);
+}
 
 export function isProjectStage(value: string): value is ProjectStage {
   return (PROJECT_STAGES as readonly string[]).includes(value);
@@ -16,12 +31,11 @@ export function isProjectStage(value: string): value is ProjectStage {
 
 export function nextProjectStage(
   current: ProjectStage,
-  options?: { maintenanceEnabled?: boolean }
+  options?: { includeMaintenance?: boolean }
 ): ProjectStage | null {
-  const maintenanceEnabled = options?.maintenanceEnabled ?? true;
-  const order: ProjectStage[] = maintenanceEnabled
+  const order: ProjectStage[] = options?.includeMaintenance
     ? [...PROJECT_STAGES]
-    : PROJECT_STAGES.filter((s) => s !== "maintenance");
+    : [...DELIVERY_PROJECT_STAGES];
   const idx = order.indexOf(current);
   if (idx < 0 || idx >= order.length - 1) return null;
   return order[idx + 1] ?? null;

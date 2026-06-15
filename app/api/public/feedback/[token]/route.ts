@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSideClient } from "@/lib/supabase";
+import { resolveContactCommunicationLocale } from "@/lib/contacts/communication-locale";
+import { CLICKIN360_BRAND } from "@/lib/brand";
 import { z } from "zod";
 
 type RouteContext = { params: Promise<{ token: string }> };
@@ -36,10 +38,9 @@ export async function GET(_req: NextRequest, context: RouteContext) {
         first_name: contact.first_name,
         last_name: contact.last_name,
       },
-      company_name: settings?.quote_company_name ?? "ClickIn 360",
+      company_name: CLICKIN360_BRAND,
       google_reviews_url: settings?.google_reviews_url ?? null,
-      locale:
-        contact.preferred_language === "en" || settings?.ui_locale === "en" ? "en" : "es",
+      locale: resolveContactCommunicationLocale(contact.preferred_language),
     });
   } catch (err) {
     console.error("GET /api/public/feedback/[token]:", err);

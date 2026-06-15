@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { resolveContactCommunicationLocale } from "@/lib/contacts/communication-locale";
 
 export async function buildProjectWebhookContact(
   supabase: SupabaseClient,
@@ -32,7 +33,7 @@ export async function buildProjectWebhookContact(
     last_name: contact.last_name,
     email: contact.email,
     phone: contact.phone,
-    preferred_language: contact.preferred_language === "en" ? "en" : "es",
+    preferred_language: resolveContactCommunicationLocale(contact.preferred_language),
     review_request_opt_out: contact.review_request_opt_out === true,
     project_feedback_token: token,
     project_feedback_url: token ? `${appUrl}/project-feedback/${token}` : null,

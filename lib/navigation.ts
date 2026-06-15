@@ -107,6 +107,3 @@ export const MAIN_NAV: NavItem[] = [
     description: "Workspace Google Drive",
   },
 ];
-
-/** @deprecated Use MAIN_NAV — secondary section removed from sidebar */
-export const SECONDARY_NAV: NavItem[] = [];

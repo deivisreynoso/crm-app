@@ -232,8 +232,12 @@
       "communicationChannels": "Canales de comunicación",
       "frictionArea": "Área de fricción",
       "signals": "Señales",
-      "aiSummary": "Resumen IA"
+      "aiSummary": "Resumen IA",
+      "preferredLanguage": "Idioma preferido"
     },
+    "preferredLanguageEn": "Inglés",
+    "preferredLanguageEs": "Español",
+    "preferredLanguageEmpty": "Sin definir",
     "statusLead": "Lead",
     "statusProspect": "Prospecto",
     "statusActive": "Activo",
@@ -296,7 +300,10 @@
     "addNotePlaceholder": "¿Qué ocurrió?",
     "saveNote": "Guardar nota",
     "addTaskTitle": "Agregar tarea",
-    "createTask": "Crear tarea"
+    "createTask": "Crear tarea",
+    "startOnboarding": "Iniciar onboarding",
+    "startingOnboarding": "Iniciando…",
+    "edit": "Editar"
   },
   "tasks": {
     "titlePlaceholder": "Título de la tarea",
