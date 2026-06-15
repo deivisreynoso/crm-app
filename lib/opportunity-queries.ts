@@ -97,7 +97,8 @@ export async function listOpportunitiesWithContacts(
     .from("opportunities")
     .select("*")
     .eq("user_id", userId)
-    .order("updated_at", { ascending: false });
+    .order("updated_at", { ascending: false })
+    .limit(1000);
 
   const pipelineId = options?.pipelineId;
   const contactId = options?.contactId;

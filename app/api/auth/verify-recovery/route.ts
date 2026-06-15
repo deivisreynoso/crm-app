@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { checkRateLimit, clientIpFromRequest } from "@/lib/api/rate-limit";
 import { getSupabaseBrowserConfig } from "@/lib/supabase/config";
 
 const bodySchema = z.object({
@@ -10,6 +11,20 @@ const bodySchema = z.object({
 /** Exchange recovery token_hash for a session (server-side; works cross-device). */
 export async function POST(req: NextRequest) {
   try {
+    const ip = clientIpFromRequest(req);
+    const limit = checkRateLimit(`verify-recovery:${ip}`, 20, 3_600_000);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        {
+          status: 429,
+          headers: limit.retryAfterSec
+            ? { "Retry-After": String(limit.retryAfterSec) }
+            : undefined,
+        }
+      );
+    }
+
     const body = await req.json();
     const parsed = bodySchema.safeParse(body);
     if (!parsed.success) {

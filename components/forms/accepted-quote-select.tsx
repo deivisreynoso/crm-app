@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { FormLabel } from "@/components/ui/form-label";
 import { useInvoices } from "@/hooks/useFinances";
@@ -28,6 +28,24 @@ type AcceptedQuoteSelectProps = {
   id?: string;
 };
 
+function toOption(q: CrmDocument, defaultCurrency: string): AcceptedQuoteOption {
+  return {
+    id: q.id,
+    contact_id: q.contact_id ?? null,
+    total_amount: Number(q.total_amount ?? 0),
+    currency:
+      (q as { currency?: string }).currency === "MXN"
+        ? "MXN"
+        : (q as { currency?: string }).currency === "USD"
+          ? "USD"
+          : defaultCurrency,
+    tax_rate: Number(q.tax_rate ?? 0),
+    tax_amount: Number(q.tax_amount ?? 0),
+    subtotal: Number(q.subtotal ?? q.total_amount ?? 0),
+    label: [q.quote_reference, q.title].filter(Boolean).join(" — ") || q.title,
+  };
+}
+
 export function AcceptedQuoteSelect({
   value,
   onChange,
@@ -38,19 +56,42 @@ export function AcceptedQuoteSelect({
   id = "quote-select",
 }: AcceptedQuoteSelectProps) {
   const [quotes, setQuotes] = useState<CrmDocument[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [listLoaded, setListLoaded] = useState(false);
   const { data: invoices = [] } = useInvoices({ summary: true });
   const { data: workspaceSettings } = useWorkspaceSettings();
   const defaultCurrency = workspaceSettings?.default_currency ?? "USD";
 
+  const loadQuoteList = useCallback(async () => {
+    if (listLoaded) return;
+    setLoading(true);
+    try {
+      const res = await axios.get<{ data: CrmDocument[] }>("/api/documents", {
+        params: { billable: "1", limit: 50 },
+      });
+      setQuotes(res.data.data ?? []);
+      setListLoaded(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [listLoaded]);
+
   useEffect(() => {
+    if (!value) return;
     let cancelled = false;
+    setLoading(true);
     void axios
-      .get<{ data: CrmDocument[] }>("/api/documents", {
-        params: { billable: "1", limit: 200 },
-      })
+      .get<CrmDocument>(`/api/documents/${value}`)
       .then((res) => {
-        if (!cancelled) setQuotes(res.data.data ?? []);
+        if (!cancelled) {
+          setQuotes((prev) => {
+            const existing = prev.filter((q) => q.id !== value);
+            return [...existing, res.data];
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setQuotes((prev) => prev.filter((q) => q.id !== value));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -58,7 +99,7 @@ export function AcceptedQuoteSelect({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [value]);
 
   const invoicedQuoteIds = useMemo(
     () =>
@@ -73,21 +114,7 @@ export function AcceptedQuoteSelect({
   const options: AcceptedQuoteOption[] = useMemo(() => {
     return quotes
       .filter((q) => !invoicedQuoteIds.has(q.id) || q.id === value)
-      .map((q) => ({
-        id: q.id,
-        contact_id: q.contact_id ?? null,
-        total_amount: Number(q.total_amount ?? 0),
-        currency:
-          (q as { currency?: string }).currency === "MXN"
-            ? "MXN"
-            : (q as { currency?: string }).currency === "USD"
-              ? "USD"
-              : defaultCurrency,
-        tax_rate: Number(q.tax_rate ?? 0),
-        tax_amount: Number(q.tax_amount ?? 0),
-        subtotal: Number(q.subtotal ?? q.total_amount ?? 0),
-        label: [q.quote_reference, q.title].filter(Boolean).join(" — ") || q.title,
-      }));
+      .map((q) => toOption(q, defaultCurrency));
   }, [quotes, invoicedQuoteIds, value, defaultCurrency]);
 
   function handleChange(next: string) {
@@ -97,6 +124,10 @@ export function AcceptedQuoteSelect({
     }
     const opt = options.find((o) => o.id === next) ?? null;
     onChange(next, opt);
+  }
+
+  function handleFocus() {
+    void loadQuoteList();
   }
 
   if (locked && value) {
@@ -119,15 +150,18 @@ export function AcceptedQuoteSelect({
         className="input-field w-full"
         value={value}
         onChange={(e) => handleChange(e.target.value)}
+        onFocus={handleFocus}
         disabled={disabled || loading || locked}
       >
         {allowStandalone && (
           <option value="">
-            {loading ? "Loading…" : "None — standalone invoice"}
+            {loading && !listLoaded ? "Loading…" : "None — standalone invoice"}
           </option>
         )}
         {!allowStandalone && !value && (
-          <option value="">{loading ? "Loading…" : "Select an accepted quote…"}</option>
+          <option value="">
+            {loading && !listLoaded ? "Loading…" : "Select an accepted quote…"}
+          </option>
         )}
         {options.map((o) => (
           <option key={o.id} value={o.id}>

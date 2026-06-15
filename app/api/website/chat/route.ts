@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { checkRateLimit, clientIpFromRequest } from "@/lib/api/rate-limit";
+import { registerWebchatPollSecret } from "@/lib/website/webchat-poll-auth";
 
 const DEFAULT_WEBHOOK = "https://n8n.clickin360.com/webhook/webchat";
 
 const bodySchema = z.object({
   session_id: z.string().min(1),
+  session_secret: z.string().min(16).optional(),
   message: z.string().min(1),
   name: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
@@ -13,11 +16,34 @@ const bodySchema = z.object({
 /** Same-origin proxy for the marketing chat widget → N8N (avoids browser CORS). */
 export async function POST(req: NextRequest) {
   try {
+    const ip = clientIpFromRequest(req);
+    const limit = checkRateLimit(`webchat-send:${ip}`, 60, 60_000);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        {
+          status: 429,
+          headers: limit.retryAfterSec
+            ? { "Retry-After": String(limit.retryAfterSec) }
+            : undefined,
+        }
+      );
+    }
+
     const parsed = bodySchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Validation failed", details: parsed.error.flatten() },
         { status: 400 }
+      );
+    }
+
+    const workspaceOwnerId = process.env.WEBSITE_LEADS_USER_ID?.trim();
+    if (workspaceOwnerId && parsed.data.session_secret) {
+      registerWebchatPollSecret(
+        workspaceOwnerId,
+        parsed.data.session_id,
+        parsed.data.session_secret
       );
     }
 

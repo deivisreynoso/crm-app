@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { checkRateLimit, clientIpFromRequest } from "@/lib/api/rate-limit";
 import { createLeadFromWebsite } from "@/lib/leads/website-leads";
 import {
   getBookingAvailabilityForWebsite,
@@ -48,6 +49,20 @@ function sameOrigin(req: NextRequest): boolean {
 export async function POST(req: NextRequest) {
   if (!sameOrigin(req)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const ip = clientIpFromRequest(req);
+  const limit = checkRateLimit(`lead-form:${ip}`, 20, 3_600_000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      {
+        status: 429,
+        headers: limit.retryAfterSec
+          ? { "Retry-After": String(limit.retryAfterSec) }
+          : undefined,
+      }
+    );
   }
 
   let requestLang: "es" | "en" = "es";

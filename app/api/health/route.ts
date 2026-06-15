@@ -1,20 +1,34 @@
 import { createServerSideClient } from '@/lib/supabase';
 import { NextRequest, NextResponse } from 'next/server';
+import { checkRateLimit, clientIpFromRequest } from '@/lib/api/rate-limit';
 
 export async function GET(req: NextRequest) {
+  const ip = clientIpFromRequest(req);
+  const limit = checkRateLimit(`health:${ip}`, 60, 60_000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.' },
+      {
+        status: 429,
+        headers: limit.retryAfterSec
+          ? { 'Retry-After': String(limit.retryAfterSec) }
+          : undefined,
+      }
+    );
+  }
+
   try {
     const supabase = createServerSideClient();
 
-    // Test query - get user count
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('contacts')
       .select('id')
       .limit(1);
 
     if (error) {
-      console.error('Supabase error:', error);
+      console.error('Health check database error:', error);
       return NextResponse.json(
-        { error: error.message },
+        { error: 'Service unavailable' },
         { status: 500 }
       );
     }
@@ -24,10 +38,10 @@ export async function GET(req: NextRequest) {
       database: 'connected',
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Health check error:', error);
     return NextResponse.json(
-      { error: error.message },
+      { error: 'Service unavailable' },
       { status: 500 }
     );
   }

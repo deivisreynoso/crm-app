@@ -1,4 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
+import { loadEnvConfig } from "@next/env";
+
+// Load .env.local so E2E_EMAIL / E2E_PASSWORD work with `npm run test:e2e`
+loadEnvConfig(process.cwd());
 
 export default defineConfig({
   testDir: "./e2e",

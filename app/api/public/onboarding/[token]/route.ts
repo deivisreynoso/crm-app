@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSideClient } from "@/lib/supabase";
+import { checkRateLimit, clientIpFromRequest } from "@/lib/api/rate-limit";
 import { resolveContactCommunicationLocale } from "@/lib/contacts/communication-locale";
 import { CLICKIN360_BRAND } from "@/lib/brand";
 import { submitQuestionnaireSchema } from "@/lib/onboarding/questionnaire-schema";
@@ -51,6 +52,20 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
+    const ip = clientIpFromRequest(req);
+    const limit = checkRateLimit(`onboarding-submit:${ip}`, 10, 3_600_000);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        {
+          status: 429,
+          headers: limit.retryAfterSec
+            ? { "Retry-After": String(limit.retryAfterSec) }
+            : undefined,
+        }
+      );
+    }
+
     const { token } = await context.params;
     const parsed = submitQuestionnaireSchema.safeParse(await req.json());
     if (!parsed.success) {

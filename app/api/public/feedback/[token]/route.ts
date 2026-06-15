@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSideClient } from "@/lib/supabase";
+import { checkRateLimit, clientIpFromRequest } from "@/lib/api/rate-limit";
 import { resolveContactCommunicationLocale } from "@/lib/contacts/communication-locale";
 import { CLICKIN360_BRAND } from "@/lib/brand";
 import { z } from "zod";
@@ -50,6 +51,20 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
+    const ip = clientIpFromRequest(req);
+    const limit = checkRateLimit(`day14-feedback:${ip}`, 10, 3_600_000);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        {
+          status: 429,
+          headers: limit.retryAfterSec
+            ? { "Retry-After": String(limit.retryAfterSec) }
+            : undefined,
+        }
+      );
+    }
+
     const { token } = await context.params;
     const parsed = feedbackSchema.safeParse(await req.json());
     if (!parsed.success) {
@@ -67,12 +82,23 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Feedback link not found" }, { status: 404 });
     }
 
+    const comment = parsed.data.comment?.trim();
+    const description = [
+      `Customer feedback submitted (${parsed.data.rating}/5)`,
+      comment ? `Comment:\n${comment}` : null,
+      parsed.data.would_recommend != null
+        ? `Would recommend: ${parsed.data.would_recommend ? "Yes" : "No"}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
     const { logContactActivity } = await import("@/lib/activities/log-contact-activity");
     await logContactActivity(supabase, {
       userId: contact.user_id as string,
       contactId: contact.id as string,
       type: "system",
-      description: `Customer feedback submitted (${parsed.data.rating}/5)`,
+      description,
       metadata: {
         rating: parsed.data.rating,
         comment: parsed.data.comment ?? null,

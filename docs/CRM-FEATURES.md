@@ -29,6 +29,10 @@ git log -1 --format='%h %s (%cs)'
 
 | Date | Commit | Type | Summary |
 |------|--------|------|---------|
+| 2026-06-15 | *(pending)* | fix + qa | **QA sprint (round 2):** conversations last-message query fix; lazy AcceptedQuoteSelect; opportunities limit; custom-fields manage guard; auth/lead/health rate limits; full CRM E2E suite (`crm-full.spec.ts`); remove deprecated `usePayments` |
+| 2026-06-10 | *(pending)* | fix + qa | **QA sprint:** public form rate limits; Day-14 feedback timeline content; ContactSelect async combobox; E2E smoke harness; `docs/n8n/README.md`, `QA-SPRINT-REPORT.md` |
+| 2026-06-10 | `e976846` | fix | **Performance:** contact detail lazy tab loading; parallel activity-feed queries; project feedback in timeline |
+| 2026-06-10 | `16af274` | feature | **Onboarding questionnaire** 7-section bilingual wizard; project stepper on contact; branding/copy fixes |
 | 2026-06-14 | *(pending)* | feature | **Sprint 5:** onboarding automation, outbound webhooks, quote expiry/versioning, invoice recurrence, loss reasons, session timeout, appointment reminder webhooks (migrations **071–073**) |
 | 2026-06-14 | *(pending)* | feature | **Group notifications:** sales/support group emails + in-app prefs (migration **070**); Google Drive attach in email composer; onboarding workflow proposal |
 | 2026-06-14 | `ee5093d` | feature | Google Drive **Shared drives** browse; docs pass (CRM-FEATURES, API, AUTH-ROADMAP, audit tracker, inbox proposal) |

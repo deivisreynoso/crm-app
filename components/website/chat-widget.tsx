@@ -22,6 +22,7 @@ import {
   CHAT_OPEN_EVENT,
   getChatProfile,
   getOrCreateChatSessionId,
+  getOrCreateChatSessionSecret,
   saveChatProfile,
 } from "@/lib/website/chat-session";
 import {
@@ -158,6 +159,7 @@ export function ChatWidget({
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState("");
+  const [sessionSecret, setSessionSecret] = useState("");
   const [profile, setProfile] = useState<{ name?: string; email?: string }>({});
   const [welcomed, setWelcomed] = useState(false);
   const [lastHumanMsgId, setLastHumanMsgId] = useState<string | null>(null);
@@ -165,6 +167,7 @@ export function ChatWidget({
 
   useEffect(() => {
     setSessionId(getOrCreateChatSessionId());
+    setSessionSecret(getOrCreateChatSessionSecret());
     setProfile(getChatProfile());
   }, []);
 
@@ -217,12 +220,15 @@ export function ChatWidget({
   }, [open, minimized, variant]);
 
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId || !sessionSecret) return;
     if (variant === "floating" && !open) return;
 
     const poll = async () => {
       try {
-        const params = new URLSearchParams({ session_id: sessionId });
+        const params = new URLSearchParams({
+          session_id: sessionId,
+          session_secret: sessionSecret,
+        });
         if (lastHumanMsgId) params.set("after", lastHumanMsgId);
         const res = await fetch(`/api/website/chat/messages?${params}`);
         if (!res.ok) return;
@@ -254,7 +260,7 @@ export function ChatWidget({
     void poll();
     const interval = window.setInterval(() => void poll(), 3000);
     return () => window.clearInterval(interval);
-  }, [sessionId, open, variant, lastHumanMsgId]);
+  }, [sessionId, sessionSecret, open, variant, lastHumanMsgId]);
 
   const postMessage = useCallback(
     async (text: string, userMessageId?: string) => {
@@ -269,6 +275,7 @@ export function ChatWidget({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             session_id: sessionId || getOrCreateChatSessionId(),
+            session_secret: sessionSecret || getOrCreateChatSessionSecret(),
             message: trimmed,
             ...(profile.name ? { name: profile.name } : {}),
             ...(profile.email ? { email: profile.email } : {}),
@@ -327,7 +334,7 @@ export function ChatWidget({
         setLoading(false);
       }
     },
-    [apiBaseUrl, loading, profile.email, profile.name, sessionId, t.error]
+    [apiBaseUrl, loading, profile.email, profile.name, sessionId, sessionSecret, t.error]
   );
 
   const sendUserMessage = useCallback(

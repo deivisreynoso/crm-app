@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { notifyConversationHumanReview } from "@/lib/conversations/notify-human-review";
+import {
+  consumePendingPollSecret,
+  pollSecretFromQualification,
+  qualificationWithPollSecret,
+} from "@/lib/website/webchat-poll-auth";
 import type {
   ConversationChannel,
   ConversationQualification,
@@ -104,6 +109,18 @@ export async function syncConversationTurn(
       last_message_at: now,
       updated_at: now,
     };
+    if (input.channel === "webchat") {
+      const pendingPollHash = consumePendingPollSecret(
+        workspaceOwnerId,
+        input.session_id
+      );
+      if (pendingPollHash && !pollSecretFromQualification(qualification)) {
+        updatePayload.qualification = qualificationWithPollSecret(
+          qualification,
+          pendingPollHash
+        );
+      }
+    }
     if (input.contact_id) updatePayload.contact_id = input.contact_id;
     if (humanReviewRequested) updatePayload.handler = "human";
 
@@ -119,10 +136,20 @@ export async function syncConversationTurn(
     }
     conversationId = updated.id as string;
   } else {
+    const pendingPollHash =
+      input.channel === "webchat"
+        ? consumePendingPollSecret(workspaceOwnerId, input.session_id)
+        : null;
+
+    const insertQualification = pendingPollHash
+      ? qualificationWithPollSecret(qualification, pendingPollHash)
+      : qualification;
+
     const { data: created, error } = await supabase
       .from("conversations")
       .insert({
         ...row,
+        qualification: insertQualification,
         handler: humanReviewRequested ? "human" : "ai",
         human_review_requested: humanReviewRequested,
       })

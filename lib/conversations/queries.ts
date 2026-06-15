@@ -38,7 +38,7 @@ async function attachListEnrichment(
     ...new Set(rows.map((r) => r.handler_user_id).filter(Boolean)),
   ] as string[];
 
-  const [contactsRes, profilesRes, messagesRes] = await Promise.all([
+  const [contactsRes, profilesRes, lastMessagesRes] = await Promise.all([
     contactIds.length
       ? supabase
           .from("contacts")
@@ -51,11 +51,17 @@ async function attachListEnrichment(
           .select("id, display_name")
           .in("id", handlerIds)
       : Promise.resolve({ data: [] as Array<{ id: string; display_name: string | null }> }),
-    supabase
-      .from("conversation_messages")
-      .select("conversation_id, body, created_at")
-      .in("conversation_id", ids)
-      .order("created_at", { ascending: false }),
+    Promise.all(
+      ids.map((conversationId) =>
+        supabase
+          .from("conversation_messages")
+          .select("conversation_id, body, created_at")
+          .eq("conversation_id", conversationId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      )
+    ),
   ]);
 
   const contactMap = new Map(
@@ -66,8 +72,9 @@ async function attachListEnrichment(
   );
 
   const lastMessageMap = new Map<string, string>();
-  for (const msg of messagesRes.data ?? []) {
-    if (!lastMessageMap.has(msg.conversation_id as string)) {
+  for (const res of lastMessagesRes) {
+    const msg = res.data;
+    if (msg?.conversation_id) {
       lastMessageMap.set(
         msg.conversation_id as string,
         previewBody(String(msg.body), 100)

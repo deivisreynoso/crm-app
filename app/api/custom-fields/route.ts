@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth";
+import { requireAuth, requireWorkspaceManage } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { customFieldSchema } from "@/lib/validators";
 import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
@@ -44,6 +44,9 @@ export async function POST(req: NextRequest) {
   try {
     const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
+
+    const manageError = requireWorkspaceManage(role!, isWorkspaceOwner);
+    if (manageError) return manageError;
 
     const body = await req.json();
     const parsed = customFieldSchema.safeParse(body);

@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth";
+import { requireAuth, requireWorkspaceManage } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { scanContactDuplicates } from "@/lib/duplicates/scan-contacts";
 import { humanizeDbError } from "@/lib/validation-errors";
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
+    const { workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
+
+    const manageError = requireWorkspaceManage(role, isWorkspaceOwner);
+    if (manageError) return manageError;
 
     const status = new URL(req.url).searchParams.get("status") ?? "pending";
     const supabase = createServerSideClient();
@@ -84,8 +87,11 @@ async function enrichContacts(
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
+    const { workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
+
+    const manageError = requireWorkspaceManage(role, isWorkspaceOwner);
+    if (manageError) return manageError;
 
     const body = await req.json().catch(() => ({}));
     if (body.action !== "scan") {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSideClient } from "@/lib/supabase";
+import { checkRateLimit, clientIpFromRequest } from "@/lib/api/rate-limit";
 import { loadPublicQuoteByToken } from "@/lib/quotes/load-public-quote";
 import { logContactActivity } from "@/lib/activities/log-contact-activity";
 import { triggerN8NWebhook } from "@/lib/n8n";
@@ -58,6 +59,20 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
+    const ip = clientIpFromRequest(req);
+    const limit = checkRateLimit(`quote-respond:${ip}`, 20, 3_600_000);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        {
+          status: 429,
+          headers: limit.retryAfterSec
+            ? { "Retry-After": String(limit.retryAfterSec) }
+            : undefined,
+        }
+      );
+    }
+
     const { token } = await context.params;
     const body = await req.json().catch(() => ({}));
     const parsed = respondSchema.safeParse(body);
