@@ -21,7 +21,7 @@ interface OpportunityListViewProps {
   opportunities: OpportunityWithContact[];
   stages?: PipelineStage[];
   onEdit: (opp: OpportunityWithContact) => void;
-  onDelete: (opp: OpportunityWithContact) => void;
+  onDelete?: (opp: OpportunityWithContact) => void;
   deletingId?: string | null;
   readOnly?: boolean;
 }
@@ -124,10 +124,12 @@ export function OpportunityListView({
                 >
                   <Pencil className="h-4 w-4" strokeWidth={1.75} />
                 </button>
+                {onDelete && (
                 <ListDeleteAction
                   onClick={() => onDelete(opp)}
                   disabled={deletingId === opp.id}
                 />
+                )}
               </div>
             </DataTableCell>
             )}

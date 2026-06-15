@@ -474,7 +474,7 @@ export default function OpportunitiesPage() {
               opportunities={opportunities}
               onMoveStage={handleMoveStage}
               onEdit={openEdit}
-              onDelete={requestDelete}
+              onDelete={canManage ? requestDelete : undefined}
               readOnly={!canWrite}
               deletingId={
                 deleteOpportunity.isPending ? deletingOpportunity?.id ?? null : null
@@ -487,7 +487,7 @@ export default function OpportunitiesPage() {
               opportunities={opportunities}
               stages={selectedPipeline.stages}
               onEdit={openEdit}
-              onDelete={requestDelete}
+              onDelete={canManage ? requestDelete : undefined}
               readOnly={!canWrite}
               deletingId={
                 deleteOpportunity.isPending ? deletingOpportunity?.id ?? null : null

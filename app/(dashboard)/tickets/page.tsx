@@ -45,7 +45,7 @@ export default function ServiceTicketsPage() {
     ...(createdFrom ? { created_from: createdFrom } : {}),
     ...(createdTo ? { created_to: createdTo } : {}),
   });
-  const { canWrite } = useWorkspaceCapabilities();
+  const { canWrite, canManage } = useWorkspaceCapabilities();
   const createTicket = useCreateTicket();
   const deleteTicket = useDeleteTicket();
 
@@ -215,7 +215,7 @@ export default function ServiceTicketsPage() {
                   <DataTableCell align="right">
                     <ListActions
                       viewHref={`/tickets/${t.id}`}
-                      onDelete={canWrite ? async () => {
+                      onDelete={canManage ? async () => {
                         const ok = await confirm({
                           title: "Delete service ticket?",
                           description:

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAuth, requireWorkspaceManage } from "@/lib/api/auth";
+import { requireAuth, requireWorkspaceManage, requireWorkspaceWrite } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { canViewExpenseData } from "@/lib/finances/access";
 import { ensureFinanceCategories } from "@/lib/finances/categories";
@@ -118,15 +118,19 @@ export async function POST(req: NextRequest) {
     const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
-    const manageError = requireWorkspaceManage(role!, isWorkspaceOwner);
-    if (manageError) return manageError;
-
     const parsed = createSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid request", details: parsed.error.flatten() }, { status: 400 });
     }
 
     const body = parsed.data;
+    if (body.type === "income") {
+      const writeError = requireWorkspaceWrite(role!);
+      if (writeError) return writeError;
+    } else {
+      const expenseError = requireWorkspaceManage(role!, isWorkspaceOwner);
+      if (expenseError) return expenseError;
+    }
     if (body.type === "income" && !body.contact_id) {
       return NextResponse.json({ error: "contact_id is required for income." }, { status: 400 });
     }

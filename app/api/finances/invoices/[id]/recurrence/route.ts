@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAuth, requireWorkspaceManage } from "@/lib/api/auth";
+import { requireAuth, requireWorkspaceManage, requireWorkspaceWrite } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { recordAuditLog } from "@/lib/audit/record";
 
@@ -19,8 +19,8 @@ export async function POST(req: NextRequest, context: RouteContext) {
       await requireAuth();
     if (error) return error;
 
-    const manageError = requireWorkspaceManage(role!, isWorkspaceOwner);
-    if (manageError) return manageError;
+    const writeError = requireWorkspaceWrite(role!);
+    if (writeError) return writeError;
 
     const { id } = await context.params;
     const parsed = recurrenceSchema.safeParse(await req.json());

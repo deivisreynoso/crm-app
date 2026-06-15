@@ -4,6 +4,8 @@ Living documentation for what the CRM does today, what shipped recently, and wha
 
 Related docs:
 
+- [user-manual/USER-MANUAL-EN.md](./user-manual/USER-MANUAL-EN.md) — end-user guide (English, owner/admin)
+- [user-manual/USER-MANUAL-ES.md](./user-manual/USER-MANUAL-ES.md) — manual de usuario (Español)
 - [CLICKIN360-CRM-API.md](./CLICKIN360-CRM-API.md) — HTTP API reference
 - [AUTH-ROADMAP.md](./AUTH-ROADMAP.md) — login methods, Google SSO, dual-email owner mapping
 - [AUDIT-FIX-TRACKER.md](./AUDIT-FIX-TRACKER.md) — security/performance fix backlog

@@ -80,7 +80,7 @@ export function InvoicesTable() {
   const [presetQuoteId, setPresetQuoteId] = useState<string | undefined>();
   const [presetContactId, setPresetContactId] = useState<string | undefined>();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const { canManage } = useWorkspaceCapabilities();
+  const { canWrite, canManage } = useWorkspaceCapabilities();
   const { ctx } = useWorkspace();
   const isOwner = ctx?.isWorkspaceOwner ?? false;
   const { data: rows = [], isLoading, refetch } = useInvoices(filter || undefined);
@@ -243,7 +243,7 @@ export function InvoicesTable() {
               Delete ({selectedIds.size})
             </Button>
           )}
-          {canManage && (
+          {canWrite && (
             <button
               type="button"
               onClick={() => {
@@ -331,7 +331,7 @@ export function InvoicesTable() {
                           disabled={isBusy}
                           onClick={() => void downloadPdf(inv.id)}
                         />
-                        {canManage && inv.status === "draft" && (
+                        {canWrite && inv.status === "draft" && (
                           <IconAction
                             label="Send invoice"
                             icon={Mail}

@@ -24,7 +24,7 @@ type Props = {
 };
 
 export function InvoicePaymentsPanel({ invoice, onUpdated }: Props) {
-  const { canManage } = useWorkspaceCapabilities();
+  const { canWrite, canManage } = useWorkspaceCapabilities();
   const { data: links = [], refetch: refetchLinks } = usePaymentLinks({
     invoice_id: invoice.id,
   });
@@ -59,7 +59,7 @@ export function InvoicePaymentsPanel({ invoice, onUpdated }: Props) {
     invoiceStatus: invoice.status,
   });
   const canCollect =
-    canManage &&
+    canWrite &&
     !["voided", "paid"].includes(invoice.status) &&
     total > 0 &&
     amountPaid < total;

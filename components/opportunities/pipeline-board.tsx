@@ -25,7 +25,7 @@ interface PipelineBoardProps {
   opportunities: OpportunityWithContact[];
   onMoveStage: (opportunityId: string, stageId: string) => void | Promise<void>;
   onEdit: (opportunity: OpportunityWithContact) => void;
-  onDelete: (opportunity: OpportunityWithContact) => void;
+  onDelete?: (opportunity: OpportunityWithContact) => void;
   isMoving?: boolean;
   deletingId?: string | null;
   readOnly?: boolean;
@@ -244,7 +244,7 @@ export function PipelineBoard({
                     readOnly ? "" : "cursor-grab active:cursor-grabbing"
                   )}
                 >
-                  {!readOnly && (
+                  {!readOnly && onDelete && (
                   <button
                     type="button"
                     onClick={(e) => {

@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, requireWorkspaceManage } from "@/lib/api/auth";
+import { requireAuth, requireWorkspaceWrite } from "@/lib/api/auth";
 import { DRIVE_OAUTH_SCOPES } from "@/lib/google/drive";
 import {
   getGoogleDriveRedirectUri,
   getGoogleOAuthClientId,
 } from "@/lib/google/oauth-config";
 
-/** Starts Google Drive OAuth for the workspace (owner/admin only). */
+/** Starts Google Drive OAuth for the workspace (write roles). */
 export async function GET(req: NextRequest) {
-  const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } =
+  const { userId, workspaceOwnerId, role, error } =
     await requireAuth();
   if (error) return error;
 
-  const manageError = requireWorkspaceManage(role!, isWorkspaceOwner);
-  if (manageError) return manageError;
+  const writeError = requireWorkspaceWrite(role!);
+  if (writeError) return writeError;
 
   const clientId = getGoogleOAuthClientId();
   const redirectUri = getGoogleDriveRedirectUri(req.url);

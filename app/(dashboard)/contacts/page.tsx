@@ -79,7 +79,7 @@ function ContactsPageContent() {
     createdFrom: createdFrom || undefined,
     createdTo: createdTo || undefined,
   });
-  const { canWrite } = useWorkspaceCapabilities();
+  const { canWrite, canManage } = useWorkspaceCapabilities();
   const createContact = useCreateContact();
   const deleteContact = useDeleteContact();
 
@@ -339,7 +339,7 @@ function ContactsPageContent() {
                   <DataTableCell align="right">
                     <ListActions
                       viewHref={`/contacts/${contact.id}`}
-                      onDelete={canWrite ? async () => {
+                      onDelete={canManage ? async () => {
                         const ok = await confirm({
                           title: "Delete contact?",
                           description: `${contact.first_name} ${contact.last_name} will be permanently removed. This cannot be undone.`,

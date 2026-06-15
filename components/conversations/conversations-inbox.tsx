@@ -218,7 +218,7 @@ function ConversationListRow({
 export function ConversationsInbox() {
   const searchParams = useSearchParams();
   const highlightId = searchParams.get("highlight");
-  const { canWrite } = useWorkspaceCapabilities();
+  const { canWrite, canManage } = useWorkspaceCapabilities();
 
   const [tab, setTab] = useState<FilterTab>("all");
   const [search, setSearch] = useState("");
@@ -403,6 +403,7 @@ export function ConversationsInbox() {
                         Take over
                       </Button>
                     )}
+                    {canManage && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -413,6 +414,7 @@ export function ConversationsInbox() {
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
+                    )}
                   </>
                 )}
               </div>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAuth, requireWorkspaceManage, requireWorkspaceOwner } from "@/lib/api/auth";
+import { requireAuth, requireWorkspaceWrite, requireWorkspaceOwner } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { ownerDeleteInvoice } from "@/lib/finances/delete-invoice";
 import { recordAuditLog } from "@/lib/audit/record";
@@ -67,8 +67,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const { workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
-    const manageError = requireWorkspaceManage(role!, isWorkspaceOwner);
-    if (manageError) return manageError;
+    const writeError = requireWorkspaceWrite(role!);
+    if (writeError) return writeError;
 
     const { id } = await context.params;
     const parsed = patchSchema.safeParse(await req.json());

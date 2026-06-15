@@ -132,7 +132,7 @@ export function GoogleDriveBrowser() {
             them to contacts without leaving the CRM.
           </p>
         </div>
-        {canManage ? (
+        {canWrite ? (
           <>
             <Button
               type="button"

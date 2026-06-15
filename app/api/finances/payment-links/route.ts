@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAuth, requireWorkspaceManage } from "@/lib/api/auth";
+import { requireAuth, requireWorkspaceWrite } from "@/lib/api/auth";
 import { recordAuditLog } from "@/lib/audit/record";
 import { createServerSideClient } from "@/lib/supabase";
 import { createStripePaymentLink } from "@/lib/integrations/stripe/payment-link";
@@ -60,8 +60,8 @@ export async function POST(req: NextRequest) {
     const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
-    const manageError = requireWorkspaceManage(role!, isWorkspaceOwner);
-    if (manageError) return manageError;
+    const writeError = requireWorkspaceWrite(role!);
+    if (writeError) return writeError;
 
     if (!isStripeConfigured()) {
       return NextResponse.json({ error: "Stripe is not configured." }, { status: 503 });

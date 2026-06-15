@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { buildAppRedirectUrl } from "@/lib/auth/app-url";
 import { createServerSideClient } from "@/lib/supabase";
-import { canManageWorkspace, resolveWorkspaceContext } from "@/lib/team/workspace";
+import { canWriteWorkspace, resolveWorkspaceContext } from "@/lib/team/workspace";
 import {
   getGoogleDriveRedirectUri,
   getGoogleOAuthClientId,
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
   }
 
   const workspace = await resolveWorkspaceContext(actorUserId);
-  if (!canManageWorkspace(workspace.role, workspace.isWorkspaceOwner)) {
+  if (!canWriteWorkspace(workspace.role)) {
     return NextResponse.redirect(
       buildAppRedirectUrl("/media?google_drive=forbidden", req.url)
     );

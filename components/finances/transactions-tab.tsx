@@ -30,7 +30,7 @@ type Props = {
 };
 
 export function TransactionsTab({ filters, showAdd = true }: Props) {
-  const { canManage } = useWorkspaceCapabilities();
+  const { canWrite, canManage } = useWorkspaceCapabilities();
   const { data: rows = [], isLoading } = useFinanceTransactions(filters);
   const { data: invoices = [] } = useInvoices({ summary: true });
   const voidTx = useVoidFinanceTransaction();
@@ -61,14 +61,18 @@ export function TransactionsTab({ filters, showAdd = true }: Props) {
           <Download className="h-4 w-4 mr-1.5" />
           Export CSV
         </Button>
-        {showAdd && canManage && (
+        {showAdd && (canWrite || canManage) && (
           <>
-            <Button type="button" size="sm" variant="outline" onClick={() => { setIncomeType("expense"); setAddOpen(true); }}>
-              Add expense
-            </Button>
-            <Button type="button" size="sm" onClick={() => { setIncomeType("income"); setAddOpen(true); }}>
-              Log income
-            </Button>
+            {canManage && (
+              <Button type="button" size="sm" variant="outline" onClick={() => { setIncomeType("expense"); setAddOpen(true); }}>
+                Add expense
+              </Button>
+            )}
+            {canWrite && (
+              <Button type="button" size="sm" onClick={() => { setIncomeType("income"); setAddOpen(true); }}>
+                Log income
+              </Button>
+            )}
           </>
         )}
       </div>

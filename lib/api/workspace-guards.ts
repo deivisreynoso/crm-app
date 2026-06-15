@@ -63,24 +63,42 @@ const WORKSPACE_MANAGE_WRITE_PREFIXES = [
 /** GET routes that require manage role even though they are reads */
 const WORKSPACE_MANAGE_READ_PREFIXES = ["/api/audit-logs", "/api/settings/integrations", "/api/settings/automations"];
 
+/** DELETE allowed without manage role (personal prefs / disconnect own integrations). */
+const WRITE_ALLOWED_DELETE_PREFIXES = [
+  "/api/account",
+  "/api/notifications",
+  "/api/integrations/gmail/disconnect",
+  "/api/integrations/google-calendar/disconnect",
+];
+
 export function requiresWorkspaceManage(pathname: string, method: string) {
   const m = method.toUpperCase();
+  if (m === "DELETE") {
+    if (
+      WRITE_ALLOWED_DELETE_PREFIXES.some(
+        (p) => pathname === p || pathname.startsWith(`${p}/`)
+      )
+    ) {
+      return false;
+    }
+    if (pathname.startsWith("/api/")) {
+      return true;
+    }
+  }
   if (m === "GET" || m === "HEAD") {
     return WORKSPACE_MANAGE_READ_PREFIXES.some((p) => pathname.startsWith(p));
   }
   if (pathname.startsWith("/api/settings/member")) return false;
+  if (pathname.startsWith("/api/settings/review")) return false;
   if (pathname.startsWith("/api/settings/quote-logo")) return true;
   if (pathname === "/api/settings" && m === "PATCH") return true;
   if (pathname === "/api/settings/automations" && m === "PATCH") return true;
-  if (/^\/api\/opportunities\/[^/]+\/project-stage$/.test(pathname) && m === "PATCH") {
-    return true;
-  }
   if (pathname === "/api/team/members" && m === "POST") return true;
   if (/^\/api\/team\/members\/[^/]+$/.test(pathname) && m === "PATCH") return true;
   if (pathname === "/api/pipelines/seed" && m === "POST") return false;
   if (pathname === "/api/pipelines" && m === "POST") return true;
   if (/^\/api\/pipelines\/[^/]+$/.test(pathname) && m !== "GET") return true;
-  /** Catalog CRUD in Settings; quote line items use POST /api/quote-services (write role). */
+  /** Catalog price edit/delete in Settings; quote line items use POST /api/quote-services (write role). */
   if (/^\/api\/quote-services\/[^/]+$/.test(pathname) && m !== "GET") return true;
   if (
     WORKSPACE_MANAGE_WRITE_PREFIXES.some((prefix) => pathname.startsWith(prefix))

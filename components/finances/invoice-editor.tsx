@@ -50,7 +50,7 @@ type Props = {
 
 export function InvoiceEditor({ invoiceId }: Props) {
   const router = useRouter();
-  const { canManage } = useWorkspaceCapabilities();
+  const { canWrite, canManage } = useWorkspaceCapabilities();
   const { ctx } = useWorkspace();
   const isOwner = ctx?.isWorkspaceOwner ?? false;
   const { data: invoice, isLoading, error, refetch } = useInvoice(invoiceId);
@@ -93,7 +93,7 @@ export function InvoiceEditor({ invoiceId }: Props) {
     [lines, taxRate]
   );
 
-  const readOnly = !canManage || (invoice?.status !== "draft" && invoice?.status !== undefined);
+  const readOnly = !canWrite || (invoice?.status !== "draft" && invoice?.status !== undefined);
 
   const amountPaid = useMemo(
     () =>
@@ -261,7 +261,7 @@ export function InvoiceEditor({ invoiceId }: Props) {
               {toast.text}
             </span>
           )}
-          {canManage && invoice.status === "draft" && (
+          {canWrite && invoice.status === "draft" && (
             <Button variant="outline" size="sm" disabled={updateInvoice.isPending} onClick={() => void saveDraft()}>
               Save draft
             </Button>
@@ -270,7 +270,7 @@ export function InvoiceEditor({ invoiceId }: Props) {
             <FileDown className="h-4 w-4 mr-1.5" />
             Download PDF
           </Button>
-          {canManage && !["voided", "paid"].includes(invoice.status) && (
+          {canWrite && !["voided", "paid"].includes(invoice.status) && (
             <Button variant="outline" size="sm" onClick={() => setSendOpen(true)}>
               <Mail className="h-4 w-4 mr-1.5" />
               Send

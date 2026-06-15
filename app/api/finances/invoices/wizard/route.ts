@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAuth, requireWorkspaceManage } from "@/lib/api/auth";
+import { requireAuth, requireWorkspaceWrite } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { executeInvoiceWizard, type InvoiceWizardInput } from "@/lib/finances/invoice-wizard";
 import { INVOICE_TYPES } from "@/lib/finances/invoice-types";
@@ -47,8 +47,8 @@ export async function POST(req: NextRequest) {
     const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
-    const manageError = requireWorkspaceManage(role!, isWorkspaceOwner);
-    if (manageError) return manageError;
+    const writeError = requireWorkspaceWrite(role!);
+    if (writeError) return writeError;
 
     const parsed = wizardSchema.safeParse(await req.json());
     if (!parsed.success) {

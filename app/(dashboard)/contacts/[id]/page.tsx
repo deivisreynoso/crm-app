@@ -455,7 +455,7 @@ export default function ContactDetailPage({ params }: PageProps) {
           <ProjectStageStepper
             opportunity={projectContext.opportunity}
             pipelineStages={projectContext.pipelineStages}
-            canManage={canManage}
+            canManage={canWrite}
             onUpdated={() => {
               void queryClient.invalidateQueries({ queryKey: ["opportunities"] });
               void queryClient.invalidateQueries({ queryKey: ["contact", id] });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, requireWorkspaceManage } from "@/lib/api/auth";
+import { requireAuth, requireWorkspaceWrite } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { updateProjectStageSchema } from "@/lib/validators";
 import { updateOpportunityProjectStage } from "@/lib/project-stages/update-stage";
@@ -13,8 +13,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       await requireAuth();
     if (error) return error;
 
-    const manageError = requireWorkspaceManage(role!, isWorkspaceOwner);
-    if (manageError) return manageError;
+    const writeError = requireWorkspaceWrite(role!);
+    if (writeError) return writeError;
 
     const { id } = await context.params;
     const parsed = updateProjectStageSchema.safeParse(await req.json());
