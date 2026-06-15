@@ -7,7 +7,8 @@ import { buildProjectWebhookContact } from "@/lib/project-stages/webhook-contact
 import { resolveProjectStagesSettings } from "@/lib/project-stages/defaults";
 import { sendProjectFeedbackThankYou } from "@/lib/project-stages/feedback-email";
 import { fireWebhook } from "@/lib/webhooks/outbound";
-import type { CrmLocale } from "@/lib/crm/i18n";
+import { resolveContactCommunicationLocale } from "@/lib/contacts/communication-locale";
+import { CLICKIN360_BRAND } from "@/lib/brand";
 
 type RouteContext = { params: Promise<{ token: string }> };
 
@@ -19,7 +20,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     const { data: opportunity } = await supabase
       .from("opportunities")
       .select(
-        "id, title, feedback_received_at, user_id, contact_id, contact:contacts(id, first_name, last_name, email, preferred_language)"
+        "id, feedback_received_at, user_id, contact_id, contact:contacts(id, first_name, last_name, email, preferred_language)"
       )
       .eq("project_feedback_token", token.trim())
       .maybeSingle();
@@ -34,24 +35,14 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       preferred_language?: string | null;
     } | null;
 
-    const { data: settings } = await supabase
-      .from("user_settings")
-      .select("quote_company_name, ui_locale")
-      .eq("user_id", opportunity.user_id)
-      .maybeSingle();
-
-    const locale: CrmLocale =
-      contact?.preferred_language === "en" || settings?.ui_locale === "en"
-        ? "en"
-        : "es";
+    const locale = resolveContactCommunicationLocale(contact?.preferred_language);
 
     return NextResponse.json({
-      opportunity_title: opportunity.title,
       contact: {
         first_name: contact?.first_name ?? "",
         last_name: contact?.last_name ?? "",
       },
-      company_name: settings?.quote_company_name ?? "ClickIn 360",
+      company_name: CLICKIN360_BRAND,
       locale,
       already_submitted: Boolean(opportunity.feedback_received_at),
     });
@@ -181,15 +172,12 @@ export async function POST(req: NextRequest, context: RouteContext) {
       project_stages_settings: projectSettings,
     });
 
-    const locale: CrmLocale =
-      parsed.data.locale ??
-      (contact.preferred_language === "en" ? "en" : "es");
+    const locale = resolveContactCommunicationLocale(contact.preferred_language);
 
     try {
       await sendProjectFeedbackThankYou({
         locale,
         firstName: (contact.first_name as string) || "there",
-        companyName: userSettings?.quote_company_name ?? "ClickIn 360",
         to: contact.email as string,
       });
     } catch (emailErr) {

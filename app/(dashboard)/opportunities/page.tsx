@@ -12,7 +12,6 @@ import { OpportunityListView } from "@/components/opportunities/opportunity-list
 import { SavedFiltersBar } from "@/components/filters/saved-filters-bar";
 import { PipelineSettings } from "@/components/opportunities/pipeline-settings";
 import { OpportunityForm } from "@/components/opportunities/opportunity-form";
-import { ProjectStageStepper } from "@/components/opportunities/project-stage-stepper";
 import { NewPipelineForm } from "@/components/opportunities/new-pipeline-form";
 import {
   usePipelines,
@@ -400,18 +399,7 @@ export default function OpportunitiesPage() {
                 {saveError}
               </p>
             )}
-            {panel === "edit" && editingOpportunity ? (
-              <div className="mb-4">
-                <ProjectStageStepper
-                  opportunity={editingOpportunity}
-                  pipelineStages={selectedPipeline.stages}
-                  canManage={canManage}
-                  onUpdated={(opp) => {
-                    setEditingOpportunity(opp);
-                  }}
-                />
-              </div>
-            ) : null}
+
             <OpportunityForm
               key={opportunityModalKey}
               pipelineId={selectedPipeline.id}

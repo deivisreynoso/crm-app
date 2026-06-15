@@ -232,8 +232,12 @@
       "communicationChannels": "Communication channels",
       "frictionArea": "Friction area",
       "signals": "Signals",
-      "aiSummary": "AI summary"
+      "aiSummary": "AI summary",
+      "preferredLanguage": "Preferred language"
     },
+    "preferredLanguageEn": "English",
+    "preferredLanguageEs": "Spanish",
+    "preferredLanguageEmpty": "Not set",
     "statusLead": "Lead",
     "statusProspect": "Prospect",
     "statusActive": "Active",
@@ -296,7 +300,10 @@
     "addNotePlaceholder": "What happened?",
     "saveNote": "Save note",
     "addTaskTitle": "Add task",
-    "createTask": "Create task"
+    "createTask": "Create task",
+    "startOnboarding": "Start onboarding",
+    "startingOnboarding": "Starting…",
+    "edit": "Edit"
   },
   "tasks": {
     "titlePlaceholder": "Task title",

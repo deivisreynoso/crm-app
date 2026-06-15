@@ -32,5 +32,19 @@ export async function maybeInitProjectStageOnWon(
     return null;
   }
 
+  const contactId = opportunity.contact_id as string | undefined;
+  const workspaceOwnerId = opportunity.user_id as string;
+  if (contactId) {
+    const { error: contactError } = await supabase
+      .from("contacts")
+      .update({ status: "active", updated_at: now })
+      .eq("id", contactId)
+      .eq("user_id", workspaceOwnerId);
+
+    if (contactError) {
+      console.error("maybeInitProjectStageOnWon contact active:", contactError.message);
+    }
+  }
+
   return data as Record<string, unknown>;
 }

@@ -9,7 +9,7 @@ import {
   type ProjectStageLabels,
   type ProjectStagesSettings,
 } from "@/lib/project-stages/defaults";
-import { PROJECT_STAGES } from "@/lib/project-stages/constants";
+import { DELIVERY_PROJECT_STAGES } from "@/lib/project-stages/constants";
 
 function useAutomationsProjectSettings() {
   return axios
@@ -84,7 +84,7 @@ export function ProjectStagesSettingsPanel() {
       <div className="space-y-3">
         <p className="text-sm font-medium text-heading">Stage labels (EN / ES)</p>
         <div className="grid gap-3">
-          {PROJECT_STAGES.map((stage) => (
+          {DELIVERY_PROJECT_STAGES.map((stage) => (
             <div key={stage} className="grid sm:grid-cols-[120px_1fr_1fr] gap-2 items-center">
               <span className="text-xs font-mono text-body-muted">{stage}</span>
               <input
@@ -101,17 +101,6 @@ export function ProjectStagesSettingsPanel() {
           ))}
         </div>
       </div>
-
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={settings.maintenance_enabled}
-          onChange={(e) =>
-            setSettings((s) => ({ ...s, maintenance_enabled: e.target.checked }))
-          }
-        />
-        Enable maintenance stage in pipeline stepper
-      </label>
 
       <div className="grid sm:grid-cols-2 gap-4">
         <div>

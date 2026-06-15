@@ -13,7 +13,7 @@ export function QuoteServicesSettings() {
         {dict.settings?.quoteServicesSettingsHelp ??
           "Owners and admins can edit prices and remove products. Sales can manage the catalog from Tools → Product Catalog."}
       </p>
-      <Link href="/services" className="text-sm text-[var(--primary)] hover:underline">
+      <Link href="/quotes?tab=products" className="text-sm text-[var(--primary)] hover:underline">
         {dict.settings?.openCatalog ?? "Open Product Catalog"}
       </Link>
       <QuoteServicesCatalog canManageCatalog />

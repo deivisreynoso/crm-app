@@ -152,6 +152,14 @@ export function ContactForm({
           </select>
         </div>
         <div>
+          <FormLabel htmlFor="preferred_language">Preferred language</FormLabel>
+          <select id="preferred_language" {...register("preferred_language")} className="input-field">
+            <option value="">Not set</option>
+            <option value="en">English</option>
+            <option value="es">Spanish</option>
+          </select>
+        </div>
+        <div>
           <FormLabel htmlFor="source">Source</FormLabel>
           <input id="source" {...register("source")} className="input-field" />
         </div>

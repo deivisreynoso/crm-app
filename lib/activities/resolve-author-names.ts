@@ -2,9 +2,15 @@ import type { createServerSideClient } from "@/lib/supabase";
 import { displayNameFromAuthUser } from "@/lib/users/auth-user-display-name";
 import { formatAuthorDisplayName } from "@/lib/users/author-display-name";
 
+type ResolveAuthorNamesOptions = {
+  /** Skip slow auth.admin lookups on read-heavy paths (e.g. activity feed). */
+  skipAuthAdminLookup?: boolean;
+};
+
 export async function resolveAuthorNames(
   supabase: ReturnType<typeof createServerSideClient>,
-  userIds: string[]
+  userIds: string[],
+  options?: ResolveAuthorNamesOptions
 ): Promise<Map<string, string>> {
   const uniqueIds = [...new Set(userIds.filter(Boolean))];
   const map = new Map<string, string>();
@@ -47,7 +53,7 @@ export async function resolveAuthorNames(
   }
 
   const missing = uniqueIds.filter((id) => !map.has(id));
-  if (!missing.length) return map;
+  if (!missing.length || options?.skipAuthAdminLookup) return map;
 
   await Promise.all(
     missing.map(async (id) => {

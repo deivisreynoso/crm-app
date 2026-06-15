@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSideClient } from "@/lib/supabase";
+import { resolveContactCommunicationLocale } from "@/lib/contacts/communication-locale";
+import { CLICKIN360_BRAND } from "@/lib/brand";
+import { submitQuestionnaireSchema } from "@/lib/onboarding/questionnaire-schema";
 import { fireWebhook } from "@/lib/webhooks/outbound";
-import { z } from "zod";
 
 type RouteContext = { params: Promise<{ token: string }> };
-
-const submitSchema = z.object({
-  responses: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
-  locale: z.enum(["en", "es"]).optional(),
-});
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
@@ -17,7 +14,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     const { data: contact } = await supabase
       .from("contacts")
       .select(
-        "id, first_name, last_name, email, preferred_language, onboarding_started_at, onboarding_completed_at, user_id"
+        "id, first_name, last_name, email, phone, company, preferred_language, onboarding_started_at, onboarding_completed_at, user_id"
       )
       .eq("onboarding_token", token.trim())
       .maybeSingle();
@@ -37,10 +34,11 @@ export async function GET(_req: NextRequest, context: RouteContext) {
         first_name: contact.first_name,
         last_name: contact.last_name,
         email: contact.email,
+        phone: contact.phone,
+        company: contact.company,
       },
-      company_name: settings?.quote_company_name ?? "ClickIn 360",
-      locale:
-        contact.preferred_language === "en" || settings?.ui_locale === "en" ? "en" : "es",
+      company_name: CLICKIN360_BRAND,
+      locale: resolveContactCommunicationLocale(contact.preferred_language),
       onboarding_started_at: contact.onboarding_started_at,
       onboarding_completed_at: contact.onboarding_completed_at,
       tasks: settings?.onboarding_task_template ?? [],
@@ -54,7 +52,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
     const { token } = await context.params;
-    const parsed = submitSchema.safeParse(await req.json());
+    const parsed = submitQuestionnaireSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
@@ -62,7 +60,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const supabase = createServerSideClient();
     const { data: contact } = await supabase
       .from("contacts")
-      .select("id, user_id, first_name, last_name, email")
+      .select("id, user_id, first_name, last_name, email, preferred_language")
       .eq("onboarding_token", token.trim())
       .maybeSingle();
 
@@ -79,11 +77,13 @@ export async function POST(req: NextRequest, context: RouteContext) {
       })
       .eq("id", contact.id);
 
+    const locale = resolveContactCommunicationLocale(contact.preferred_language);
+
     void fireWebhook(supabase, contact.user_id as string, "questionnaire.submitted", {
       contact_id: contact.id,
       contact,
       responses: parsed.data.responses,
-      locale: parsed.data.locale ?? "es",
+      locale,
     });
 
     void fireWebhook(supabase, contact.user_id as string, "onboarding.complete", {

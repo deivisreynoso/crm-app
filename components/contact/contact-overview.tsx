@@ -188,6 +188,20 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
               onSave={async (v) => saveField({ status: v as Contact["status"] })}
             />
           </div>
+          <div className={fieldCell}>
+            <InlineSelectField
+              label={f.preferredLanguage}
+              value={contact.preferred_language ?? ""}
+              options={[
+                { value: "en", label: ct.preferredLanguageEn },
+                { value: "es", label: ct.preferredLanguageEs },
+              ]}
+              allowEmpty
+              emptyLabel={ct.preferredLanguageEmpty}
+              readOnly={readOnly}
+              onSave={save("preferred_language")}
+            />
+          </div>
           <div className={cn(fieldCell, "min-[420px]:col-span-2")}>
             <InlineEditableField
               label={f.source}

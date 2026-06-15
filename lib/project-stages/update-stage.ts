@@ -54,6 +54,14 @@ export async function updateOpportunityProjectStage(
     };
   }
 
+  if (stage === "maintenance") {
+    return {
+      ok: false,
+      status: 400,
+      error: "Maintenance is not part of the delivery workflow",
+    };
+  }
+
   let settings = input.settings;
   if (!settings) {
     const { data: userSettings } = await supabase
@@ -62,14 +70,6 @@ export async function updateOpportunityProjectStage(
       .eq("user_id", workspaceOwnerId)
       .maybeSingle();
     settings = resolveProjectStagesSettings(userSettings?.project_stages_settings);
-  }
-
-  if (stage === "maintenance" && !settings.maintenance_enabled) {
-    return {
-      ok: false,
-      status: 400,
-      error: "Maintenance stage is disabled in project settings",
-    };
   }
 
   if (!isProjectStage(stage)) {
