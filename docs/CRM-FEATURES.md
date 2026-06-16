@@ -31,6 +31,7 @@ git log -1 --format='%h %s (%cs)'
 
 | Date | Commit | Type | Summary |
 |------|--------|------|---------|
+| 2026-06-16 | *(pending)* | feature | **Sprint 6:** calendar multi-attendees + `customer_meeting` kind; onboarding form refresh (escalation channel, inline booking, workspace branding); `onboarding_responses` + `project_feedback` tables; close-won N8N API; partial-payment webhook; Spanish quote_send template; analytics TanStack Query caching; N8N UPDATE workflow exports (migrations **075–079**) |
 | 2026-06-15 | *(pending)* | fix + qa | **QA sprint (round 2):** conversations last-message query fix; lazy AcceptedQuoteSelect; opportunities limit; custom-fields manage guard; auth/lead/health rate limits; full CRM E2E suite (`crm-full.spec.ts`); remove deprecated `usePayments` |
 | 2026-06-10 | *(pending)* | fix + qa | **QA sprint:** public form rate limits; Day-14 feedback timeline content; ContactSelect async combobox; E2E smoke harness; `docs/n8n/README.md`, `QA-SPRINT-REPORT.md` |
 | 2026-06-10 | `e976846` | fix | **Performance:** contact detail lazy tab loading; parallel activity-feed queries; project feedback in timeline |

@@ -7,9 +7,8 @@ import { buildProjectWebhookContact } from "@/lib/project-stages/webhook-contact
 import { resolveProjectStagesSettings } from "@/lib/project-stages/defaults";
 import { sendProjectFeedbackThankYou } from "@/lib/project-stages/feedback-email";
 import { fireWebhook } from "@/lib/webhooks/outbound";
-import { formatProjectFeedbackActivityContent } from "@/lib/project-stages/format-feedback-activity";
 import { resolveContactCommunicationLocale } from "@/lib/contacts/communication-locale";
-import { CLICKIN360_BRAND } from "@/lib/brand";
+import { resolveWorkspaceBranding } from "@/lib/branding/workspace-branding";
 
 type RouteContext = { params: Promise<{ token: string }> };
 
@@ -37,13 +36,17 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     } | null;
 
     const locale = resolveContactCommunicationLocale(contact?.preferred_language);
+    const branding = await resolveWorkspaceBranding(
+      supabase,
+      opportunity.user_id as string
+    );
 
     return NextResponse.json({
       contact: {
         first_name: contact?.first_name ?? "",
         last_name: contact?.last_name ?? "",
       },
-      company_name: CLICKIN360_BRAND,
+      branding,
       locale,
       already_submitted: Boolean(opportunity.feedback_received_at),
     });
@@ -132,21 +135,36 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     const locale = resolveContactCommunicationLocale(contact.preferred_language);
-    const feedbackContent = formatProjectFeedbackActivityContent(
-      parsed.data.score,
-      feedbackNotes,
-      locale
-    );
+
+    const { data: feedbackRow, error: insertError } = await supabase
+      .from("project_feedback")
+      .insert([
+        {
+          contact_id: opportunity.contact_id,
+          opportunity_id: opportunity.id,
+          feedback_token: token.trim(),
+          score: parsed.data.score,
+          what_worked_well: parsed.data.what_worked?.trim() || null,
+          what_to_improve: parsed.data.what_to_improve?.trim() || null,
+          would_recommend: parsed.data.would_recommend,
+        },
+      ])
+      .select("id")
+      .single();
+
+    if (insertError) {
+      console.error("project_feedback insert:", insertError.message);
+    }
 
     await logContactActivity(supabase, {
       userId: opportunity.user_id as string,
       contactId: opportunity.contact_id as string,
       type: "project_feedback",
-      description: feedbackContent,
+      description: `Project feedback received — ${parsed.data.score}/5`,
       metadata: {
         opportunity_id: opportunity.id,
+        project_feedback_id: feedbackRow?.id,
         feedback_score: parsed.data.score,
-        feedback_notes: feedbackNotes,
       },
     });
 
@@ -177,6 +195,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
       contact: webhookContact,
       feedback_score: parsed.data.score,
       feedback_notes: feedbackNotes,
+      project_feedback_id: feedbackRow?.id,
       project_stages_settings: projectSettings,
     });
 

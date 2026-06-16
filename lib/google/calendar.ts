@@ -79,6 +79,11 @@ export async function getGoogleCalendarAccessToken(
   return tokens.access_token;
 }
 
+export type GoogleCalendarAttendee = {
+  email: string;
+  displayName?: string;
+};
+
 export type GoogleCalendarEventInput = {
   title: string;
   description?: string | null;
@@ -86,6 +91,7 @@ export type GoogleCalendarEventInput = {
   start_time: string;
   end_time: string;
   addGoogleMeet?: boolean;
+  attendees?: GoogleCalendarAttendee[];
 };
 
 export type GoogleCalendarEventResult = {
@@ -128,6 +134,13 @@ export async function createGoogleCalendarEvent(
         conferenceSolutionKey: { type: "hangoutsMeet" },
       },
     };
+  }
+
+  if (event.attendees?.length) {
+    body.attendees = event.attendees.map((a) => ({
+      email: a.email,
+      displayName: a.displayName,
+    }));
   }
 
   const url = new URL(
@@ -195,6 +208,14 @@ export async function updateGoogleCalendarEvent(
         location: event.location ?? undefined,
         start: { dateTime: new Date(event.start_time).toISOString() },
         end: { dateTime: new Date(event.end_time).toISOString() },
+        ...(event.attendees?.length
+          ? {
+              attendees: event.attendees.map((a) => ({
+                email: a.email,
+                displayName: a.displayName,
+              })),
+            }
+          : {}),
       }),
     }
   );

@@ -7,6 +7,38 @@ import {
   storeInvoicePdf,
   type InvoiceLineItem,
 } from "@/lib/finances/invoices";
+import {
+  getCustomerT,
+  interpolateCustomerCopy,
+} from "@/lib/i18n/customer-comms";
+
+type InvoiceEmailContact = {
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  preferred_language?: string | null;
+};
+
+async function resolveInvoiceEmailContact(
+  supabase: SupabaseClient,
+  contactId?: string | null
+): Promise<InvoiceEmailContact | null> {
+  if (!contactId) return null;
+  const { data } = await supabase
+    .from("contacts")
+    .select("first_name, last_name, email, preferred_language")
+    .eq("id", contactId)
+    .maybeSingle();
+  return (data as InvoiceEmailContact | null) ?? null;
+}
+
+function customerName(contact: InvoiceEmailContact | null): string {
+  const fullName = [contact?.first_name, contact?.last_name]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return fullName || "there";
+}
 
 function paymentRequestHtml(input: {
   invoiceNumber: string;
@@ -47,10 +79,19 @@ function partialPaymentHtml(input: {
   balanceDue: string;
   total: string;
   companyName?: string;
+  locale?: string | null;
+  customerName: string;
+  currency: string;
 }) {
+  const t = getCustomerT(input.locale).paymentReceipt;
+  const opening = interpolateCustomerCopy(t.bodyOpening, {
+    name: input.customerName,
+    amount: input.paymentAmount,
+    currency: input.currency,
+  });
   return `
     <div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;color:#111;">
-      <p style="margin:0 0 12px;">Thank you — we received your payment.</p>
+      <p style="margin:0 0 12px;">${opening}</p>
       <p style="margin:0 0 16px;">
         Payment of <strong>${input.paymentAmount}</strong> was applied to invoice
         <strong>${input.invoiceNumber}</strong>.
@@ -61,6 +102,8 @@ function partialPaymentHtml(input: {
       <p style="margin:0;font-size:14px;color:#555;">
         Remaining balance: <strong>${input.balanceDue}</strong>
       </p>
+      <p style="margin:16px 0 0;font-size:14px;">${interpolateCustomerCopy(t.invoiceRef, { invoice_number: input.invoiceNumber })}</p>
+      <p style="font-size:13px;color:#666;margin:16px 0 0;">${t.thankYou}</p>
       <p style="font-size:13px;color:#666;margin:24px 0 0;">
         This invoice stays open until the full balance is received.
         ${input.companyName ? ` — ${input.companyName}` : ""}
@@ -73,15 +116,23 @@ function receiptHtml(input: {
   invoiceNumber: string;
   total: string;
   companyName?: string;
+  locale?: string | null;
+  customerName: string;
+  currency: string;
 }) {
+  const t = getCustomerT(input.locale).paymentReceipt;
+  const opening = interpolateCustomerCopy(t.bodyOpening, {
+    name: input.customerName,
+    amount: input.total,
+    currency: input.currency,
+  });
   return `
     <div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;color:#111;">
-      <p style="margin:0 0 12px;">Thank you for your payment.</p>
-      <p style="margin:0 0 16px;">
-        Your payment for invoice <strong>${input.invoiceNumber}</strong>
-        (${input.total}) has been received${input.companyName ? ` by <strong>${input.companyName}</strong>` : ""}.
-      </p>
+      <p style="margin:0 0 12px;">${opening}</p>
+      <p style="margin:0 0 16px;">${interpolateCustomerCopy(t.invoiceRef, { invoice_number: input.invoiceNumber })}</p>
+      <p style="margin:0 0 16px;">${t.thankYou}</p>
       <p style="margin:0;font-size:13px;color:#666;">A PDF receipt is attached to this email.</p>
+      ${input.companyName ? `<p style="margin:16px 0 0;font-size:13px;color:#666;">${input.companyName}</p>` : ""}
     </div>
   `;
 }
@@ -167,17 +218,28 @@ export async function sendPartialPaymentEmail(
     style: "currency",
     currency: input.invoice.currency,
   });
+  const contact = await resolveInvoiceEmailContact(
+    supabase,
+    (input.invoice as { contact_id?: string | null }).contact_id
+  );
+  const t = getCustomerT(contact?.preferred_language).paymentReceipt;
+  const paymentAmount = formatter.format(input.paymentAmount);
 
   await sendEmail({
     to: input.toEmail,
-    subject: `Payment received — Invoice ${input.invoice.invoice_number}`,
+    subject: interpolateCustomerCopy(t.subject, {
+      invoice_number: input.invoice.invoice_number,
+    }),
     html: partialPaymentHtml({
       invoiceNumber: input.invoice.invoice_number,
-      paymentAmount: formatter.format(input.paymentAmount),
+      paymentAmount,
       amountPaid: formatter.format(input.amountPaid),
       balanceDue: formatter.format(input.balanceDue),
       total: formatter.format(Number(input.invoice.total)),
       companyName: settings?.quote_company_name as string | undefined,
+      locale: contact?.preferred_language,
+      customerName: customerName(contact),
+      currency: input.invoice.currency,
     }),
   });
 
@@ -226,16 +288,23 @@ export async function sendInvoiceReceiptEmail(
     style: "currency",
     currency: input.invoice.currency,
   });
+  const contact = await resolveInvoiceEmailContact(supabase, input.invoice.contact_id);
+  const t = getCustomerT(contact?.preferred_language).paymentReceipt;
 
   const html = receiptHtml({
     invoiceNumber: input.invoice.invoice_number,
     total: formatter.format(Number(input.invoice.total)),
     companyName: settings?.quote_company_name as string | undefined,
+    locale: contact?.preferred_language,
+    customerName: customerName(contact),
+    currency: input.invoice.currency,
   });
 
   await sendMailgunEmailWithAttachment({
     to: input.toEmail,
-    subject: `Receipt — Invoice ${input.invoice.invoice_number}`,
+    subject: interpolateCustomerCopy(t.subject, {
+      invoice_number: input.invoice.invoice_number,
+    }),
     html,
     attachment: {
       filename: pdf.fileName,

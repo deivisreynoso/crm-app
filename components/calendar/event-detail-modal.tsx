@@ -34,6 +34,10 @@ export function EventDetailModal({
   if (!event) return null;
 
   const appointment = isAppointmentEvent(event);
+  const extraUsers =
+    event.attendees?.filter((a) => a.attendee_type === "user") ?? [];
+  const extraContacts =
+    event.attendees?.filter((a) => a.attendee_type === "contact") ?? [];
 
   return (
     <>
@@ -50,14 +54,32 @@ export function EventDetailModal({
           </p>
           {event.owner_name && !appointment && (
             <p>
-              <span className="text-body-muted">Owner: </span>
+              <span className="text-body-muted">Organizer: </span>
               <span className="text-heading font-medium">{event.owner_name}</span>
+            </p>
+          )}
+          {extraUsers.length > 0 && (
+            <p>
+              <span className="text-body-muted">Additional team: </span>
+              <span className="text-heading">
+                {extraUsers.map((a) => a.display_name ?? "Member").join(", ")}
+              </span>
             </p>
           )}
           {contactName && (
             <p>
-              <span className="text-body-muted">Contact: </span>
+              <span className="text-body-muted">Primary contact: </span>
               <span className="text-heading font-medium">{contactName}</span>
+            </p>
+          )}
+          {extraContacts.length > 0 && (
+            <p>
+              <span className="text-body-muted">Additional contacts: </span>
+              <span className="text-heading">
+                {extraContacts
+                  .map((a) => a.display_name ?? a.email ?? "Contact")
+                  .join(", ")}
+              </span>
             </p>
           )}
           {event.location_type === "google_meet" && event.location && (

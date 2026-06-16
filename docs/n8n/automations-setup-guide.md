@@ -445,3 +445,27 @@ Webhook  →  Config: Edit These Values  →  (rest of flow)
 The Config node uses **Include Other Input Fields** so CRM event data (`event`, `payload`, etc.) passes through unchanged while adding your config strings.
 
 **Router only:** the Validate node reads `x-crm-webhook-secret` from **CRM Router Webhook** (headers are not on the Config node output).
+
+---
+
+## 12. Sprint 6 — N8N UPDATE workflow imports
+
+Canonical workflow exports live in `docs/n8n/Automations/` (do not edit in place). For each sprint that changes automation behavior, import-ready copies are written to `docs/n8n/` with **`UPDATE`** appended to the workflow name.
+
+| UPDATE file | Changes |
+|-------------|---------|
+| `ClickIn360 Onboarding A — Kickoff UPDATE.json` | `*2` path: `PATCH /api/opportunities/close-won` after token save; `POST /api/contacts/{id}/activities` after welcome email; `invoice.paid` accepts `payment_status: partially_paid` |
+| `ClickIn360 Appointment Reminders UPDATE.json` | Expands `additional_contacts` from webhook payload — one reminder sequence per attendee |
+| `ClickIn360 Onboarding B — Assets Reminders UPDATE.json` | `GET /api/contacts/{id}/calendar-events?kind=customer_meeting` — sends booking reminder only when no kickoff meeting exists |
+| `ClickIn360 Project Advocacy UPDATE.json` | `PATCH /api/project-feedback/{id}/google-review-sent` after Google review Mailgun |
+
+**Import steps:** n8n → Workflows → Import from file → pick the `UPDATE` JSON → open **Config: Edit These Values** → verify `crm_base_url` → ensure **CRM API** credential (`x-n8n-secret` header) is linked on new HTTP nodes → Save → Activate (replace or deactivate the prior version).
+
+**CRM internal APIs** (N8N auth via `N8N_CRM_WEBHOOK_SECRET` / **CRM API** credential):
+
+- `PATCH /api/opportunities/close-won` — body: `{ contact_id, document_id, invoice_total }`
+- `POST /api/contacts/{id}/activities` — body: `{ body, type? }`
+- `GET /api/contacts/{id}/calendar-events?kind=customer_meeting`
+- `PATCH /api/project-feedback/{id}/google-review-sent`
+
+Future database migrations: apply via Supabase MCP (`apply_migration`, project `zidewuotwczkudlmxcda`) — migrations **075–079** shipped with Sprint 6.

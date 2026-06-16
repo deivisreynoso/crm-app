@@ -1,0 +1,2008 @@
+{
+  "name": "ClickIn360 Onboarding A — Kickoff",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Self-hosted n8n Community Edition\n\n**No Settings → Variables** on the free plan. Edit the **Config: Edit These Values** Set node (yellow fields) in each workflow instead.\n\nOptional: you can also set OS/Docker env vars on the n8n container — not required if you use the Config node.\n\n**Triggers:** quote.accepted, invoice.paid, onboarding.manual_start\n\nEdit Config: `crm_base_url`, \nhttps://www.clickin360.com\n\n`booking_offers_url`.\n\nhttps://www.clickin360.com/api/leads/booking-offers?lang=es",
+        "height": 320,
+        "width": 520,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "72e73bee-4677-45c3-b0d0-a1a63e07a222",
+      "name": "INSTRUCTIONS: Onboarding A",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ad82f928-4a37-4c77-8384-0613a10f86e8",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        624,
+        80
+      ],
+      "id": "2497204d-5ca8-48ee-be46-5ebbd57644c4",
+      "name": "Onboarding A Webhook",
+      "webhookId": "ad82f928-4a37-4c77-8384-0613a10f86e8",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f5ae52ac-f6c3-464b-ba93-28644d0574e5",
+              "name": "crm_base_url",
+              "value": "https://www.clickin360.com",
+              "type": "string"
+            },
+            {
+              "id": "6f6deabf-ed72-44b5-bc10-3aaa9d9721db",
+              "name": "booking_offers_url",
+              "value": "https://www.clickin360.com/api/leads/booking-offers?lang=es",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        880,
+        80
+      ],
+      "id": "49f205e3-f59f-4149-9187-59955231e745",
+      "name": "Config: Edit These Values",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $input.first().json;\nconst cfg = { \n  crm_base_url: root.crm_base_url, \n  booking_offers_url: root.booking_offers_url \n};\n\n// Payload is nested under root.body when coming from webhook\nconst body = root.body || root;\nconst event = body.event;\nconst workspaceOwnerId = body.workspace_owner_id;\nconst emittedAt = body.emitted_at;\nconst payload = body.payload || {};\nconst document = payload.document || {};\nconst invoice = payload.invoice || {};\nconst contact = payload.contact || document.contact || invoice.contact || {};\n\nconst contactId = \n  payload.contact_id || \n  contact.id || \n  document.contact_id || \n  invoice.contact_id || \n  null;\n\nconst documentId = \n  payload.document_id || \n  document.id || \n  invoice.quote_id || \n  payload.invoice_id || \n  payload.quote_id || \n  null;\n\nconst idempotencyKey = documentId \n  ? `${contactId}:${documentId}` \n  : `${contactId}:no-quote`;\n\nconst crmBase = (cfg.crm_base_url || 'https://www.clickin360.com').replace(/\\/$/, '');\n\nconst onboardingToken = payload.onboarding_token || contact.onboarding_token || null;\nconst onboardingUrl = onboardingToken \n  ? `${crmBase}/onboarding/${onboardingToken}` \n  : null;\n\nconst locale = contact.preferred_language === 'en' ? 'en' : 'es';\nconst firstName = contact.first_name || 'there';\nconst contactEmail = contact.email || null;\n\nlet action = 'stop';\nlet reason = '';\n\nif (event === 'onboarding.manual_start') {\n  action = 'start';\n\n} else if (event === 'invoice.paid') {\n  if (invoice.invoice_type === 'quote' || invoice.quote_id) {\n    action = 'start';\n  } else {\n    reason = 'invoice is not quote-type';\n  }\n\n} else if (event === 'quote.accepted') {\n  action = 'record_quote';\n\n} else {\n  reason = `unhandled event: ${event}`;\n}\n\nreturn [{ \n  json: { \n    event, \n    action,\n    reason,\n    payload, \n    document, \n    invoice, \n    contact, \n    contactId, \n    documentId, \n    workspaceOwnerId, \n    idempotencyKey, \n    onboardingUrl, \n    locale, \n    contactEmail,\n    firstName,\n    emitted_at: emittedAt,\n    ...cfg \n  } \n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1152,
+        80
+      ],
+      "id": "5e7cd4ce-4fed-4988-9f94-8817a124f8d6",
+      "name": "Parse CRM Payload",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nlet action = 'stop';\nlet reason = '';\nif (d.event === 'onboarding.manual_start') { action = 'start'; reason = 'manual_override'; }\nelse if (d.event === 'quote.accepted') { action = 'record_quote'; reason = 'quote_accepted_pending_invoice'; }\nelse if (d.event === 'invoice.paid') {\n  const quoteId = d.invoice?.quote_id || d.documentId;\n  action = 'start';\n  reason = quoteId ? 'invoice_paid_with_quote' : 'invoice_paid_no_quote';\n}\nreturn [{ json: { ...d, action, reason } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        80
+      ],
+      "id": "b9b6a3f6-9128-478a-bc2b-0f5d8794a916",
+      "name": "Gate: Should Start Onboarding?",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "af9b806c-2322-4f1c-9ef3-ca4c806cd8fb",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "record_quote",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1664,
+        240
+      ],
+      "id": "1ad3ee95-31e9-4352-9acd-d7dd7e117ebd",
+      "name": "IF Record Quote Accepted?",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Gate: Should Start Onboarding?').first().json;\nreturn [{ json: { idempotency_key: d.idempotencyKey, contact_id: String(d.contactId), document_id: d.documentId ? String(d.documentId) : null, workspace_owner_id: String(d.workspaceOwnerId), status: 'quote_accepted', quote_accepted_at: new Date().toISOString() } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        240
+      ],
+      "id": "fb28767a-aa8e-47c6-a459-ba3874b69249",
+      "name": "Build Quote Accepted Record",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "tableId": "onboarding_runs",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "idempotency_key",
+              "fieldValue": "={{ $json.payload.contact_id + '_quote_' + $json.payload.quote_id }}"
+            },
+            {
+              "fieldId": "contact_id",
+              "fieldValue": "={{ $json.payload.contact_id }}"
+            },
+            {
+              "fieldId": "workspace_owner_id",
+              "fieldValue": "={{ $json.workspace_owner_id }}"
+            },
+            {
+              "fieldId": "document_id",
+              "fieldValue": "={{ $json.payload.quote_id }}"
+            },
+            {
+              "fieldId": "quote_accepted_at",
+              "fieldValue": "={{ $json.emitted_at }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "pending"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2192,
+        240
+      ],
+      "id": "334864a7-a4f9-4aef-adb2-19ef930222c5",
+      "name": "Supabase: Upsert Quote Accepted",
+      "credentials": {
+        "supabaseApi": {
+          "id": "RMU1A9mNhAl6E751",
+          "name": "Supabase account"
+        }
+      },
+      "disabled": true,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "50e41063-ff34-4968-adca-98ce44f12f03",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "start",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1664,
+        48
+      ],
+      "id": "7f0bc0d7-9e16-4286-ac59-28952278b922",
+      "name": "IF Start Kickoff?",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "onboarding_runs",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "idempotency_key",
+              "keyValue": "={{ $('Parse CRM Payload').item.json.idempotencyKey }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        48
+      ],
+      "id": "aa43aadd-a01f-4568-b174-12701f249f34",
+      "name": "Supabase: Check Idempotency",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "RMU1A9mNhAl6E751",
+          "name": "Supabase account"
+        }
+      },
+      "disabled": true,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b78a6775-a5f3-44fc-a40e-6a78d8c1da04",
+              "leftValue": "={{ Object.keys($json).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2192,
+        48
+      ],
+      "id": "aef6005d-0932-44be-9034-eb015b71654e",
+      "name": "IF New Run?",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Gate: Should Start Onboarding?').first().json;\nconst booking = d.booking_offers_url || (d.crm_base_url + '/api/leads/booking-offers?lang=es');\nconst isEn = d.locale === 'en';\nconst subject = isEn ? 'Welcome to ClickIn 360 — next steps' : 'Bienvenido a ClickIn 360 — siguientes pasos';\nconst text = isEn\n  ? `Hi ${d.firstName},\\n\\nWelcome to ClickIn 360! Your onboarding has started.\\n\\n1) Complete the questionnaire: ${d.onboardingUrl || '(link will be sent separately)'}\\n2) Book your kickoff call: ${booking}\\n\\nThank you!`\n  : `Hola ${d.firstName},\\n\\n¡Bienvenido a ClickIn 360! Tu incorporación ha comenzado.\\n\\n1) Completa el cuestionario: ${d.onboardingUrl || '(enlace por separado)'}\\n2) Agenda tu llamada de inicio: ${booking}\\n\\n¡Gracias!`;\nreturn [{ json: { ...d, subject, text, toEmail: d.contactEmail } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2448,
+        48
+      ],
+      "id": "ab7ce992-5ea1-4bb7-b7a5-6dc573e70e38",
+      "name": "Build Welcome Email",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "fromEmail": "no-reply@clickin360.com",
+        "toEmail": "={{ $json.toEmail }}",
+        "subject": "={{ $json.subject }}",
+        "text": "={{ $json.text }}"
+      },
+      "type": "n8n-nodes-base.mailgun",
+      "typeVersion": 1,
+      "position": [
+        2704,
+        48
+      ],
+      "id": "3cd41133-e984-44f8-a1b9-17e86de7df30",
+      "name": "Mailgun: Welcome + Kickoff",
+      "credentials": {
+        "mailgunApi": {
+          "id": "nyCSKNSycMl74trx",
+          "name": "Mailgun account"
+        }
+      },
+      "disabled": true,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "onboarding_runs",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "contact_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.payload.contact_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "started"
+            },
+            {
+              "fieldId": "started_at",
+              "fieldValue": "={{ $json.emitted_at }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2960,
+        48
+      ],
+      "id": "dbfbfbe5-b7b7-43e7-b37c-141783c643f7",
+      "name": "Supabase: Mark Started",
+      "credentials": {
+        "supabaseApi": {
+          "id": "RMU1A9mNhAl6E751",
+          "name": "Supabase account"
+        }
+      },
+      "disabled": true,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "contacts",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $('Gate: Should Start Onboarding?1').first().json.contactId }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2144,
+        736
+      ],
+      "id": "a1fc6d47-5c48-4c77-99bc-2605b72497f7",
+      "name": "Supabase: Get Contact Token",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "RMU1A9mNhAl6E751",
+          "name": "Supabase account"
+        }
+      },
+      "disabled": true,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d4e5f6a7-b8c9-4012-d345-6789abcdef01",
+              "leftValue": "={{ $json.needTokenSave }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2656,
+        736
+      ],
+      "id": "21d51e08-4ed8-4d6d-8797-0efce2fadc03",
+      "name": "IF Save Token?",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "contacts",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.contactId }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "onboarding_token",
+              "fieldValue": "={{ $json.onboarding_token }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2912,
+        640
+      ],
+      "id": "517a16bf-4eb2-4ad1-9f69-6afb82bad697",
+      "name": "Supabase: Set Onboarding Token",
+      "credentials": {
+        "supabaseApi": {
+          "id": "RMU1A9mNhAl6E751",
+          "name": "Supabase account"
+        }
+      },
+      "disabled": true,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "content": "## Self-hosted n8n Community Edition\n\n**No Settings → Variables** on the free plan. Edit the **Config: Edit These Values** Set node (yellow fields) in each workflow instead.\n\nOptional: you can also set OS/Docker env vars on the n8n container — not required if you use the Config node.\n\n**Triggers:** quote.accepted, invoice.paid, onboarding.manual_start\n\nEdit Config: `crm_base_url` (e.g. https://www.clickin360.com).\n\nKickoff email uses public `/es/book-call` or `/en/book-call` — not `/api/leads/booking-offers` (staff API only).",
+        "height": 320,
+        "width": 520,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -304,
+        688
+      ],
+      "id": "96914709-261e-42f8-8c45-8a6e8c5364cb",
+      "name": "INSTRUCTIONS: Onboarding A1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ad82f928-4a37-4c77-8384-0613a10f86e8",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        320,
+        768
+      ],
+      "id": "578dad8a-4327-42b9-b20f-93b3d1bee217",
+      "name": "Onboarding A Webhook1",
+      "webhookId": "ad82f928-4a37-4c77-8384-0613a10f86e8",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f5ae52ac-f6c3-464b-ba93-28644d0574e5",
+              "name": "crm_base_url",
+              "value": "https://www.clickin360.com",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        576,
+        768
+      ],
+      "id": "04ed6ef8-f265-4bac-914d-3832688ad557",
+      "name": "Config: Edit These Values1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $input.first().json;\nconst cfg = { \n  crm_base_url: root.crm_base_url \n};\n\n// Payload is nested under root.body when coming from webhook\nconst body = root.body || root;\nconst event = body.event;\nconst workspaceOwnerId = body.workspace_owner_id;\nconst emittedAt = body.emitted_at;\nconst payload = body.payload || {};\nconst document = payload.document || {};\nconst invoice = payload.invoice || {};\nconst contact = payload.contact || document.contact || invoice.contact || {};\n\nconst contactId = \n  payload.contact_id || \n  contact.id || \n  document.contact_id || \n  invoice.contact_id || \n  null;\n\nconst documentId = \n  payload.document_id || \n  document.id || \n  invoice.quote_id || \n  payload.invoice_id || \n  payload.quote_id || \n  null;\n\nconst idempotencyKey = documentId \n  ? `${contactId}:${documentId}` \n  : `${contactId}:no-quote`;\n\nconst crmBase = (cfg.crm_base_url || 'https://www.clickin360.com').replace(/\\/$/, '');\n\nconst onboardingToken = payload.onboarding_token || contact.onboarding_token || null;\nconst onboardingUrl = onboardingToken \n  ? `${crmBase}/onboarding/${onboardingToken}` \n  : null;\n\nconst locale = contact.preferred_language === 'en' ? 'en' : 'es';\nconst firstName = contact.first_name || 'there';\nconst contactEmail = contact.email || null;\n\nlet action = 'stop';\nlet reason = '';\n\nif (event === 'onboarding.manual_start') {\n  action = 'start';\n\n} else if (event === 'invoice.paid') {\n  if (invoice.invoice_type === 'quote' || invoice.quote_id) {\n    action = 'start';\n  } else {\n    reason = 'invoice is not quote-type';\n  }\n\n} else if (event === 'quote.accepted') {\n  action = 'record_quote';\n\n} else {\n  reason = `unhandled event: ${event}`;\n}\n\nreturn [{ \n  json: { \n    event, \n    action,\n    reason,\n    payload, \n    document, \n    invoice, \n    contact, \n    contactId, \n    documentId, \n    workspaceOwnerId, \n    idempotencyKey, \n    onboardingUrl, \n    locale, \n    contactEmail,\n    firstName,\n    emitted_at: emittedAt,\n    ...cfg \n  } \n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        848,
+        768
+      ],
+      "id": "7ccab5c3-4126-416f-b593-632a464fb002",
+      "name": "Parse CRM Payload1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nlet action = 'stop';\nlet reason = '';\nif (d.event === 'onboarding.manual_start') { action = 'start'; reason = 'manual_override'; }\nelse if (d.event === 'quote.accepted') { action = 'record_quote'; reason = 'quote_accepted_pending_invoice'; }\nelse if (d.event === 'invoice.paid') {\n  const quoteId = d.invoice?.quote_id || d.documentId;\n  action = 'start';\n  reason = quoteId ? 'invoice_paid_with_quote' : 'invoice_paid_no_quote';\n}\nreturn [{ json: { ...d, action, reason } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        768
+      ],
+      "id": "6179c67d-52d2-40dd-a7c9-b6d725182e56",
+      "name": "Gate: Should Start Onboarding?1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "af9b806c-2322-4f1c-9ef3-ca4c806cd8fb",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "record_quote",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1360,
+        928
+      ],
+      "id": "05f3eb01-a7e5-4b82-b4ce-24e1ab5e9438",
+      "name": "IF Record Quote Accepted?1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Gate: Should Start Onboarding?1').first().json;\nreturn [{ json: { idempotency_key: d.idempotencyKey, contact_id: String(d.contactId), document_id: d.documentId ? String(d.documentId) : null, workspace_owner_id: String(d.workspaceOwnerId), status: 'quote_accepted', quote_accepted_at: new Date().toISOString() } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1616,
+        928
+      ],
+      "id": "3031232d-c692-4e8f-a753-59c46eab0a0f",
+      "name": "Build Quote Accepted Record1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "tableId": "onboarding_runs",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "idempotency_key",
+              "fieldValue": "={{ $json.payload.contact_id + '_quote_' + $json.payload.quote_id }}"
+            },
+            {
+              "fieldId": "contact_id",
+              "fieldValue": "={{ $json.payload.contact_id }}"
+            },
+            {
+              "fieldId": "workspace_owner_id",
+              "fieldValue": "={{ $json.workspace_owner_id }}"
+            },
+            {
+              "fieldId": "document_id",
+              "fieldValue": "={{ $json.payload.quote_id }}"
+            },
+            {
+              "fieldId": "quote_accepted_at",
+              "fieldValue": "={{ $json.emitted_at }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "pending"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1888,
+        928
+      ],
+      "id": "e8fa02ef-cfec-4210-85e2-395427988036",
+      "name": "Supabase: Upsert Quote Accepted1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "RMU1A9mNhAl6E751",
+          "name": "Supabase account"
+        }
+      },
+      "disabled": true,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "50e41063-ff34-4968-adca-98ce44f12f03",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "start",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1360,
+        736
+      ],
+      "id": "0595ec0e-d573-4ecc-bd16-6e3b979dfde3",
+      "name": "IF Start Kickoff?1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "onboarding_runs",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "idempotency_key",
+              "keyValue": "={{ $('Parse CRM Payload1').item.json.idempotencyKey }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1616,
+        736
+      ],
+      "id": "841bb2ff-6939-4dcd-8184-392c04eaecb6",
+      "name": "Supabase: Check Idempotency1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "RMU1A9mNhAl6E751",
+          "name": "Supabase account"
+        }
+      },
+      "disabled": true,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b78a6775-a5f3-44fc-a40e-6a78d8c1da04",
+              "leftValue": "={{ Object.keys($json).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1888,
+        736
+      ],
+      "id": "91c0b50a-b9c7-49d5-a816-96b0767af765",
+      "name": "IF New Run?1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Gate: Should Start Onboarding?1').first().json;\nconst contactRow = $input.first().json || {};\nconst crmBase = (d.crm_base_url || 'https://www.clickin360.com').replace(/\\/$/, '');\n\nlet token = null;\nif (d.onboardingUrl) {\n  const parts = d.onboardingUrl.split('/onboarding/');\n  token = parts[1] || null;\n}\nif (!token) token = contactRow.onboarding_token || null;\n\nconst needTokenSave = !token;\nif (!token) {\n  const { randomUUID } = require('crypto');\n  token = randomUUID().replace(/-/g, '');\n}\n\nconst onboardingUrl = `${crmBase}/onboarding/${token}`;\nconst bookingUrl = d.locale === 'en'\n  ? `${crmBase}/en/book-call`\n  : `${crmBase}/es/book-call`;\n\nconst isEn = d.locale === 'en';\nconst subject = isEn ? 'Welcome to ClickIn 360 — next steps' : 'Bienvenido a ClickIn 360 — siguientes pasos';\nconst text = isEn\n  ? `Hi ${d.firstName},\\n\\nWelcome to ClickIn 360! Your onboarding has started.\\n\\n1) Complete the questionnaire: ${onboardingUrl}\\n2) Book your kickoff call: ${bookingUrl}\\n\\nThank you!`\n  : `Hola ${d.firstName},\\n\\n¡Bienvenido a ClickIn 360! Tu incorporación ha comenzado.\\n\\n1) Completa el cuestionario: ${onboardingUrl}\\n2) Agenda tu llamada de inicio: ${bookingUrl}\\n\\n¡Gracias!`;\n\nreturn [{ json: { ...d, subject, text, toEmail: d.contactEmail, onboardingUrl, bookingUrl, needTokenSave, onboarding_token: token } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2400,
+        736
+      ],
+      "id": "c1109bfd-017c-48c6-9ad2-e2fdb214717f",
+      "name": "Build Welcome Email1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "fromEmail": "no-reply@clickin360.com",
+        "toEmail": "={{ $('Build Welcome Email1').first().json.toEmail }}",
+        "subject": "={{ $('Build Welcome Email1').first().json.subject }}",
+        "text": "={{ $('Build Welcome Email1').first().json.text }}"
+      },
+      "type": "n8n-nodes-base.mailgun",
+      "typeVersion": 1,
+      "position": [
+        3168,
+        736
+      ],
+      "id": "d98d7594-eead-4c6d-9457-760a6514ef0f",
+      "name": "Mailgun: Welcome + Kickoff1",
+      "credentials": {
+        "mailgunApi": {
+          "id": "nyCSKNSycMl74trx",
+          "name": "Mailgun account"
+        }
+      },
+      "disabled": true,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "onboarding_runs",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "contact_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Build Welcome Email1').first().json.contactId }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "started"
+            },
+            {
+              "fieldId": "started_at",
+              "fieldValue": "={{ $('Build Welcome Email1').first().json.emitted_at }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3424,
+        736
+      ],
+      "id": "d113d423-21dd-491b-879c-819f395676f9",
+      "name": "Supabase: Mark Started1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "RMU1A9mNhAl6E751",
+          "name": "Supabase account"
+        }
+      },
+      "disabled": true,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $json.crm_base_url }}/api/integrations/contacts/{{ $json.contactId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ onboarding_token: $json.onboarding_token }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        752,
+        1328
+      ],
+      "id": "84ab70f0-771a-4121-944c-08e3aa08c0ac",
+      "name": "CRM: Save Onboarding Token",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "avN9SN9QlpkztmyC",
+          "name": "CRM API"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "content": "## Self-hosted n8n Community Edition\n\n**No Settings → Variables** on the free plan. Edit the **Config: Edit These Values** Set node (yellow fields) in each workflow instead.\n\nOptional: you can also set OS/Docker env vars on the n8n container — not required if you use the Config node.\n\n**Triggers:** quote.accepted, invoice.paid, onboarding.manual_start\n\nEdit Config: `crm_base_url` (e.g. https://www.clickin360.com).\n\nKickoff email uses public `/es/book-call` or `/en/book-call` — not `/api/leads/booking-offers` (staff API only).",
+        "height": 320,
+        "width": 520,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2464,
+        1376
+      ],
+      "id": "e14b8543-dcb7-4a6e-87a8-935b3bb47ab6",
+      "name": "INSTRUCTIONS: Onboarding A2"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ad82f928-4a37-4c77-8384-0613a10f86e8",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1840,
+        1456
+      ],
+      "id": "8155b652-1616-49d0-abea-68b1092dd784",
+      "name": "Onboarding A Webhook2",
+      "webhookId": "ad82f928-4a37-4c77-8384-0613a10f86e8"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f5ae52ac-f6c3-464b-ba93-28644d0574e5",
+              "name": "crm_base_url",
+              "value": "https://www.clickin360.com",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1584,
+        1456
+      ],
+      "id": "90951e50-3cef-4171-8cec-c24642f048a6",
+      "name": "Config: Edit These Values2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $input.first().json;\nconst cfg = { \n  crm_base_url: root.crm_base_url \n};\n\n// Payload is nested under root.body when coming from webhook\nconst body = root.body || root;\nconst event = body.event;\nconst workspaceOwnerId = body.workspace_owner_id;\nconst emittedAt = body.emitted_at;\nconst payload = body.payload || {};\nconst document = payload.document || {};\nconst invoice = payload.invoice || {};\nconst contact = payload.contact || document.contact || invoice.contact || {};\n\nconst contactId = \n  payload.contact_id || \n  contact.id || \n  document.contact_id || \n  invoice.contact_id || \n  null;\n\nconst documentId = \n  payload.document_id || \n  document.id || \n  invoice.quote_id || \n  payload.invoice_id || \n  payload.quote_id || \n  null;\n\nconst idempotencyKey = documentId \n  ? `${contactId}:${documentId}` \n  : `${contactId}:no-quote`;\n\nconst crmBase = (cfg.crm_base_url || 'https://www.clickin360.com').replace(/\\/$/, '');\n\nconst onboardingToken = payload.onboarding_token || contact.onboarding_token || null;\nconst onboardingUrl = onboardingToken \n  ? `${crmBase}/onboarding/${onboardingToken}` \n  : null;\n\nconst locale = contact.preferred_language === 'en' ? 'en' : 'es';\nconst firstName = contact.first_name || 'there';\nconst contactEmail = contact.email || null;\n\nlet action = 'stop';\nlet reason = '';\n\nif (event === 'onboarding.manual_start') {\n  action = 'start';\n\n} else if (event === 'invoice.paid') {\n  if (invoice.invoice_type === 'quote' || invoice.quote_id) {\n    action = 'start';\n  } else {\n    reason = 'invoice is not quote-type';\n  }\n\n} else if (event === 'quote.accepted') {\n  action = 'record_quote';\n\n} else {\n  reason = `unhandled event: ${event}`;\n}\n\nreturn [{ \n  json: { \n    event, \n    action,\n    reason,\n    payload, \n    document, \n    invoice, \n    contact, \n    contactId, \n    documentId, \n    workspaceOwnerId, \n    idempotencyKey, \n    onboardingUrl, \n    locale, \n    contactEmail,\n    firstName,\n    emitted_at: emittedAt,\n    ...cfg \n  } \n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1312,
+        1456
+      ],
+      "id": "d04798ce-01a5-4de5-bdf4-9578ecfe9500",
+      "name": "Parse CRM Payload2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nlet action = 'stop';\nlet reason = '';\nif (d.event === 'onboarding.manual_start') { action = 'start'; reason = 'manual_override'; }\nelse if (d.event === 'quote.accepted') { action = 'record_quote'; reason = 'quote_accepted_pending_invoice'; }\nelse if (d.event === 'invoice.paid') {\n  const quoteId = d.invoice?.quote_id || d.documentId;\n  action = 'start';\n  reason = quoteId ? 'invoice_paid_with_quote' : 'invoice_paid_no_quote';\n}\nreturn [{ json: { ...d, action, reason } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1056,
+        1456
+      ],
+      "id": "0ef95513-3a85-4c5f-b90c-f0af111e0868",
+      "name": "Gate: Should Start Onboarding?2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "af9b806c-2322-4f1c-9ef3-ca4c806cd8fb",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "record_quote",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -800,
+        1616
+      ],
+      "id": "211a28a8-a7f6-4da7-bfa5-1712d9f16ea3",
+      "name": "IF Record Quote Accepted?2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Gate: Should Start Onboarding?2').first().json;\nreturn [{ json: { idempotency_key: d.idempotencyKey, contact_id: String(d.contactId), document_id: d.documentId ? String(d.documentId) : null, workspace_owner_id: String(d.workspaceOwnerId), status: 'quote_accepted', quote_accepted_at: new Date().toISOString() } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -544,
+        1616
+      ],
+      "id": "1c4fb271-1ce5-4688-8a54-47a0866b91f5",
+      "name": "Build Quote Accepted Record2"
+    },
+    {
+      "parameters": {
+        "tableId": "onboarding_runs",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "idempotency_key",
+              "fieldValue": "={{ $json.payload.contact_id + '_quote_' + $json.payload.quote_id }}"
+            },
+            {
+              "fieldId": "contact_id",
+              "fieldValue": "={{ $json.payload.contact_id }}"
+            },
+            {
+              "fieldId": "workspace_owner_id",
+              "fieldValue": "={{ $json.workspace_owner_id }}"
+            },
+            {
+              "fieldId": "document_id",
+              "fieldValue": "={{ $json.payload.quote_id }}"
+            },
+            {
+              "fieldId": "quote_accepted_at",
+              "fieldValue": "={{ $json.emitted_at }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "pending"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        1616
+      ],
+      "id": "dd6536ca-4875-4158-9896-7b2bf72cb2eb",
+      "name": "Supabase: Upsert Quote Accepted2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "RMU1A9mNhAl6E751",
+          "name": "Supabase account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "50e41063-ff34-4968-adca-98ce44f12f03",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "start",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -800,
+        1424
+      ],
+      "id": "623da718-c1c3-4d67-a6e7-d5d1149a88ff",
+      "name": "IF Start Kickoff?2"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "onboarding_runs",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "idempotency_key",
+              "keyValue": "={{ $('Parse CRM Payload2').item.json.idempotencyKey }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -544,
+        1424
+      ],
+      "id": "9034774b-fa8e-49f4-941c-e786d35d7733",
+      "name": "Supabase: Check Idempotency2",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "RMU1A9mNhAl6E751",
+          "name": "Supabase account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b78a6775-a5f3-44fc-a40e-6a78d8c1da04",
+              "leftValue": "={{ Object.keys($json).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -272,
+        1424
+      ],
+      "id": "3aa7df6e-5c0f-4355-8543-b96b27acac8c",
+      "name": "IF New Run?2"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "contacts",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $('Gate: Should Start Onboarding?2').first().json.contactId }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        1424
+      ],
+      "id": "bfdbbaa6-c73d-4aae-9ecc-2fd759fd3a74",
+      "name": "Supabase: Get Contact Token1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "RMU1A9mNhAl6E751",
+          "name": "Supabase account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Gate: Should Start Onboarding?2').first().json;\nconst contactRow = $input.first().json || {};\nconst crmBase = (d.crm_base_url || 'https://www.clickin360.com').replace(/\\/$/, '');\n\nlet existingToken = null;\nif (d.onboardingUrl) {\n  const parts = d.onboardingUrl.split('/onboarding/');\n  existingToken = parts[1] || null;\n}\nif (!existingToken) existingToken = contactRow.onboarding_token || null;\n\nlet token = existingToken;\nlet needTokenSave = false;\nif (!token) {\n  const { randomUUID } = require('crypto');\n  token = randomUUID().replace(/-/g, '');\n  needTokenSave = true;\n}\n\nconst locale = contactRow.preferred_language === 'en' || d.locale === 'en' ? 'en' : 'es';\nconst onboardingUrl = `${crmBase}/onboarding/${token}`;\nconst bookingUrl = locale === 'en'\n  ? `${crmBase}/en/book-call`\n  : `${crmBase}/es/book-call`;\n\nconst isEn = locale === 'en';\nconst subject = isEn ? 'Welcome to ClickIn 360 — next steps' : 'Bienvenido a ClickIn 360 — siguientes pasos';\nconst text = isEn\n  ? `Hi ${d.firstName},\\n\\nWelcome to ClickIn 360! Your onboarding has started.\\n\\n1) Complete the questionnaire: ${onboardingUrl}\\n2) Book your kickoff call: ${bookingUrl}\\n\\nThank you!`\n  : `Hola ${d.firstName},\\n\\n¡Bienvenido a ClickIn 360! Tu incorporación ha comenzado.\\n\\n1) Completa el cuestionario: ${onboardingUrl}\\n2) Agenda tu llamada de inicio: ${bookingUrl}\\n\\n¡Gracias!`;\n\nreturn [{ json: { ...d, locale, subject, text, toEmail: d.contactEmail, onboardingUrl, bookingUrl, needTokenSave, onboarding_token: token } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        1424
+      ],
+      "id": "1fe681ca-63ad-4175-97a7-8661b23c6736",
+      "name": "Build Welcome Email2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d4e5f6a7-b8c9-4012-d345-6789abcdef01",
+              "leftValue": "={{ $json.needTokenSave }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        496,
+        1424
+      ],
+      "id": "f37bdd88-f9c0-455f-92d8-4ca2f668267d",
+      "name": "IF Save Token?1"
+    },
+    {
+      "parameters": {
+        "fromEmail": "no-reply@clickin360.com",
+        "toEmail": "={{ $('Build Welcome Email2').first().json.toEmail }}",
+        "subject": "={{ $('Build Welcome Email2').first().json.subject }}",
+        "text": "={{ $('Build Welcome Email2').first().json.text }}"
+      },
+      "type": "n8n-nodes-base.mailgun",
+      "typeVersion": 1,
+      "position": [
+        1008,
+        1424
+      ],
+      "id": "ada03258-48b2-41df-aad0-33592399053d",
+      "name": "Mailgun: Welcome + Kickoff2",
+      "credentials": {
+        "mailgunApi": {
+          "id": "nyCSKNSycMl74trx",
+          "name": "Mailgun account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "onboarding_runs",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "contact_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Build Welcome Email2').first().json.contactId }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "started"
+            },
+            {
+              "fieldId": "started_at",
+              "fieldValue": "={{ $('Build Welcome Email2').first().json.emitted_at }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        1424
+      ],
+      "id": "8c66e5ed-ebfa-4796-90d2-4595b2952e52",
+      "name": "Supabase: Mark Started2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "RMU1A9mNhAl6E751",
+          "name": "Supabase account"
+        }
+      },
+      "continueOnFail": true
+    }
+  ],
+  "pinData": {
+    "Onboarding A Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.clickin360.com",
+            "user-agent": "n8n",
+            "content-length": "1473",
+            "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "content-type": "application/json",
+            "via": "1.1 Caddy",
+            "x-forwarded-for": "172.18.0.3",
+            "x-forwarded-host": "n8n.clickin360.com",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "event": "invoice.paid",
+            "workspace_owner_id": "98826477-4944-4894-acae-2d6543e35180",
+            "emitted_at": "2026-06-14T18:58:22.673Z",
+            "payload": {
+              "invoice_id": "00d2191e-7959-4d2a-b91d-4ce11bbf3a64",
+              "invoice": {
+                "id": "00d2191e-7959-4d2a-b91d-4ce11bbf3a64",
+                "user_id": "98826477-4944-4894-acae-2d6543e35180",
+                "invoice_number": "INV-2026-0006",
+                "quote_id": "db91b9d7-ad77-4e40-aab3-7e1c91456a9a",
+                "contact_id": "15ca189b-18a6-4377-ae16-a9419aae9809",
+                "status": "paid",
+                "line_items": [
+                  {
+                    "quantity": 1,
+                    "line_total": 20000,
+                    "unit_price": 20000,
+                    "description": "Implementacion Bot"
+                  }
+                ],
+                "subtotal": 20000,
+                "tax_rate": 0,
+                "tax_amount": 0,
+                "discount_amount": 0,
+                "total": 20000,
+                "currency": "MXN",
+                "due_date": "2026-07-14",
+                "sent_at": null,
+                "paid_at": "2026-06-14T18:58:22.564+00:00",
+                "viewed_at": null,
+                "stripe_invoice_id": null,
+                "payment_link_id": null,
+                "notes": null,
+                "footer_text": null,
+                "pdf_storage_path": "98826477-4944-4894-acae-2d6543e35180/invoices/00d2191e-7959-4d2a-b91d-4ce11bbf3a64/INV-2026-0006.pdf",
+                "voided_at": null,
+                "created_at": "2026-06-14T18:57:59.053488+00:00",
+                "updated_at": "2026-06-14T18:58:22.564+00:00",
+                "invoice_type": "quote",
+                "collection_method": "manual",
+                "recurrence_rule": null,
+                "recurrence_parent_id": null,
+                "is_recurring_parent": false,
+                "contact": {
+                  "id": "15ca189b-18a6-4377-ae16-a9419aae9809",
+                  "email": "deivis.reynoso@gmail.com",
+                  "phone": "+1 3217047500",
+                  "last_name": "Reynoso",
+                  "first_name": "Deivis"
+                }
+              },
+              "amount_paid": 20000,
+              "payment_source": "manual",
+              "last_payment_amount": 20000
+            },
+            "n8n_webhook_base": "https://n8n.clickin360.com/webhook"
+          },
+          "webhookUrl": "https://n8n.clickin360.com/webhook/ad82f928-4a37-4c77-8384-0613a10f86e8",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Onboarding A Webhook1": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.clickin360.com",
+            "user-agent": "n8n",
+            "content-length": "1473",
+            "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "content-type": "application/json",
+            "via": "1.1 Caddy",
+            "x-forwarded-for": "172.18.0.3",
+            "x-forwarded-host": "n8n.clickin360.com",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "event": "invoice.paid",
+            "workspace_owner_id": "98826477-4944-4894-acae-2d6543e35180",
+            "emitted_at": "2026-06-14T18:58:22.673Z",
+            "payload": {
+              "invoice_id": "00d2191e-7959-4d2a-b91d-4ce11bbf3a64",
+              "invoice": {
+                "id": "00d2191e-7959-4d2a-b91d-4ce11bbf3a64",
+                "user_id": "98826477-4944-4894-acae-2d6543e35180",
+                "invoice_number": "INV-2026-0006",
+                "quote_id": "db91b9d7-ad77-4e40-aab3-7e1c91456a9a",
+                "contact_id": "15ca189b-18a6-4377-ae16-a9419aae9809",
+                "status": "paid",
+                "line_items": [
+                  {
+                    "quantity": 1,
+                    "line_total": 20000,
+                    "unit_price": 20000,
+                    "description": "Implementacion Bot"
+                  }
+                ],
+                "subtotal": 20000,
+                "tax_rate": 0,
+                "tax_amount": 0,
+                "discount_amount": 0,
+                "total": 20000,
+                "currency": "MXN",
+                "due_date": "2026-07-14",
+                "sent_at": null,
+                "paid_at": "2026-06-14T18:58:22.564+00:00",
+                "viewed_at": null,
+                "stripe_invoice_id": null,
+                "payment_link_id": null,
+                "notes": null,
+                "footer_text": null,
+                "pdf_storage_path": "98826477-4944-4894-acae-2d6543e35180/invoices/00d2191e-7959-4d2a-b91d-4ce11bbf3a64/INV-2026-0006.pdf",
+                "voided_at": null,
+                "created_at": "2026-06-14T18:57:59.053488+00:00",
+                "updated_at": "2026-06-14T18:58:22.564+00:00",
+                "invoice_type": "quote",
+                "collection_method": "manual",
+                "recurrence_rule": null,
+                "recurrence_parent_id": null,
+                "is_recurring_parent": false,
+                "contact": {
+                  "id": "15ca189b-18a6-4377-ae16-a9419aae9809",
+                  "email": "deivis.reynoso@gmail.com",
+                  "phone": "+1 3217047500",
+                  "last_name": "Reynoso",
+                  "first_name": "Deivis"
+                }
+              },
+              "amount_paid": 20000,
+              "payment_source": "manual",
+              "last_payment_amount": 20000
+            },
+            "n8n_webhook_base": "https://n8n.clickin360.com/webhook"
+          },
+          "webhookUrl": "https://n8n.clickin360.com/webhook/ad82f928-4a37-4c77-8384-0613a10f86e8",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Onboarding A Webhook2": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.clickin360.com",
+            "user-agent": "n8n",
+            "content-length": "1473",
+            "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "content-type": "application/json",
+            "via": "1.1 Caddy",
+            "x-forwarded-for": "172.18.0.3",
+            "x-forwarded-host": "n8n.clickin360.com",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "event": "invoice.paid",
+            "workspace_owner_id": "98826477-4944-4894-acae-2d6543e35180",
+            "emitted_at": "2026-06-14T18:58:22.673Z",
+            "payload": {
+              "invoice_id": "00d2191e-7959-4d2a-b91d-4ce11bbf3a64",
+              "invoice": {
+                "id": "00d2191e-7959-4d2a-b91d-4ce11bbf3a64",
+                "user_id": "98826477-4944-4894-acae-2d6543e35180",
+                "invoice_number": "INV-2026-0006",
+                "quote_id": "db91b9d7-ad77-4e40-aab3-7e1c91456a9a",
+                "contact_id": "15ca189b-18a6-4377-ae16-a9419aae9809",
+                "status": "paid",
+                "line_items": [
+                  {
+                    "quantity": 1,
+                    "line_total": 20000,
+                    "unit_price": 20000,
+                    "description": "Implementacion Bot"
+                  }
+                ],
+                "subtotal": 20000,
+                "tax_rate": 0,
+                "tax_amount": 0,
+                "discount_amount": 0,
+                "total": 20000,
+                "currency": "MXN",
+                "due_date": "2026-07-14",
+                "sent_at": null,
+                "paid_at": "2026-06-14T18:58:22.564+00:00",
+                "viewed_at": null,
+                "stripe_invoice_id": null,
+                "payment_link_id": null,
+                "notes": null,
+                "footer_text": null,
+                "pdf_storage_path": "98826477-4944-4894-acae-2d6543e35180/invoices/00d2191e-7959-4d2a-b91d-4ce11bbf3a64/INV-2026-0006.pdf",
+                "voided_at": null,
+                "created_at": "2026-06-14T18:57:59.053488+00:00",
+                "updated_at": "2026-06-14T18:58:22.564+00:00",
+                "invoice_type": "quote",
+                "collection_method": "manual",
+                "recurrence_rule": null,
+                "recurrence_parent_id": null,
+                "is_recurring_parent": false,
+                "contact": {
+                  "id": "15ca189b-18a6-4377-ae16-a9419aae9809",
+                  "email": "deivis.reynoso@gmail.com",
+                  "phone": "+1 3217047500",
+                  "last_name": "Reynoso",
+                  "first_name": "Deivis"
+                }
+              },
+              "amount_paid": 20000,
+              "payment_source": "manual",
+              "last_payment_amount": 20000
+            },
+            "n8n_webhook_base": "https://n8n.clickin360.com/webhook"
+          },
+          "webhookUrl": "https://n8n.clickin360.com/webhook/ad82f928-4a37-4c77-8384-0613a10f86e8",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Onboarding A Webhook": {
+      "main": [
+        [
+          {
+            "node": "Config: Edit These Values",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config: Edit These Values": {
+      "main": [
+        [
+          {
+            "node": "Parse CRM Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse CRM Payload": {
+      "main": [
+        [
+          {
+            "node": "Gate: Should Start Onboarding?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate: Should Start Onboarding?": {
+      "main": [
+        [
+          {
+            "node": "IF Start Kickoff?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF Record Quote Accepted?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Record Quote Accepted?": {
+      "main": [
+        [
+          {
+            "node": "Build Quote Accepted Record",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Build Quote Accepted Record": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Upsert Quote Accepted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Start Kickoff?": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Check Idempotency",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Supabase: Check Idempotency": {
+      "main": [
+        [
+          {
+            "node": "IF New Run?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF New Run?": {
+      "main": [
+        [
+          {
+            "node": "Build Welcome Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Welcome Email": {
+      "main": [
+        [
+          {
+            "node": "Mailgun: Welcome + Kickoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mailgun: Welcome + Kickoff": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Mark Started",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Get Contact Token": {
+      "main": [
+        [
+          {
+            "node": "Build Welcome Email1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Save Token?": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Set Onboarding Token",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mailgun: Welcome + Kickoff1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Set Onboarding Token": {
+      "main": [
+        [
+          {
+            "node": "Mailgun: Welcome + Kickoff1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Onboarding A Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Config: Edit These Values1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config: Edit These Values1": {
+      "main": [
+        [
+          {
+            "node": "Parse CRM Payload1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse CRM Payload1": {
+      "main": [
+        [
+          {
+            "node": "Gate: Should Start Onboarding?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate: Should Start Onboarding?1": {
+      "main": [
+        [
+          {
+            "node": "IF Start Kickoff?1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF Record Quote Accepted?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Record Quote Accepted?1": {
+      "main": [
+        [
+          {
+            "node": "Build Quote Accepted Record1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Quote Accepted Record1": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Upsert Quote Accepted1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Start Kickoff?1": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Check Idempotency1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Check Idempotency1": {
+      "main": [
+        [
+          {
+            "node": "IF New Run?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF New Run?1": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Get Contact Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Welcome Email1": {
+      "main": [
+        [
+          {
+            "node": "IF Save Token?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mailgun: Welcome + Kickoff1": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Mark Started1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM: Save Onboarding Token": {
+      "main": [
+        [
+          {
+            "node": "Mailgun: Welcome + Kickoff2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Onboarding A Webhook2": {
+      "main": [
+        [
+          {
+            "node": "Config: Edit These Values2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config: Edit These Values2": {
+      "main": [
+        [
+          {
+            "node": "Parse CRM Payload2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse CRM Payload2": {
+      "main": [
+        [
+          {
+            "node": "Gate: Should Start Onboarding?2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate: Should Start Onboarding?2": {
+      "main": [
+        [
+          {
+            "node": "IF Start Kickoff?2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF Record Quote Accepted?2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Record Quote Accepted?2": {
+      "main": [
+        [
+          {
+            "node": "Build Quote Accepted Record2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Quote Accepted Record2": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Upsert Quote Accepted2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Start Kickoff?2": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Check Idempotency2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Check Idempotency2": {
+      "main": [
+        [
+          {
+            "node": "IF New Run?2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF New Run?2": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Get Contact Token1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Get Contact Token1": {
+      "main": [
+        [
+          {
+            "node": "Build Welcome Email2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Welcome Email2": {
+      "main": [
+        [
+          {
+            "node": "IF Save Token?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Save Token?1": {
+      "main": [
+        [
+          {
+            "node": "CRM: Save Onboarding Token",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mailgun: Welcome + Kickoff2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mailgun: Welcome + Kickoff2": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Mark Started2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "0ba1d725-a8e7-4dad-aab9-1b373206ffc1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d3fa9cdd620dd2c6b69b121e71ddbcc9471c89fa2a348af4786bfb8119fd5402"
+  },
+  "nodeGroups": [],
+  "id": "mykYjhHBtiBpkffN",
+  "tags": []
+}

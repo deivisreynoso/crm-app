@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAuth, requireWorkspaceWrite } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { humanizeDbError } from "@/lib/validation-errors";
+import { logContactActivity } from "@/lib/activities/log-contact-activity";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -14,7 +15,7 @@ const bodySchema = z.object({
 
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
-    const { workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const writeError = requireWorkspaceWrite(role!);
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Invoice cannot be sent in this status." }, { status: 400 });
     }
 
-    const contact = invoice.contact as { email?: string | null } | null;
+    const contact = invoice.contact as { id?: string; email?: string | null } | null;
     const to = parsed.data.to ?? contact?.email;
     if (!to) {
       return NextResponse.json({ error: "Recipient email is required." }, { status: 400 });
@@ -57,6 +58,17 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     if (dbError) {
       return NextResponse.json({ error: humanizeDbError(dbError.message) }, { status: 500 });
+    }
+
+    if (contact?.id) {
+      await logContactActivity(supabase, {
+        userId: workspaceOwnerId!,
+        createdBy: userId!,
+        contactId: contact.id,
+        type: "system",
+        description: `Invoice ${invoice.invoice_number} sent to ${to}`,
+        metadata: { invoice_id: id, to },
+      });
     }
 
     return NextResponse.json({

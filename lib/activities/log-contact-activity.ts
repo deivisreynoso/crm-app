@@ -10,7 +10,8 @@ export type ContactActivityType =
   | "update"
   | "created"
   | "review_request"
-  | "project_feedback";
+  | "project_feedback"
+  | "onboarding";
 
 export async function logContactActivity(
   supabase: SupabaseClient,

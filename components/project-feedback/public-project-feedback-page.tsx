@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
-import { CLICKIN360_BRAND } from "@/lib/brand";
+import type { WorkspaceBranding } from "@/lib/branding/workspace-branding";
 
 type Props = { token: string };
+
+const BRAND_FALLBACK = "#1D9E75";
 
 const COPY = {
   en: {
@@ -53,12 +55,14 @@ export function PublicProjectFeedbackPage({ token }: Props) {
   const [already, setAlready] = useState(false);
   const [error, setError] = useState<"invalid" | "submit" | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [branding, setBranding] = useState<WorkspaceBranding | null>(null);
 
   useEffect(() => {
     axios
       .get(`/api/public/project-feedback/${token}`)
       .then((res) => {
         setLocale(res.data.locale === "en" ? "en" : "es");
+        if (res.data.branding) setBranding(res.data.branding);
         if (res.data.already_submitted) {
           setAlready(true);
           setDone(true);
@@ -69,6 +73,8 @@ export function PublicProjectFeedbackPage({ token }: Props) {
   }, [token]);
 
   const t = COPY[locale];
+  const brandColor = branding?.primary_color ?? BRAND_FALLBACK;
+  const companyName = branding?.company_name ?? "ClickIn 360";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -111,9 +117,15 @@ export function PublicProjectFeedbackPage({ token }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10 px-4">
+    <div
+      className="min-h-screen bg-slate-50 py-10 px-4"
+      style={{ fontFamily: branding?.font_family }}
+    >
       <div className="max-w-md mx-auto bg-white rounded-xl shadow-sm border p-6 space-y-4">
-        <p className="text-xs uppercase tracking-wide text-slate-500">{CLICKIN360_BRAND}</p>
+        {branding?.logo_url ? (
+          <img src={branding.logo_url} alt="" className="h-10 w-auto object-contain" />
+        ) : null}
+        <p className="text-xs uppercase tracking-wide text-slate-500">{companyName}</p>
         <h1 className="text-xl font-semibold text-slate-900">{t.title}</h1>
         {done ? (
           <p className="text-emerald-700 text-sm">{already ? t.already : t.thanks}</p>
@@ -169,7 +181,7 @@ export function PublicProjectFeedbackPage({ token }: Props) {
             {error === "submit" ? (
               <p className="text-sm text-red-600">{t.submitError}</p>
             ) : null}
-            <Button type="submit" className="w-full" disabled={submitting}>
+            <Button type="submit" className="w-full" disabled={submitting} style={{ background: brandColor }}>
               {submitting ? "…" : t.submit}
             </Button>
           </form>

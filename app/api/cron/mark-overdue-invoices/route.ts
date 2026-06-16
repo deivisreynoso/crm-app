@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerSideClient } from "@/lib/supabase";
 import { markOverdueInvoices } from "@/lib/finances/invoices";
 import { notifyInvoiceOverdue } from "@/lib/finances/finance-notifications";
+import { logContactActivity } from "@/lib/activities/log-contact-activity";
 
 function isAuthorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET?.trim();
@@ -33,6 +34,20 @@ export async function GET(req: NextRequest) {
       marked += newlyOverdue.length;
       for (const inv of newlyOverdue) {
         await notifyInvoiceOverdue(supabase, ownerId, inv.id, inv.invoice_number);
+        const { data: invoice } = await supabase
+          .from("invoices")
+          .select("contact_id")
+          .eq("id", inv.id)
+          .maybeSingle();
+        if (invoice?.contact_id) {
+          await logContactActivity(supabase, {
+            userId: ownerId,
+            contactId: invoice.contact_id as string,
+            type: "system",
+            description: `Invoice ${inv.invoice_number} marked overdue`,
+            metadata: { invoice_id: inv.id },
+          });
+        }
       }
     }
 

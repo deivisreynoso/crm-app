@@ -137,6 +137,7 @@ export function useMoveOpportunityStage(pipelineId?: string) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["opportunities"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics", "pipeline"] });
     },
   });
 }

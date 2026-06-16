@@ -82,7 +82,7 @@ Status: **done** | **todo**
 | QA-3 | Day-14 feedback full content in timeline | **done** |
 | QA-4 | E2E smoke harness + `.env.local.example` | **done** |
 | QA-5 | `docs/n8n/README.md` | **done** |
-| QA-6 | Migration 074 in production Supabase | **pending** — manual apply |
+| QA-6 | Migrations 074–079 in production Supabase | **done** — applied manually (Sprint 6) |
 | QA-7 | Full role-matrix E2E (Admin/Sales/Viewer) | **pending** — needs credentials |
 | QA-8 | Mobile 390px audit | **pending** — Sprint 6 |
 | QA-9 | Production RLS cross-tenant test | **pending** |

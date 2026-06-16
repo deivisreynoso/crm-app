@@ -1,6 +1,4 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { recalculateInvoicePaymentStatus } from "@/lib/finances/invoice-payment-status";
-
 export type FinanceCurrency = "USD" | "MXN";
 
 export async function voidFinanceTransaction(
@@ -56,6 +54,9 @@ export async function voidFinanceTransaction(
   });
 
   if (original.invoice_id) {
+    const { recalculateInvoicePaymentStatus } = await import(
+      "@/lib/finances/invoice-payment-status"
+    );
     await recalculateInvoicePaymentStatus(
       supabase,
       workspaceOwnerId,
@@ -131,8 +132,5 @@ export async function recordStripeFinanceTransaction(
     .single();
   if (insertError) throw insertError;
 
-  await recalculateInvoicePaymentStatus(supabase, input.workspaceOwnerId, input.invoiceId, {
-    lastPaymentAmount: input.amount,
-  });
   return inserted;
 }

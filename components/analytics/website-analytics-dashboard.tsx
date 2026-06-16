@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import {
   Area,
@@ -99,31 +100,27 @@ function CategoryBadge({ category }: { category: Ga4EventCategory }) {
 }
 
 export function WebsiteAnalyticsDashboard({ dateRange }: Props) {
-  const [data, setData] = useState<Ga4Data | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [eventFilter, setEventFilter] = useState<Ga4EventCategory | "all">("all");
 
-  useEffect(() => {
-    setLoading(true);
-    setError(null);
-    const params = new URLSearchParams({
-      start_date: dateRange.start_date,
-      end_date: dateRange.end_date,
-    });
-    void axios
-      .get<{ data: Ga4Data }>(`/api/analytics/ga4?${params}`)
-      .then((res) => setData(res.data.data))
-      .catch((err) => {
-        const msg =
-          axios.isAxiosError(err) && err.response?.data?.error
-            ? String(err.response.data.error)
-            : "Could not load Google Analytics.";
-        setError(msg);
-        setData(null);
-      })
-      .finally(() => setLoading(false));
-  }, [dateRange.end_date, dateRange.start_date]);
+  const { data, error, isLoading } = useQuery({
+    queryKey: ["analytics", "ga4", dateRange.start_date, dateRange.end_date],
+    staleTime: 3_600_000,
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        start_date: dateRange.start_date,
+        end_date: dateRange.end_date,
+      });
+      const { data: res } = await axios.get<{ data: Ga4Data }>(`/api/analytics/ga4?${params}`);
+      return res.data;
+    },
+  });
+
+  const errorMessage =
+    error && axios.isAxiosError(error) && error.response?.data?.error
+      ? String(error.response.data.error)
+      : error
+        ? "Could not load Google Analytics."
+        : null;
 
   const filteredEvents = useMemo(() => {
     if (!data) return [];
@@ -153,16 +150,16 @@ export function WebsiteAnalyticsDashboard({ dateRange }: Props) {
     return data.catalogEventNames.filter((name) => !seen.has(name));
   }, [data]);
 
-  if (loading) {
+  if (isLoading) {
     return <AnalyticsLoadingGrid count={6} />;
   }
 
-  if (error) {
+  if (errorMessage) {
     return (
       <AnalyticsErrorCard
         message={
           <>
-            {error}
+            {errorMessage}
             <span className="block text-xs mt-2 text-body-muted font-normal">
               An admin must configure GA4_PROPERTY_ID and service account credentials under
               Settings → Integrations.

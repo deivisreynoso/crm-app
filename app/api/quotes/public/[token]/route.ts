@@ -26,12 +26,6 @@ const respondSchema = z
   })
   .superRefine((data, ctx) => {
     if (data.action === "accept") {
-      if (!data.name?.trim()) {
-        ctx.addIssue({ code: "custom", message: "Name is required.", path: ["name"] });
-      }
-      if (!data.email?.trim()) {
-        ctx.addIssue({ code: "custom", message: "Email is required.", path: ["email"] });
-      }
       if (!data.disclaimer_acknowledged) {
         ctx.addIssue({
           code: "custom",

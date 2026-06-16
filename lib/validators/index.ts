@@ -344,6 +344,8 @@ export const calendarEventSchema = z
     location: z.string().optional().or(z.literal("")),
     location_type: z.enum(["physical", "google_meet", "other"]).optional(),
     assigned_to: z.string().uuid().optional().or(z.literal("")),
+    additional_users: z.array(z.string().uuid()).optional(),
+    additional_contacts: z.array(z.string().uuid()).optional(),
   })
   .refine((data) => new Date(data.end_time) > new Date(data.start_time), {
     message: "End time must be after start time",
@@ -364,6 +366,8 @@ export const calendarEventPatchSchema = z
     location: z.string().optional().or(z.literal("")),
     location_type: z.enum(["physical", "google_meet", "other"]).optional(),
     assigned_to: z.string().uuid().optional().or(z.literal("")),
+    additional_users: z.array(z.string().uuid()).optional(),
+    additional_contacts: z.array(z.string().uuid()).optional(),
   })
   .refine(
     (data) => {

@@ -15,6 +15,7 @@ export function useFinanceOverview(period = "month", from?: string, to?: string)
 
   return useQuery({
     queryKey: ["finance-overview", period, from, to],
+    staleTime: 300_000,
     queryFn: async () => {
       const { data } = await axios.get<{ data: FinanceOverview }>(
         `/api/finances/overview?${params}`

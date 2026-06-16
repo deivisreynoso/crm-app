@@ -6,6 +6,8 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { LocationInput } from "@/components/calendar/location-input";
 import { ContactSearchCombobox } from "@/components/forms/contact-search-combobox";
+import { ContactMultiSelect } from "@/components/forms/contact-multi-select";
+import { UserMultiSelect } from "@/components/forms/user-multi-select";
 import { useOpportunityPicker } from "@/hooks/useOpportunities";
 import { useWorkspace } from "@/components/crm/workspace-provider";
 import type { CalendarEvent, CalendarEventFormInput } from "@/types";
@@ -48,6 +50,8 @@ export function CreateEventModal({
   const [contactId, setContactId] = useState("");
   const [opportunityId, setOpportunityId] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
+  const [additionalUsers, setAdditionalUsers] = useState<string[]>([]);
+  const [additionalContacts, setAdditionalContacts] = useState<string[]>([]);
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [isVirtual, setIsVirtual] = useState(true);
@@ -77,6 +81,16 @@ export function CreateEventModal({
       setContactId(initial.contact_id ?? "");
       setOpportunityId(initial.opportunity_id ?? "");
       setAssignedTo(initial.assigned_to ?? "");
+      setAdditionalUsers(
+        initial.attendees
+          ?.filter((a) => a.attendee_type === "user" && a.user_id)
+          .map((a) => a.user_id as string) ?? []
+      );
+      setAdditionalContacts(
+        initial.attendees
+          ?.filter((a) => a.attendee_type === "contact" && a.contact_id)
+          .map((a) => a.contact_id as string) ?? []
+      );
       setStart(toLocalInput(initial.start_time));
       setEnd(toLocalInput(initial.end_time));
       setIsVirtual(initial.location_type === "google_meet");
@@ -93,6 +107,8 @@ export function CreateEventModal({
     setContactId(defaultContactId ?? "");
     setOpportunityId("");
     setAssignedTo("");
+    setAdditionalUsers([]);
+    setAdditionalContacts([]);
     setStart(toLocalInput(startDt.toISOString()));
     setEnd(toLocalInput(endDt.toISOString()));
     setIsVirtual(true);
@@ -132,6 +148,8 @@ export function CreateEventModal({
         contact_id: contactId,
         opportunity_id: opportunityId || undefined,
         assigned_to: assignedTo || actorId || undefined,
+        additional_users: additionalUsers.length ? additionalUsers : undefined,
+        additional_contacts: additionalContacts.length ? additionalContacts : undefined,
         start_time: new Date(start).toISOString(),
         end_time: new Date(end).toISOString(),
         location: isVirtual ? undefined : location || undefined,
@@ -224,9 +242,22 @@ export function CreateEventModal({
           onChange={(id) => {
             setContactId(id);
             setOpportunityId("");
+            setAdditionalContacts((prev) => prev.filter((x) => x !== id));
           }}
           required
           error={fieldErrors.link}
+        />
+        <UserMultiSelect
+          label="Additional team members (optional)"
+          selectedIds={additionalUsers}
+          excludeId={assignedTo || actorId}
+          onChange={setAdditionalUsers}
+        />
+        <ContactMultiSelect
+          label="Additional contacts (optional)"
+          selectedIds={additionalContacts}
+          excludeId={contactId}
+          onChange={setAdditionalContacts}
         />
         <div>
           <label className="block text-sm font-medium text-heading mb-1">

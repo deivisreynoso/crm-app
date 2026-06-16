@@ -1,9 +1,9 @@
 {
-  "name": "ClickIn360 Onboarding B \u2014 Assets Reminders",
+  "name": "ClickIn360 Onboarding B — Assets Reminders",
   "nodes": [
     {
       "parameters": {
-        "content": "## Self-hosted n8n Community Edition\n\n**No Settings \u2192 Variables** on the free plan. Edit the **Config: Edit These Values** Set node (yellow fields) in each workflow instead.\n\nOptional: you can also set OS/Docker env vars on the n8n container \u2014 not required if you use the Config node.\n\n**Trigger:** questionnaire.submitted\n\nEdit Config: `crm_base_url` for feedback links.",
+        "content": "## Self-hosted n8n Community Edition\n\n**No Settings → Variables** on the free plan. Edit the **Config: Edit These Values** Set node (yellow fields) in each workflow instead.\n\nOptional: you can also set OS/Docker env vars on the n8n container — not required if you use the Config node.\n\n**Trigger:** questionnaire.submitted\n\nEdit Config: `crm_base_url` for feedback links.",
         "height": 280,
         "width": 500,
         "color": 4
@@ -11,10 +11,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -600,
-        0
+        1008,
+        -224
       ],
-      "id": "2f8e3289-3573-47b4-8be0-139b117dda34",
+      "id": "bef556f8-8faa-4c52-8028-692d7965ae66",
       "name": "INSTRUCTIONS: Onboarding B"
     },
     {
@@ -26,17 +26,15 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        0,
-        0
+        1616,
+        -224
       ],
-      "id": "a9f21b0c-e25f-4348-891a-8217c4f2427b",
+      "id": "4154973f-fb47-4289-8683-cec368714712",
       "name": "Onboarding B Webhook",
       "webhookId": "74d2a3eb-0e44-4595-9fe5-01faa0ebc66b"
     },
     {
       "parameters": {
-        "mode": "manual",
-        "duplicateItem": false,
         "assignments": {
           "assignments": [
             {
@@ -47,17 +45,16 @@
             }
           ]
         },
-        "options": {
-          "includeOtherFields": true
-        }
+        "includeOtherFields": true,
+        "options": {}
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        260,
-        0
+        1872,
+        -224
       ],
-      "id": "988be346-620e-4580-b30e-a665417b4043",
+      "id": "02a3a27a-f4f0-423d-aa7e-e38e15e9894b",
       "name": "Config: Edit These Values"
     },
     {
@@ -67,74 +64,73 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        520,
-        0
+        2128,
+        -224
       ],
-      "id": "32cdae38-c375-4602-beaf-a16a67e22b74",
+      "id": "3f171b7d-1576-4e31-add5-4b98bb597954",
       "name": "Parse Payload"
     },
     {
       "parameters": {
-        "jsCode": "const d = $input.first().json;\nconst isEn = d.locale === 'en';\nreturn [{ json: { toEmail: d.contactEmail, subject: isEn ? 'We received your onboarding questionnaire' : 'Recibimos tu cuestionario de incorporaci\u00f3n', text: isEn ? `Hi ${d.firstName}, thank you for completing the onboarding questionnaire. Our team will review your answers and follow up shortly.` : `Hola ${d.firstName}, gracias por completar el cuestionario de incorporaci\u00f3n. Nuestro equipo revisar\u00e1 tus respuestas y te contactar\u00e1 pronto.` } }];"
+        "jsCode": "const d = $input.first().json;\nconst isEn = d.locale === 'en';\nreturn [{ json: { toEmail: d.contactEmail, subject: isEn ? 'We received your onboarding questionnaire' : 'Recibimos tu cuestionario de incorporación', text: isEn ? `Hi ${d.firstName}, thank you for completing the onboarding questionnaire. Our team will review your answers and follow up shortly.` : `Hola ${d.firstName}, gracias por completar el cuestionario de incorporación. Nuestro equipo revisará tus respuestas y te contactará pronto.` } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        780,
-        0
+        2400,
+        -224
       ],
-      "id": "76486133-cccf-450b-90fd-85c69f911cae",
+      "id": "cd5e8f82-9c60-427c-bebf-1f5fd9bf16b5",
       "name": "Build Confirmation Email"
     },
     {
       "parameters": {
-        "fromEmail": "ClickIn 360 <no-reply@mail.clickin360.com>",
+        "fromEmail": "no-reply@clickin360.com",
         "toEmail": "={{ $json.toEmail }}",
         "subject": "={{ $json.subject }}",
-        "text": "={{ $json.text }}",
-        "options": {}
+        "text": "={{ $json.text }}"
       },
       "type": "n8n-nodes-base.mailgun",
       "typeVersion": 1,
       "position": [
-        1040,
-        0
+        2656,
+        -224
       ],
-      "id": "b1fc4392-3d62-4165-b4c5-84851724e485",
+      "id": "d8d9ee09-6c56-4506-a194-9947953d1298",
       "name": "Mailgun: Questionnaire Confirmation",
       "credentials": {
         "mailgunApi": {
-          "id": "686871dc-7fb6-4452-8499-05cb780996e0",
-          "name": "Mailgun"
+          "id": "nyCSKNSycMl74trx",
+          "name": "Mailgun account"
         }
       },
       "continueOnFail": true
     },
     {
       "parameters": {
-        "fromEmail": "ClickIn 360 <no-reply@mail.clickin360.com>",
+        "fromEmail": "no-reply@clickin360.com",
         "toEmail": "sales@clickin360.com",
         "subject": "Onboarding questionnaire received",
-        "text": "={{ 'Contact ' + $('Parse Payload').item.json.contactEmail + ' submitted the onboarding questionnaire.' }}",
-        "options": {}
+        "text": "={{ 'Contact ' + $('Parse Payload').item.json.contactEmail + ' submitted the onboarding questionnaire.' }}"
       },
       "type": "n8n-nodes-base.mailgun",
       "typeVersion": 1,
       "position": [
-        1300,
-        0
+        2912,
+        -224
       ],
-      "id": "8ab87616-e8ec-44b0-8fc5-bee08dbc89ea",
+      "id": "56bb5643-866d-453e-9dda-cc9383655db5",
       "name": "Mailgun: Notify Owner",
       "credentials": {
         "mailgunApi": {
-          "id": "686871dc-7fb6-4452-8499-05cb780996e0",
-          "name": "Mailgun"
+          "id": "nyCSKNSycMl74trx",
+          "name": "Mailgun account"
         }
       },
       "continueOnFail": true
     }
   ],
+  "pinData": {},
   "connections": {
     "Onboarding B Webhook": {
       "main": [
@@ -192,11 +188,17 @@
       ]
     }
   },
-  "pinData": {},
-  "meta": {
-    "templateCredsSetupCompleted": true
-  },
+  "active": true,
   "settings": {
-    "executionOrder": "v1"
-  }
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "bc51419f-bf7c-4ab5-84f7-7226575fa891",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d3fa9cdd620dd2c6b69b121e71ddbcc9471c89fa2a348af4786bfb8119fd5402"
+  },
+  "nodeGroups": [],
+  "id": "2e2DPjUwmhvNDuEC",
+  "tags": []
 }

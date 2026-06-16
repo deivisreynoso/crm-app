@@ -3,6 +3,44 @@
   "nodes": [
     {
       "parameters": {
+        "method": "POST",
+        "url": "={{ $json.n8n_webhook_base }}/f3a8c2d1-4e5b-6a7f-8c9d-0e1f2a3b4c5d",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3872,
+        1120
+      ],
+      "id": "ab60fdb9-20b6-4f53-ac3b-ad0bcab42468",
+      "name": "Forward: Project Advocacy (completed)",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.n8n_webhook_base }}/f3a8c2d1-4e5b-6a7f-8c9d-0e1f2a3b4c5d",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3872,
+        1248
+      ],
+      "id": "175f0a82-835c-466d-bbdb-3e1acb7af4ba",
+      "name": "Forward: Project Advocacy (feedback)",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
         "content": "## Self-hosted n8n Community Edition\n\n**No Settings → Variables** on the free plan. Edit the **Config: Edit These Values** Set node (yellow fields) in each workflow instead.\n\nOptional: you can also set OS/Docker env vars on the n8n container — not required if you use the Config node.\n\n**STEP 1** Edit **Config: Edit These Values** → set `crm_outbound_webhook_secret` and `n8n_webhook_base`.\n\n**STEP 2** Activate workflow. Copy Production URL → CRM Settings → Automations → Webhook URL.\n\n**STEP 3** Import & activate sub-workflows A, B, C, Appointments (edit Config in each).",
         "height": 400,
         "width": 540,
@@ -11,11 +49,11 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        720,
-        96
+        2208,
+        128
       ],
-      "id": "bda198df-6a9c-45fc-9982-674cbf216efe",
-      "name": "INSTRUCTIONS: Router (Community)"
+      "id": "e72a6b25-b01f-4359-b067-0d874f2ecf65",
+      "name": "INSTRUCTIONS: Router (Community)1"
     },
     {
       "parameters": {
@@ -26,11 +64,11 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        1344,
-        320
+        2832,
+        352
       ],
-      "id": "a23c1f4e-68e5-4a70-abd9-3b21649d5396",
-      "name": "CRM Router Webhook",
+      "id": "1e98d862-1050-4934-bc4d-9b0059e8b109",
+      "name": "CRM Router Webhook1",
       "webhookId": "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e"
     },
     {
@@ -56,24 +94,24 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1600,
-        320
+        3088,
+        352
       ],
-      "id": "adb49c21-d390-432c-a658-9adb0ef0c5ad",
-      "name": "Config: Edit These Values"
+      "id": "ec607680-4104-418a-ab80-05cfc3e9c477",
+      "name": "Config: Edit These Values1"
     },
     {
       "parameters": {
-        "jsCode": "const config = $input.first().json;\nconst webhook = $('CRM Router Webhook').first().json;\n\nconst expected = (config.crm_outbound_webhook_secret || '').trim();\nif (!expected || expected === 'PASTE_SAME_SECRET_AS_CRM_HERE') {\n  throw new Error('Edit the Config node: replace PASTE_SAME_SECRET_AS_CRM_HERE with your real secret.');\n}\n\nconst rawHeaders = webhook.headers || {};\nconst headerSecret = Object.entries(rawHeaders)\n  .find(([k]) => k.toLowerCase() === 'x-crm-webhook-secret')?.[1];\nconst secret = String(headerSecret || '').trim();\n\nif (!secret) {\n  throw new Error('Missing x-crm-webhook-secret header. CRM must send it, or test with curl -H \"x-crm-webhook-secret: ...\"');\n}\n\nif (secret !== expected) {\n  throw new Error('Secret mismatch: header does not match Config node. Use the exact same value in CRM and n8n.');\n}\n\nfunction extractPayload(src) {\n  if (src.body && typeof src.body === 'object' && src.body.event) return src.body;\n  if (src.event) {\n    const { headers, params, query, body, crm_outbound_webhook_secret, n8n_webhook_base, ...rest } = src;\n    if (rest.event) return rest;\n  }\n  return src;\n}\n\nconst crm = extractPayload(webhook);\nconst event = crm.event || config.event;\nif (!event) {\n  throw new Error('No event in webhook body.');\n}\n\nreturn [{\n  json: {\n    event,\n    workspace_owner_id: crm.workspace_owner_id || config.workspace_owner_id,\n    emitted_at: crm.emitted_at || config.emitted_at,\n    payload: crm.payload || config.payload || {},\n    n8n_webhook_base: (config.n8n_webhook_base || '').replace(/\\/$/, ''),\n  },\n}];"
+        "jsCode": "const config = $input.first().json;\nconst webhook = $('CRM Router Webhook1').first().json;\n\nconst expected = (config.crm_outbound_webhook_secret || '').trim();\nif (!expected || expected === 'PASTE_SAME_SECRET_AS_CRM_HERE') {\n  throw new Error('Edit the Config node: replace PASTE_SAME_SECRET_AS_CRM_HERE with your real secret.');\n}\n\nconst rawHeaders = webhook.headers || {};\nconst headerSecret = Object.entries(rawHeaders)\n  .find(([k]) => k.toLowerCase() === 'x-crm-webhook-secret')?.[1];\nconst secret = String(headerSecret || '').trim();\n\nif (!secret) {\n  throw new Error('Missing x-crm-webhook-secret header. CRM must send it, or test with curl -H \"x-crm-webhook-secret: ...\"');\n}\n\nif (secret !== expected) {\n  throw new Error('Secret mismatch: header does not match Config node. Use the exact same value in CRM and n8n.');\n}\n\nfunction extractPayload(src) {\n  if (src.body && typeof src.body === 'object' && src.body.event) return src.body;\n  if (src.event) {\n    const { headers, params, query, body, crm_outbound_webhook_secret, n8n_webhook_base, ...rest } = src;\n    if (rest.event) return rest;\n  }\n  return src;\n}\n\nconst crm = extractPayload(webhook);\nconst event = crm.event || config.event;\nif (!event) {\n  throw new Error('No event in webhook body.');\n}\n\nreturn [{\n  json: {\n    event,\n    workspace_owner_id: crm.workspace_owner_id || config.workspace_owner_id,\n    emitted_at: crm.emitted_at || config.emitted_at,\n    payload: crm.payload || config.payload || {},\n    n8n_webhook_base: (config.n8n_webhook_base || '').replace(/\\/$/, ''),\n  },\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1872,
-        320
+        3360,
+        352
       ],
-      "id": "42cb62d7-37d9-475a-8a66-424200142db6",
-      "name": "Validate Secret + Pass Through"
+      "id": "af29e83f-8054-43d5-9c14-a5cf26d8a88b",
+      "name": "Validate Secret + Pass Through1"
     },
     {
       "parameters": {
@@ -318,11 +356,11 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        2128,
-        320
+        3616,
+        352
       ],
-      "id": "93e19638-a0aa-4e72-b08a-0e6880ccee14",
-      "name": "Route By Event"
+      "id": "92f34c6a-0954-493b-91db-c0277df0f2e5",
+      "name": "Route By Event1"
     },
     {
       "parameters": {
@@ -336,11 +374,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        2384,
-        128
+        3872,
+        160
       ],
-      "id": "10567f38-91e1-467d-ab4b-8bef1c7da129",
-      "name": "Forward: Onboarding A",
+      "id": "68da05ad-dd13-4e3e-aeeb-b9232f95a4ac",
+      "name": "Forward: Onboarding A1",
       "continueOnFail": true
     },
     {
@@ -355,11 +393,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        2384,
-        240
+        3872,
+        272
       ],
-      "id": "87465239-0ee1-460c-bfd5-8df26dec8ada",
-      "name": "Forward: Onboarding A (invoice)",
+      "id": "08dca756-5c3f-4f63-bd16-68fecbd3c49e",
+      "name": "Forward: Onboarding A (invoice)1",
       "continueOnFail": true
     },
     {
@@ -374,11 +412,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        2384,
-        368
+        3872,
+        400
       ],
-      "id": "6f60ff12-ec5e-47d5-a909-dbee8c7d2507",
-      "name": "Forward: Onboarding A (manual)",
+      "id": "4db2b5ee-604d-4307-81a1-6b2c66086b0e",
+      "name": "Forward: Onboarding A (manual)1",
       "continueOnFail": true
     },
     {
@@ -393,11 +431,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        2384,
-        480
+        3872,
+        512
       ],
-      "id": "91d62247-db81-4bbb-9a23-6522116ed26c",
-      "name": "Forward: Onboarding B",
+      "id": "4eeebb8e-c361-4952-9c63-dbdba2499aef",
+      "name": "Forward: Onboarding B1",
       "continueOnFail": true
     },
     {
@@ -412,11 +450,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        2384,
-        608
+        3872,
+        640
       ],
-      "id": "3b02a460-5b1a-4535-98d4-45f5725f6fa8",
-      "name": "Forward: Onboarding C",
+      "id": "4a9f6f32-a300-4d32-9db8-3cf4c466d46c",
+      "name": "Forward: Onboarding C1",
       "continueOnFail": true
     },
     {
@@ -431,11 +469,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        2384,
-        720
+        3872,
+        752
       ],
-      "id": "51811402-d82c-42de-81da-39c36ec6bccc",
-      "name": "Forward: Appointments (create)",
+      "id": "1890d1b9-fc6c-4807-b4fe-a942cce6c80e",
+      "name": "Forward: Appointments (create)1",
       "continueOnFail": true
     },
     {
@@ -450,11 +488,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        2384,
-        848
+        3872,
+        880
       ],
-      "id": "3ff8faa2-dd18-40b1-97eb-9bb426a8b049",
-      "name": "Forward: Appointments (update)",
+      "id": "4d8f237e-38ee-4ccc-8baa-3f20c3453e6e",
+      "name": "Forward: Appointments (update)1",
       "continueOnFail": true
     },
     {
@@ -469,54 +507,16 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        2384,
-        960
+        3872,
+        992
       ],
-      "id": "64e3717c-d687-4d24-a57d-e3d45d0fd578",
-      "name": "Forward: Appointments (cancel)",
-      "continueOnFail": true
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $json.n8n_webhook_base }}/f3a8c2d1-4e5b-6a7f-8c9d-0e1f2a3b4c5d",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        2384,
-        1088
-      ],
-      "id": "7a8b9c0d-project-completed-forward",
-      "name": "Forward: Project Advocacy (completed)",
-      "continueOnFail": true
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $json.n8n_webhook_base }}/f3a8c2d1-4e5b-6a7f-8c9d-0e1f2a3b4c5d",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        2384,
-        1216
-      ],
-      "id": "8b9c0d1e-project-feedback-forward",
-      "name": "Forward: Project Advocacy (feedback)",
+      "id": "e2743aba-defb-45a3-9f33-5b9a039c602b",
+      "name": "Forward: Appointments (cancel)1",
       "continueOnFail": true
     }
   ],
   "pinData": {
-    "CRM Router Webhook": [
+    "CRM Router Webhook1": [
       {
         "json": {
           "headers": {
@@ -556,93 +556,93 @@
     ]
   },
   "connections": {
-    "CRM Router Webhook": {
+    "CRM Router Webhook1": {
       "main": [
         [
           {
-            "node": "Config: Edit These Values",
+            "node": "Config: Edit These Values1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Config: Edit These Values": {
+    "Config: Edit These Values1": {
       "main": [
         [
           {
-            "node": "Validate Secret + Pass Through",
+            "node": "Validate Secret + Pass Through1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Validate Secret + Pass Through": {
+    "Validate Secret + Pass Through1": {
       "main": [
         [
           {
-            "node": "Route By Event",
+            "node": "Route By Event1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Route By Event": {
+    "Route By Event1": {
       "main": [
         [
           {
-            "node": "Forward: Onboarding A",
+            "node": "Forward: Onboarding A1",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Forward: Onboarding A (invoice)",
+            "node": "Forward: Onboarding A (invoice)1",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Forward: Onboarding A (manual)",
+            "node": "Forward: Onboarding A (manual)1",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Forward: Onboarding B",
+            "node": "Forward: Onboarding B1",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Forward: Onboarding C",
+            "node": "Forward: Onboarding C1",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Forward: Appointments (create)",
+            "node": "Forward: Appointments (create)1",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Forward: Appointments (update)",
+            "node": "Forward: Appointments (update)1",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Forward: Appointments (cancel)",
+            "node": "Forward: Appointments (cancel)1",
             "type": "main",
             "index": 0
           }
@@ -669,7 +669,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "14ce2d8c-db40-476b-b8f4-45f1b9a2d4b7",
+  "versionId": "14082932-bc51-49d2-b770-e718cc566159",
   "meta": {
     "instanceId": "d3fa9cdd620dd2c6b69b121e71ddbcc9471c89fa2a348af4786bfb8119fd5402"
   },

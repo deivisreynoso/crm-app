@@ -16,6 +16,7 @@ import {
 } from "@/lib/google/gmail";
 import { saveContactEmail } from "@/lib/emails/save-contact-email";
 import { logEmailContactActivity } from "@/lib/activities/log-email-activity";
+import { logContactActivity } from "@/lib/activities/log-contact-activity";
 import { resolveGmailSendOptions } from "@/lib/emails/build-gmail-send-options";
 import { appendEmailSignature } from "@/lib/email/signature";
 
@@ -169,6 +170,14 @@ export async function POST(req: NextRequest, context: RouteContext) {
           from: fromEmail,
           gmail_message_id: sent.messageId,
           gmail_thread_id: sent.threadId ?? null,
+        });
+        await logContactActivity(supabase, {
+          userId: workspaceOwnerId!,
+          createdBy: userId!,
+          contactId: contact.id,
+          type: "system",
+          description: `Invoice ${invoice.invoice_number} sent to ${to}`,
+          metadata: { invoice_id: id, to },
         });
       } catch (err) {
         console.error("Invoice email logging failed:", err);

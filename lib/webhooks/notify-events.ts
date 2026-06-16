@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ensureContactOnboardingTokens } from "@/lib/onboarding/start";
 import { fireWebhook } from "@/lib/webhooks/outbound";
+import { resolveAdditionalContactsForWebhook } from "@/lib/calendar/event-attendees";
 
 export async function notifyInvoicePaid(
   supabase: SupabaseClient,
@@ -54,8 +55,20 @@ export async function notifyAppointmentEvent(
   event: "appointment.created" | "appointment.updated" | "appointment.cancelled",
   calendarEvent: Record<string, unknown>
 ): Promise<void> {
+  const eventId = calendarEvent.id as string | undefined;
+  const primaryContactId = calendarEvent.contact_id as string | null | undefined;
+  const additional_contacts =
+    eventId && event !== "appointment.cancelled"
+      ? await resolveAdditionalContactsForWebhook(
+          supabase,
+          eventId,
+          primaryContactId
+        )
+      : [];
+
   void fireWebhook(supabase, workspaceOwnerId, event, {
     calendar_event_id: calendarEvent.id,
     calendar_event: calendarEvent,
+    ...(additional_contacts.length ? { additional_contacts } : {}),
   });
 }

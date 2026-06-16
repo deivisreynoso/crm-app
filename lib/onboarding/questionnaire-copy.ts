@@ -12,7 +12,7 @@ export type SelectOption = {
   label: Record<OnboardingLocale, string>;
 };
 
-export const QUESTIONNAIRE_SECTION_COUNT = 7;
+export const QUESTIONNAIRE_SECTION_COUNT = 6;
 
 export const GOAL_OPTIONS: CheckboxOption[] = [
   { value: "Customer support", label: { en: "Customer support", es: "Soporte al cliente" } },
@@ -29,7 +29,6 @@ export const CHANNEL_OPTIONS: CheckboxOption[] = [
   { value: "Website chat", label: { en: "Website chat", es: "Chat web" } },
   { value: "Facebook Messenger", label: { en: "Facebook Messenger", es: "Facebook Messenger" } },
   { value: "Instagram DM", label: { en: "Instagram DM", es: "Instagram DM" } },
-  { value: "Email", label: { en: "Email", es: "Correo electrónico" } },
 ];
 
 export const ESCALATION_TRIGGER_OPTIONS: CheckboxOption[] = [
@@ -150,17 +149,10 @@ export const SECTION_COPY: SectionCopy[] = [
     },
   },
   {
-    title: { en: "Returns & integrations", es: "Devoluciones e integraciones" },
+    title: { en: "Returns & technical contact", es: "Devoluciones y contacto técnico" },
     subtitle: {
-      en: "Return policies and systems to connect.",
-      es: "Políticas de devolución y sistemas a conectar.",
-    },
-  },
-  {
-    title: { en: "Contacts & critical dates", es: "Contactos y fechas críticas" },
-    subtitle: {
-      en: "Key people and important deadlines for your project.",
-      es: "Personas clave y fechas importantes para tu proyecto.",
+      en: "Return policies and your technical point of contact.",
+      es: "Políticas de devolución y tu contacto técnico.",
     },
   },
 ];
@@ -358,8 +350,6 @@ export function summarySections(
         `${c.owner}: ${data.project.owner}`,
         `${c.email}: ${data.project.email}`,
         `${c.whatsapp}: ${data.project.whatsapp}`,
-        `${c.launchDate}: ${data.project.launch_date}`,
-        `${c.approver}: ${data.project.approver}`,
       ],
     },
     {
@@ -404,15 +394,7 @@ export function summarySections(
         `${c.returnsWindow}: ${data.returns.window_days}`,
         `${c.refundApprover}: ${data.returns.refund_approver}`,
         `${c.returnsAutomation}: ${data.returns.automation}`,
-        `${c.integrations}: ${formatSummaryValue(data.integrations.confirmed)}`,
-      ],
-    },
-    {
-      title: SECTION_COPY[6].title[locale],
-      lines: [
         `${c.techContact}: ${formatSummaryValue(data.contacts.technical)}`,
-        `${c.commercialContact}: ${formatSummaryValue(data.contacts.commercial)}`,
-        `${c.criticalDates}: ${data.critical_dates}`,
       ],
     },
   ];

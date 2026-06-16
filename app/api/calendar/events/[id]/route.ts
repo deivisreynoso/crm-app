@@ -16,6 +16,11 @@ import {
 import { assertCalendarAssigneePermission } from "@/lib/calendar/assert-assignee";
 import { resolveGoogleSyncUserId } from "@/lib/calendar/resolve-sync-user";
 import { notifyAppointmentEvent } from "@/lib/webhooks/notify-events";
+import {
+  listCalendarEventAttendees,
+  resolveAttendeeEmails,
+  upsertCalendarEventAttendees,
+} from "@/lib/calendar/event-attendees";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -120,6 +125,34 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const parentError = workspaceParentForbidden(parentCheck);
     if (parentError) return parentError;
 
+    const { data: existingRow } = await supabase
+      .from("calendar_events")
+      .select("contact_id, assigned_to")
+      .eq("id", id)
+      .eq("user_id", workspaceOwnerId!)
+      .maybeSingle();
+
+    if (d.additional_users !== undefined || d.additional_contacts !== undefined) {
+      await upsertCalendarEventAttendees(
+        supabase,
+        id,
+        {
+          additional_users: d.additional_users,
+          additional_contacts: d.additional_contacts,
+        },
+        {
+          primaryUserId:
+            (updates.assigned_to as string | undefined) ??
+            (existingRow?.assigned_to as string | undefined) ??
+            undefined,
+          primaryContactId:
+            (updates.contact_id as string | undefined) ??
+            (existingRow?.contact_id as string | undefined) ??
+            undefined,
+        }
+      );
+    }
+
     const { data, error: dbError } = await updateWithColumnFallback(
       (payload) =>
         supabase
@@ -165,12 +198,51 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           assignedTo: eventRow.assigned_to as string | null,
           preferActor: false,
         });
+
+        const extraAttendees = await resolveAttendeeEmails(
+          supabase,
+          await listCalendarEventAttendees(supabase, id)
+        );
+
+        const contactId =
+          (eventRow.contact_id as string | null) ??
+          (existingRow?.contact_id as string | undefined) ??
+          null;
+
+        let primaryContactEmail: { email: string; displayName?: string } | null = null;
+        if (contactId) {
+          const { data: primaryContact } = await supabase
+            .from("contacts")
+            .select("email, first_name, last_name")
+            .eq("id", contactId)
+            .maybeSingle();
+          if (primaryContact?.email) {
+            const name = [primaryContact.first_name, primaryContact.last_name]
+              .filter(Boolean)
+              .join(" ")
+              .trim();
+            primaryContactEmail = {
+              email: (primaryContact.email as string).trim(),
+              displayName: name || undefined,
+            };
+          }
+        }
+
+        const googleAttendees = [
+          ...(primaryContactEmail ? [primaryContactEmail] : []),
+          ...extraAttendees.map((a) => ({
+            email: a.email,
+            displayName: a.name,
+          })),
+        ];
+
         await updateGoogleCalendarEvent(syncUserId, String(eventRow.google_event_id), {
           title: String(eventRow.title),
           description: (eventRow.description as string | null) ?? null,
           location: (eventRow.location as string | null) ?? null,
           start_time: String(eventRow.start_time),
           end_time: String(eventRow.end_time),
+          attendees: googleAttendees.length ? googleAttendees : undefined,
         });
       } catch (syncErr) {
         console.error("Google Calendar sync on update:", syncErr);

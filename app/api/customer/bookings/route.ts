@@ -1,0 +1,149 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { createServerSideClient } from "@/lib/supabase";
+import { resolveSlotStart } from "@/lib/website/booking-slots-core";
+import { getBookingAvailabilityForWebsite } from "@/lib/website/booking-availability";
+import { createGoogleCalendarEvent } from "@/lib/google/calendar";
+import { notifyAppointmentEvent } from "@/lib/webhooks/notify-events";
+
+const bodySchema = z.object({
+  token: z.string().min(1),
+  slot_start: z.string().optional(),
+  slot_index: z.coerce.number().int().min(1).max(12).optional(),
+  offered_slots: z.array(z.string()).optional(),
+});
+
+/**
+ * Book customer kickoff meeting after onboarding questionnaire.
+ * POST /api/customer/bookings
+ */
+export async function POST(req: NextRequest) {
+  try {
+    const parsed = bodySchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    }
+
+    const supabase = createServerSideClient();
+    const { data: contact } = await supabase
+      .from("contacts")
+      .select("id, user_id, first_name, last_name, email, preferred_language")
+      .eq("onboarding_token", parsed.data.token.trim())
+      .maybeSingle();
+
+    if (!contact) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 404 });
+    }
+
+    const slotStart = resolveSlotStart({
+      slot_start: parsed.data.slot_start,
+      slot_index: parsed.data.slot_index,
+      offered_slots: parsed.data.offered_slots,
+    });
+
+    if (!slotStart) {
+      return NextResponse.json({ error: "Missing or invalid slot" }, { status: 400 });
+    }
+
+    const workspaceOwnerId = contact.user_id as string;
+    const config = await getBookingAvailabilityForWebsite();
+    const durationMs = config.meeting_duration_minutes * 60_000;
+    const endTime = new Date(new Date(slotStart).getTime() + durationMs).toISOString();
+
+    const lang = contact.preferred_language === "en" ? "en" : "es";
+    const title =
+      lang === "es"
+        ? `Reunión de inicio — ${[contact.first_name, contact.last_name].filter(Boolean).join(" ")}`
+        : `Project kickoff — ${[contact.first_name, contact.last_name].filter(Boolean).join(" ")}`;
+
+    const { data: settings } = await supabase
+      .from("user_settings")
+      .select("default_sales_assignee")
+      .eq("user_id", workspaceOwnerId)
+      .maybeSingle();
+
+    const assigneeId =
+      (settings?.default_sales_assignee as string | null)?.trim() || workspaceOwnerId;
+
+    const { data: event, error: insertError } = await supabase
+      .from("calendar_events")
+      .insert([
+        {
+          user_id: workspaceOwnerId,
+          contact_id: contact.id,
+          assigned_to: assigneeId,
+          title,
+          description:
+            lang === "es"
+              ? "Reunión de inicio agendada desde cuestionario de onboarding"
+              : "Kickoff meeting booked from onboarding questionnaire",
+          start_time: slotStart,
+          end_time: endTime,
+          location_type: "google_meet",
+          event_kind: "customer_meeting",
+          updated_at: new Date().toISOString(),
+        },
+      ])
+      .select()
+      .single();
+
+    if (insertError || !event) {
+      return NextResponse.json(
+        { error: insertError?.message ?? "Could not create event" },
+        { status: 500 }
+      );
+    }
+
+    let meetLink: string | null = null;
+    try {
+      const contactName = [contact.first_name, contact.last_name]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+      const google = await createGoogleCalendarEvent(assigneeId, {
+        title,
+        description: event.description as string,
+        start_time: slotStart,
+        end_time: endTime,
+        addGoogleMeet: true,
+        attendees: contact.email
+          ? [{ email: contact.email as string, displayName: contactName || undefined }]
+          : undefined,
+      });
+      meetLink = google.meetLink;
+      if (google.eventId || meetLink) {
+        await supabase
+          .from("calendar_events")
+          .update({
+            google_event_id: google.eventId,
+            google_sync_user_id: assigneeId,
+            is_synced: Boolean(google.eventId),
+            location: meetLink,
+            location_type: "google_meet",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", event.id);
+      }
+    } catch (syncErr) {
+      console.error("customer booking Google sync:", syncErr);
+    }
+
+    void notifyAppointmentEvent(
+      supabase,
+      workspaceOwnerId,
+      "appointment.created",
+      event as Record<string, unknown>
+    );
+
+    return NextResponse.json({
+      success: true,
+      event_id: event.id,
+      start_time: slotStart,
+      end_time: endTime,
+      meet_link: meetLink,
+    });
+  } catch (err) {
+    console.error("POST /api/customer/bookings:", err);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}

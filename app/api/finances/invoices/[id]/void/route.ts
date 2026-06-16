@@ -3,6 +3,7 @@ import { requireAuth, requireWorkspaceManage } from "@/lib/api/auth";
 import { recordAuditLog } from "@/lib/audit/record";
 import { createServerSideClient } from "@/lib/supabase";
 import { humanizeDbError } from "@/lib/validation-errors";
+import { logContactActivity } from "@/lib/activities/log-contact-activity";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -44,6 +45,16 @@ export async function POST(req: NextRequest, context: RouteContext) {
       changeSummary: `Voided invoice ${data.invoice_number}`,
       req,
     });
+
+    if (data.contact_id) {
+      await logContactActivity(supabase, {
+        userId: workspaceOwnerId!,
+        contactId: data.contact_id as string,
+        type: "system",
+        description: `Invoice ${data.invoice_number} voided`,
+        metadata: { invoice_id: id },
+      });
+    }
 
     return NextResponse.json({ data });
   } catch (err) {

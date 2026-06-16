@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 
+import type { WorkspaceBranding } from "@/lib/branding/workspace-branding";
+
 type Props = { token: string };
+
+const BRAND_FALLBACK = "#1D9E75";
 
 const COPY = {
   en: {
@@ -28,6 +32,7 @@ const COPY = {
 export function PublicFeedbackPage({ token }: Props) {
   const [locale, setLocale] = useState<"en" | "es">("es");
   const [company, setCompany] = useState("");
+  const [branding, setBranding] = useState<WorkspaceBranding | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [recommend, setRecommend] = useState(true);
@@ -39,12 +44,18 @@ export function PublicFeedbackPage({ token }: Props) {
       .get(`/api/public/feedback/${token}`)
       .then((res) => {
         setLocale(res.data.locale === "en" ? "en" : "es");
-        setCompany(res.data.company_name ?? "");
+        if (res.data.branding) {
+          setBranding(res.data.branding);
+          setCompany(res.data.branding.company_name ?? "");
+        } else {
+          setCompany(res.data.company_name ?? "");
+        }
       })
       .catch(() => setError("Invalid feedback link."));
   }, [token]);
 
   const t = COPY[locale];
+  const brandColor = branding?.primary_color ?? BRAND_FALLBACK;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -66,8 +77,14 @@ export function PublicFeedbackPage({ token }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10 px-4">
+    <div
+      className="min-h-screen bg-slate-50 py-10 px-4"
+      style={{ fontFamily: branding?.font_family }}
+    >
       <div className="max-w-md mx-auto bg-white rounded-xl shadow-sm border p-6 space-y-4">
+        {branding?.logo_url ? (
+          <img src={branding.logo_url} alt="" className="h-10 w-auto object-contain" />
+        ) : null}
         <p className="text-xs uppercase text-slate-500">{company}</p>
         <h1 className="text-xl font-semibold">{t.title}</h1>
         {done ? (
@@ -105,7 +122,7 @@ export function PublicFeedbackPage({ token }: Props) {
               />
               {t.recommend}
             </label>
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full" style={{ background: brandColor }}>
               {t.submit}
             </Button>
           </form>

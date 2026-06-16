@@ -1,0 +1,583 @@
+{
+  "name": "ClickIn360 Project Advocacy UPDATE",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Project Advocacy (post-delivery)\n\n**Triggers (via CRM Event Router):**\n- `project.completed` → send project feedback survey email\n- `project.feedback_received` → guardrail + 24h Wait → Google review (if score ≥ threshold)\n\nEdit **Config: Edit These Values**:\n- `crm_base_url`\n- `google_reviews_url` (match CRM Settings → Google review invitations)\n- `review_score_threshold` (match CRM Settings → Automations → Project stages)\n- `google_review_delay_hours` (default 24 — must match Wait node)\n\n**NOT** the manual CRM Request review button.",
+        "height": 360,
+        "width": 560,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1840,
+        80
+      ],
+      "id": "31349c9d-0598-453b-9481-e8cc93cf4453",
+      "name": "INSTRUCTIONS: Project Advocacy"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "f3a8c2d1-4e5b-6a7f-8c9d-0e1f2a3b4c5d",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1120,
+        128
+      ],
+      "id": "be63cfc7-319f-4267-b27f-6e509def4c8a",
+      "name": "Project Advocacy Webhook",
+      "webhookId": "f3a8c2d1-4e5b-6a7f-8c9d-0e1f2a3b4c5d"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfg-crm-base",
+              "name": "crm_base_url",
+              "value": "https://www.clickin360.com",
+              "type": "string"
+            },
+            {
+              "id": "cfg-google-reviews",
+              "name": "google_reviews_url",
+              "value": "https://g.page/r/CeVI5TJuGN_GEAI/review",
+              "type": "string"
+            },
+            {
+              "id": "cfg-threshold",
+              "name": "review_score_threshold",
+              "value": "4",
+              "type": "string"
+            },
+            {
+              "id": "cfg-delay",
+              "name": "google_review_delay_hours",
+              "value": "24",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -848,
+        128
+      ],
+      "id": "2c421cbe-8c26-42da-af09-30204a8d723d",
+      "name": "Config: Edit These Values"
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $input.first().json;\nconst event = root.event || root.body?.event;\nconst payload = root.payload || root.body?.payload || {};\nconst contact = payload.contact || {};\nconst settings = payload.project_stages_settings || {};\nconst locale = contact.preferred_language === 'en' ? 'en' : 'es';\nconst threshold = Number(root.review_score_threshold || settings.review_score_threshold || 4);\nconst delayHours = Number(root.google_review_delay_hours || settings.google_review_delay_hours || 24);\nconst autoReview = settings.automatic_google_review_enabled !== false;\nconst reviewUrl = root.google_reviews_url || 'https://share.google/CZL2ZHAKEqVgdIEuJ';\nconst feedbackUrl = contact.project_feedback_url || (contact.project_feedback_token ? `${(root.crm_base_url || '').replace(/\\/$/, '')}/project-feedback/${contact.project_feedback_token}` : null);\nconst score = Number(payload.feedback_score ?? payload.opportunity?.feedback_score ?? 0);\nconst guardrailPass = autoReview && contact.review_request_opt_out !== true && score >= threshold;\nconst projectFeedbackId = payload.project_feedback_id || null;\nreturn [{ json: { event, payload, contact, locale, threshold, delayHours, autoReview, guardrailPass: guardrailPass ? 'yes' : 'no', reviewUrl, feedbackUrl, score, contactEmail: contact.email, firstName: contact.first_name || 'there', contactId: contact.id, optOut: contact.review_request_opt_out === true, opportunityId: payload.opportunity_id, project_feedback_id: projectFeedbackId, skip: feedbackUrl ? 'no' : 'yes' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -560,
+        128
+      ],
+      "id": "e637b682-5051-4c7a-bdf0-eb421bad3de1",
+      "name": "Parse Project Payload"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "rightValue": "project.completed",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "29c72616-4a56-4a14-9bd6-514e960769fc"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "project.completed"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "rightValue": "project.feedback_received",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "6b73fdc7-7c23-4c32-9ba5-0b487b54c6fe"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "project.feedback_received"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -288,
+        128
+      ],
+      "id": "91cf681c-ce70-4558-b899-108a9f3c9d81",
+      "name": "Route By Event"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst isEn = d.locale === 'en';\nif (!d.feedbackUrl) {\n  return [{ json: { ...d, skip: true, reason: 'no_feedback_url' } }];\n}\nconst subject = isEn ? `How did we do on your project, ${d.firstName}?` : `¿Cómo fue tu proyecto, ${d.firstName}?`;\nconst text = isEn\n  ? `Hi ${d.firstName},\\n\\nYour project with ClickIn 360 is complete. We'd love your feedback — it only takes a minute:\\n\\n${d.feedbackUrl}\\n\\nThank you!`\n  : `Hola ${d.firstName},\\n\\nTu proyecto con ClickIn 360 está completo. Nos encantaría tu feedback — solo toma un minuto:\\n\\n${d.feedbackUrl}\\n\\n¡Gracias!`;\nreturn [{ json: { ...d, subject, text, toEmail: d.contactEmail, skip: false } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "070062ce-cad4-4f82-af1d-8ecece5efa6b",
+      "name": "Build Feedback Request Email"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.feedbackUrl }}",
+              "rightValue": "no",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "id": "2bced801-e869-4e29-babe-6ce1e004d7b3"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        272,
+        0
+      ],
+      "id": "d687d132-486e-4054-a30f-6f18966b0777",
+      "name": "IF Has Feedback URL?"
+    },
+    {
+      "parameters": {
+        "fromEmail": "no-reply@clickin360.com",
+        "toEmail": "={{ $json.toEmail }}",
+        "subject": "={{ $json.subject }}",
+        "text": "={{ $json.text }}"
+      },
+      "type": "n8n-nodes-base.mailgun",
+      "typeVersion": 1,
+      "position": [
+        528,
+        0
+      ],
+      "id": "552031c3-2519-4e16-8a23-2b0b8f00a962",
+      "name": "Mailgun: Project Feedback Request",
+      "credentials": {
+        "mailgunApi": {
+          "id": "nyCSKNSycMl74trx",
+          "name": "Mailgun account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.guardrailPass }}",
+              "rightValue": "yes",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        240
+      ],
+      "id": "12b32010-b768-40cf-8a30-c4b5f9a3e7db",
+      "name": "IF Review Guardrail Pass?"
+    },
+    {
+      "parameters": {
+        "amount": "={{ $json.delayHours }}",
+        "unit": "hours"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        272,
+        240
+      ],
+      "id": "e84f5c71-7662-4e11-a4fc-79a668f9b1dd",
+      "name": "Wait: Review Delay",
+      "webhookId": "f091d83a-2cf1-4c6f-9f6d-3a7a12ce7171"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst isEn = d.locale === 'en';\nconst subject = isEn ? `Would you leave us a Google review, ${d.firstName}?` : `¿Nos dejas una reseña en Google, ${d.firstName}?`;\nconst text = isEn\n  ? `Hi ${d.firstName},\\n\\nThank you for the positive feedback on your project. If you have a moment, a Google review would mean a lot:\\n\\n${d.reviewUrl}\\n\\nIt only takes a minute. Thank you!`\n  : `Hola ${d.firstName},\\n\\nGracias por el feedback positivo sobre tu proyecto. Si tienes un momento, una reseña en Google nos ayudaría mucho:\\n\\n${d.reviewUrl}\\n\\nSolo toma un minuto. ¡Gracias!`;\nreturn [{ json: { ...d, subject, text, toEmail: d.contactEmail } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        240
+      ],
+      "id": "d3656ba3-5143-4d2a-b477-001d27714196",
+      "name": "Build Google Review Email"
+    },
+    {
+      "parameters": {
+        "fromEmail": "no-reply@clickin360.com",
+        "toEmail": "={{ $json.toEmail }}",
+        "subject": "={{ $json.subject }}",
+        "text": "={{ $json.text }}"
+      },
+      "type": "n8n-nodes-base.mailgun",
+      "typeVersion": 1,
+      "position": [
+        784,
+        240
+      ],
+      "id": "5d0115f8-1626-4e02-a302-5e1a8e354a1e",
+      "name": "Mailgun: Google Review Request",
+      "credentials": {
+        "mailgunApi": {
+          "id": "nyCSKNSycMl74trx",
+          "name": "Mailgun account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $('Parse Project Payload').first().json.project_feedback_id ? ($('Config: Edit These Values').first().json.crm_base_url || 'https://www.clickin360.com').replace(/\\/$/, '') + '/api/project-feedback/' + $('Parse Project Payload').first().json.project_feedback_id + '/google-review-sent' : '' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1040,
+        240
+      ],
+      "id": "435bcc39-cb83-40af-8710-ab8171a3d975",
+      "name": "CRM: Mark Google Review Sent",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "avN9SN9QlpkztmyC",
+          "name": "CRM API"
+        }
+      },
+      "continueOnFail": true
+    }
+  ],
+  "pinData": {
+    "Project Advocacy Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.clickin360.com",
+            "user-agent": "n8n",
+            "content-length": "2123",
+            "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "content-type": "application/json",
+            "via": "1.1 Caddy",
+            "x-forwarded-for": "172.18.0.3",
+            "x-forwarded-host": "n8n.clickin360.com",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "event": "project.completed",
+            "workspace_owner_id": "98826477-4944-4894-acae-2d6543e35180",
+            "emitted_at": "2026-06-15T05:03:20.841Z",
+            "payload": {
+              "opportunity_id": "01d4aee8-b9b0-47fe-beff-d9e46d150b67",
+              "opportunity": {
+                "id": "01d4aee8-b9b0-47fe-beff-d9e46d150b67",
+                "user_id": "98826477-4944-4894-acae-2d6543e35180",
+                "contact_id": "15ca189b-18a6-4377-ae16-a9419aae9809",
+                "pipeline_id": "0a5b71fd-77da-48e6-abc6-9876f6728a99",
+                "title": "Bot test",
+                "value": 10000,
+                "currency": "MXN",
+                "stage": "closed_won",
+                "probability": 50,
+                "expected_close_date": null,
+                "owner_id": "98826477-4944-4894-acae-2d6543e35180",
+                "notes": null,
+                "custom_fields": {},
+                "created_at": "2026-06-15T05:01:15.10101",
+                "updated_at": "2026-06-15T05:03:20.61",
+                "tags": [],
+                "company_id": null,
+                "loss_reason": null,
+                "loss_reason_notes": null,
+                "project_stage": "complete",
+                "project_stage_updated_at": "2026-06-15T05:03:20.61+00:00",
+                "project_completed_at": "2026-06-15T05:03:20.61+00:00",
+                "project_feedback_token": "42f4476e45283282474232ea56527cc068cc95480bdd8c47",
+                "feedback_score": null,
+                "feedback_notes": {},
+                "feedback_received_at": null
+              },
+              "contact": {
+                "id": "15ca189b-18a6-4377-ae16-a9419aae9809",
+                "first_name": "Deivis",
+                "last_name": "Reynoso",
+                "email": "deivis.reynoso@gmail.com",
+                "phone": "+1 3217047500",
+                "preferred_language": "es",
+                "review_request_opt_out": false,
+                "project_feedback_token": "42f4476e45283282474232ea56527cc068cc95480bdd8c47",
+                "project_feedback_url": "https://clickin360.com/project-feedback/42f4476e45283282474232ea56527cc068cc95480bdd8c47",
+                "feedback_score": null,
+                "feedback_notes": {}
+              },
+              "previous_project_stage": "onboarding",
+              "project_stage": "complete",
+              "project_stages_settings": {
+                "stage_labels": {
+                  "onboarding": {
+                    "en": "Onboarding",
+                    "es": "Onboarding"
+                  },
+                  "design": {
+                    "en": "Design",
+                    "es": "Diseño"
+                  },
+                  "setup": {
+                    "en": "Setup",
+                    "es": "Configuración"
+                  },
+                  "launch": {
+                    "en": "Launch",
+                    "es": "Lanzamiento"
+                  },
+                  "optimization": {
+                    "en": "Optimization",
+                    "es": "Optimización"
+                  },
+                  "complete": {
+                    "en": "Complete",
+                    "es": "Completado"
+                  },
+                  "maintenance": {
+                    "en": "Maintenance",
+                    "es": "Mantenimiento"
+                  }
+                },
+                "maintenance_enabled": true,
+                "review_score_threshold": 4,
+                "google_review_delay_hours": 24,
+                "automatic_google_review_enabled": true
+              }
+            },
+            "n8n_webhook_base": "https://n8n.clickin360.com/webhook"
+          },
+          "webhookUrl": "https://n8n.clickin360.com/webhook/f3a8c2d1-4e5b-6a7f-8c9d-0e1f2a3b4c5d",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Project Advocacy Webhook": {
+      "main": [
+        [
+          {
+            "node": "Config: Edit These Values",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config: Edit These Values": {
+      "main": [
+        [
+          {
+            "node": "Parse Project Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Project Payload": {
+      "main": [
+        [
+          {
+            "node": "Route By Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route By Event": {
+      "main": [
+        [
+          {
+            "node": "Build Feedback Request Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF Review Guardrail Pass?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Feedback Request Email": {
+      "main": [
+        [
+          {
+            "node": "IF Has Feedback URL?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Has Feedback URL?": {
+      "main": [
+        [
+          {
+            "node": "Mailgun: Project Feedback Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Review Guardrail Pass?": {
+      "main": [
+        [
+          {
+            "node": "Wait: Review Delay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait: Review Delay": {
+      "main": [
+        [
+          {
+            "node": "Build Google Review Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Google Review Email": {
+      "main": [
+        [
+          {
+            "node": "Mailgun: Google Review Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mailgun: Google Review Request": {
+      "main": [
+        [
+          {
+            "node": "CRM: Mark Google Review Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "4631be90-67db-456e-b7dd-d3698bf2863b",
+  "meta": {
+    "instanceId": "d3fa9cdd620dd2c6b69b121e71ddbcc9471c89fa2a348af4786bfb8119fd5402"
+  },
+  "nodeGroups": [],
+  "id": "LISITipywnDgo57D",
+  "tags": []
+}

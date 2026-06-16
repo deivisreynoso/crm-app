@@ -50,6 +50,7 @@ export function useCreateContact() {
       axios.post<Contact>("/api/contacts", contact),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics", "pipeline"] });
     },
   });
 }

@@ -8,6 +8,7 @@ export function usePipelineAnalytics(
 ) {
   return useQuery({
     queryKey: ["analytics", "pipeline", pipelineId, filters],
+    staleTime: 120_000,
     queryFn: async () => {
       const { data } = await axios.get<PipelineAnalytics>("/api/analytics/pipeline", {
         params: {

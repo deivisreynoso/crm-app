@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerSideClient } from "@/lib/supabase";
 import { checkRateLimit, clientIpFromRequest } from "@/lib/api/rate-limit";
 import { resolveContactCommunicationLocale } from "@/lib/contacts/communication-locale";
-import { CLICKIN360_BRAND } from "@/lib/brand";
+import { resolveWorkspaceBranding } from "@/lib/branding/workspace-branding";
 import { z } from "zod";
 
 type RouteContext = { params: Promise<{ token: string }> };
@@ -34,12 +34,15 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       .eq("user_id", contact.user_id)
       .maybeSingle();
 
+    const branding = await resolveWorkspaceBranding(supabase, contact.user_id as string);
+
     return NextResponse.json({
       contact: {
         first_name: contact.first_name,
         last_name: contact.last_name,
       },
-      company_name: CLICKIN360_BRAND,
+      branding,
+      company_name: branding.company_name,
       google_reviews_url: settings?.google_reviews_url ?? null,
       locale: resolveContactCommunicationLocale(contact.preferred_language),
     });

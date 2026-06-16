@@ -9,6 +9,7 @@ import {
 import { sendInvoicePaymentRequestEmail } from "@/lib/finances/invoice-email";
 import type { InvoiceCollectionMethod, InvoiceTypeId } from "@/lib/finances/invoice-types";
 import type { FinanceCurrency } from "@/lib/finances/transactions";
+import { logContactActivity } from "@/lib/activities/log-contact-activity";
 
 export type InvoiceWizardInput = {
   invoice_type: InvoiceTypeId;
@@ -189,6 +190,16 @@ export async function executeInvoiceWizard(
       });
       emailSent = result.sent;
       emailError = result.reason;
+      if (emailSent) {
+        await logContactActivity(supabase, {
+          userId: workspaceOwnerId,
+          createdBy: userId,
+          contactId,
+          type: "system",
+          description: `Invoice ${invoice.invoice_number} sent to ${toEmail}`,
+          metadata: { invoice_id: invoice.id, to: toEmail },
+        });
+      }
     } else {
       emailError = "Contact has no email address.";
     }

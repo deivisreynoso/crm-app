@@ -13,6 +13,11 @@ import { createGoogleCalendarEvent } from "@/lib/google/calendar";
 import { assertCalendarAssigneePermission } from "@/lib/calendar/assert-assignee";
 import { enrichCalendarEventsWithOwners } from "@/lib/calendar/enrich-events";
 import { notifyAppointmentEvent } from "@/lib/webhooks/notify-events";
+import {
+  listCalendarEventAttendees,
+  resolveAttendeeEmails,
+  upsertCalendarEventAttendees,
+} from "@/lib/calendar/event-attendees";
 
 function emptyToNull(value: string | undefined): string | null {
   return value?.trim() ? value.trim() : null;
@@ -146,6 +151,57 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: dbError.message, hint }, { status: 500 });
     }
 
+    const created = data as { id?: string } | null;
+    const eventId = created?.id;
+
+    if (eventId) {
+      await upsertCalendarEventAttendees(
+        supabase,
+        eventId,
+        {
+          additional_users: parsed.data.additional_users,
+          additional_contacts: parsed.data.additional_contacts,
+        },
+        {
+          primaryUserId: assigneeId,
+          primaryContactId: parsed.data.contact_id.trim(),
+        }
+      );
+    }
+
+    const extraAttendees = eventId
+      ? await resolveAttendeeEmails(
+          supabase,
+          await listCalendarEventAttendees(supabase, eventId)
+        )
+      : [];
+
+    const { data: primaryContact } = await supabase
+      .from("contacts")
+      .select("email, first_name, last_name")
+      .eq("id", parsed.data.contact_id.trim())
+      .maybeSingle();
+
+    let primaryContactEmail: { email: string; displayName?: string } | null = null;
+    if (primaryContact?.email) {
+      const name = [primaryContact.first_name, primaryContact.last_name]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+      primaryContactEmail = {
+        email: (primaryContact.email as string).trim(),
+        displayName: name || undefined,
+      };
+    }
+
+    const googleAttendees = [
+      ...(primaryContactEmail ? [primaryContactEmail] : []),
+      ...extraAttendees.map((a) => ({
+        email: a.email,
+        displayName: a.name,
+      })),
+    ];
+
     let googleEventId: string | null = null;
     let meetLink: string | null = null;
     try {
@@ -156,6 +212,7 @@ export async function POST(req: NextRequest) {
         start_time: row.start_time,
         end_time: row.end_time,
         addGoogleMeet: isGoogleMeet,
+        attendees: googleAttendees.length ? googleAttendees : undefined,
       });
       googleEventId = createdGoogle.eventId;
       meetLink = createdGoogle.meetLink;
@@ -163,8 +220,7 @@ export async function POST(req: NextRequest) {
       console.error("Google Calendar sync on create:", syncErr);
     }
 
-    const created = data as { id?: string } | null;
-    if ((googleEventId || meetLink) && created?.id) {
+    if ((googleEventId || meetLink) && eventId) {
       const syncPatch: Record<string, unknown> = {
         is_synced: Boolean(googleEventId),
         google_sync_user_id: googleEventId ? userId! : null,
@@ -179,7 +235,7 @@ export async function POST(req: NextRequest) {
       const { data: synced } = await supabase
         .from("calendar_events")
         .update(syncPatch)
-        .eq("id", created.id)
+        .eq("id", eventId)
         .eq("user_id", workspaceOwnerId!)
         .select()
         .single();

@@ -33,6 +33,8 @@ import {
   mergeQuoteEmailContext,
   quoteEmailHasSignatureBlock,
 } from "@/lib/email/quote-email-merge";
+import { resolveQuoteSendTemplate } from "@/lib/quotes/resolve-quote-send-template";
+import { formatCurrency } from "@/lib/utils";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -207,12 +209,45 @@ export async function POST(req: NextRequest, context: RouteContext) {
       })
     );
 
+    const quoteTotalFormatted = formatCurrency(
+      Number(doc.total_amount ?? 0),
+      (doc.currency as string) || "USD"
+    );
+    const contactDisplayName =
+      [contactRow?.first_name, contactRow?.last_name].filter(Boolean).join(" ").trim() ||
+      "there";
+    const senderName = (profile?.display_name as string | null)?.trim() || "ClickIn 360";
+
+    const quoteTemplateCtx: Record<string, string | undefined> = {
+      ...mergeCtx,
+      contact_name: contactDisplayName,
+      quote_number: quoteRef ?? (doc.title as string),
+      quote_total: quoteTotalFormatted,
+      acceptance_link: acceptUrl ?? "",
+      sender_name: senderName,
+    };
+
     let subject =
       parsed.data.subject?.trim() ||
       `${emailDefaults.subjectPrefix} ${quoteRef ?? (doc.title as string)}`;
     let emailBody = parsed.data.body?.trim() || emailDefaults.bodyHtml;
 
-    if (parsed.data.template_id && doc.contact_id && contactRow) {
+    const autoTemplate =
+      !parsed.data.template_id && !parsed.data.subject?.trim() && !parsed.data.body?.trim()
+        ? await resolveQuoteSendTemplate(
+            supabase,
+            workspaceOwnerId!,
+            contactRow?.preferred_language
+          )
+        : null;
+
+    if (autoTemplate) {
+      subject = interpolateTemplate(autoTemplate.subject, quoteTemplateCtx);
+      emailBody = interpolateTemplate(autoTemplate.body, quoteTemplateCtx).replace(
+        /\n/g,
+        "<br/>"
+      );
+    } else if (parsed.data.template_id && doc.contact_id && contactRow) {
       const { data: template } = await supabase
         .from("email_templates")
         .select("subject, body")
@@ -233,10 +268,10 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     if (subject.includes("{{")) {
-      subject = interpolateTemplate(subject, mergeCtx);
+      subject = interpolateTemplate(subject, quoteTemplateCtx);
     }
     if (emailBody.includes("{{")) {
-      emailBody = interpolateTemplate(emailBody, mergeCtx);
+      emailBody = interpolateTemplate(emailBody, quoteTemplateCtx);
     }
 
     const signatureHtml = profile?.email_signature_html as string | null | undefined;

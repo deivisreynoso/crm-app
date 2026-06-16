@@ -419,12 +419,13 @@ export interface User {
     end_time: string;
     location?: string;
     location_type?: "physical" | "google_meet" | "other" | null;
-    event_kind?: "meeting" | "appointment";
+    event_kind?: "meeting" | "appointment" | "customer_meeting";
     google_event_id?: string;
     google_sync_user_id?: string | null;
     is_synced?: boolean;
     owner_name?: string | null;
     owner_color?: string | null;
+    attendees?: CalendarEventAttendee[];
     created_at: string;
     updated_at: string;
   }
@@ -434,6 +435,8 @@ export interface User {
     company_id?: string;
     opportunity_id?: string;
     assigned_to?: string;
+    additional_users?: string[];
+    additional_contacts?: string[];
     title: string;
     description?: string;
     start_time: string;
@@ -441,6 +444,15 @@ export interface User {
     location?: string;
     location_type?: "physical" | "google_meet" | "other";
   }
+
+  export type CalendarEventAttendee = {
+    id: string;
+    attendee_type: "user" | "contact";
+    user_id?: string | null;
+    contact_id?: string | null;
+    display_name?: string | null;
+    email?: string | null;
+  };
 
   export interface OperationsMetrics {
     leads: number;

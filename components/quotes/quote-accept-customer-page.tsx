@@ -53,14 +53,6 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
 
   async function respond(action: "accept" | "reject") {
     if (action === "accept") {
-      if (!name.trim()) {
-        setError(copy.nameRequired);
-        return;
-      }
-      if (!email.trim()) {
-        setError(copy.emailRequired);
-        return;
-      }
       if (!disclaimerAck) {
         setError(copy.disclaimerAck);
         return;
@@ -217,25 +209,23 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
           <div className="mt-8 space-y-4">
             <div>
               <label className="text-xs font-medium text-slate-700 block mb-1">
-                {copy.name} *
+                {copy.name}
               </label>
               <input
                 className="input-field w-full"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                required
               />
             </div>
             <div>
               <label className="text-xs font-medium text-slate-700 block mb-1">
-                {copy.email} *
+                {copy.email}
               </label>
               <input
                 type="email"
                 className="input-field w-full"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
               />
             </div>
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">

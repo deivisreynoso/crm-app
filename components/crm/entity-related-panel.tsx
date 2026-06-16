@@ -23,6 +23,8 @@ import { useCreateOpportunity } from "@/hooks/useOpportunities";
 import { uploadErrorMessage } from "@/hooks/useDocuments";
 import { formatApiError } from "@/lib/validation-errors";
 import { CreateEventModal } from "@/components/calendar/create-event-modal";
+import { OnboardingResponsesSection } from "@/components/contact/onboarding-responses-section";
+import { ProjectFeedbackSection } from "@/components/contact/project-feedback-section";
 import { EventDetailModal } from "@/components/calendar/event-detail-modal";
 import {
   useCreateCalendarEvent,
@@ -315,6 +317,28 @@ export function EntityRelatedPanel({
           </ul>
         )}
       </RelatedListSection>
+
+      {context.contactId && (
+        <RelatedListSection
+          title="Onboarding"
+          count={0}
+          iconBg="bg-teal-600"
+          iconGlyph="📋"
+        >
+          <OnboardingResponsesSection contactId={context.contactId} />
+        </RelatedListSection>
+      )}
+
+      {context.contactId && (
+        <RelatedListSection
+          title="Feedback"
+          count={0}
+          iconBg="bg-yellow-500"
+          iconGlyph="⭐"
+        >
+          <ProjectFeedbackSection contactId={context.contactId} />
+        </RelatedListSection>
+      )}
 
       <RelatedListSection
         title={rel.attachments}

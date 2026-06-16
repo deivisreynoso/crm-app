@@ -1,15 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
+import { OnboardingBookingStep } from "@/components/onboarding/onboarding-booking-step";
+import {
+  buildSuggestedStack,
+  type EscalationChannel,
+} from "@/lib/onboarding/store-response";
 import {
   CHANNEL_OPTIONS,
   ECOMMERCE_PLATFORM_OPTIONS,
-  ESCALATION_TRIGGER_OPTIONS,
   getQuestionnaireCopy,
   GOAL_OPTIONS,
-  INTEGRATION_OPTIONS,
   KB_DOCUMENT_OPTIONS,
   optionLabel,
   ORDER_INFO_OPTIONS,
@@ -39,14 +42,19 @@ type OnboardingData = {
     phone?: string | null;
     company?: string | null;
   };
-  company_name: string;
+  branding: {
+    company_name: string;
+    primary_color: string;
+    font_family: string;
+    logo_url?: string | null;
+  };
   locale: OnboardingLocale;
   onboarding_completed_at: string | null;
 };
 
-const BRAND = "#1D9E75";
+const BRAND_FALLBACK = "#1D9E75";
 
-type WizardPhase = "steps" | "summary" | "done";
+type WizardPhase = "steps" | "summary" | "booking" | "done";
 
 export function PublicOnboardingPage({ token }: Props) {
   const [data, setData] = useState<OnboardingData | null>(null);
@@ -61,6 +69,11 @@ export function PublicOnboardingPage({ token }: Props) {
   const [submitError, setSubmitError] = useState(false);
   const [copied, setCopied] = useState(false);
   const [wasAlreadyDone, setWasAlreadyDone] = useState(false);
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [brandColors, setBrandColors] = useState("");
+  const [escalationChannel, setEscalationChannel] = useState<EscalationChannel>({
+    channels: [],
+  });
 
   useEffect(() => {
     axios
@@ -90,9 +103,21 @@ export function PublicOnboardingPage({ token }: Props) {
 
   const locale = data?.locale ?? "es";
   const t = getQuestionnaireCopy(locale);
+  const brandColor = data?.branding?.primary_color ?? BRAND_FALLBACK;
+  const brandFont = data?.branding?.font_family ?? "system-ui, sans-serif";
+  const companyName = data?.branding?.company_name ?? "ClickIn 360";
   const total = QUESTIONNAIRE_SECTION_COUNT;
+  const suggestedStack = useMemo(
+    () =>
+      buildSuggestedStack({
+        ecommerce_platform: responses.ecommerce.platform,
+        escalation_channel: escalationChannel,
+        pain_points: responses.goals.map((g) => g.toLowerCase()),
+      }),
+    [responses.ecommerce.platform, responses.goals, escalationChannel]
+  );
   const progressPct =
-    phase === "summary" || phase === "done"
+    phase === "summary" || phase === "booking" || phase === "done"
       ? 100
       : Math.round((step / total) * 100);
 
@@ -127,14 +152,6 @@ export function PublicOnboardingPage({ token }: Props) {
     []
   );
 
-  const toggleEscalation = useCallback((value: string) => {
-    setResponses((prev) => {
-      const arr = prev.escalation.triggers;
-      const next = arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
-      return { ...prev, escalation: { ...prev.escalation, triggers: next } };
-    });
-  }, []);
-
   const toggleKb = useCallback((value: string) => {
     setResponses((prev) => {
       const arr = prev.knowledge_base.documents;
@@ -151,14 +168,6 @@ export function PublicOnboardingPage({ token }: Props) {
     });
   }, []);
 
-  const toggleIntegration = useCallback((value: string) => {
-    setResponses((prev) => {
-      const arr = prev.integrations.confirmed;
-      const next = arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
-      return { ...prev, integrations: { ...prev.integrations, confirmed: next } };
-    });
-  }, []);
-
   async function submitQuestionnaire() {
     setSubmitting(true);
     setSubmitError(false);
@@ -166,8 +175,12 @@ export function PublicOnboardingPage({ token }: Props) {
       await axios.post(`/api/public/onboarding/${token}`, {
         locale,
         responses,
+        website_url: websiteUrl,
+        brand_colors: brandColors,
+        escalation_channel: escalationChannel,
+        suggested_integrations: suggestedStack,
       });
-      setPhase("done");
+      setPhase("booking");
     } catch {
       setSubmitError(true);
     } finally {
@@ -216,24 +229,40 @@ export function PublicOnboardingPage({ token }: Props) {
     );
   }
 
+  if (phase === "booking" || (phase === "done" && !wasAlreadyDone)) {
+    return (
+      <div className="min-h-screen bg-[#f5f5f3] py-8 px-4" style={{ fontFamily: brandFont }}>
+        <div className="max-w-[680px] mx-auto bg-white rounded-xl border border-[#e5e5e3] p-8">
+          {data.branding.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={data.branding.logo_url} alt="" className="max-h-12 mb-6 object-contain" />
+          ) : (
+            <p className="text-xs uppercase tracking-wide text-[#5f5e5a] mb-1">{companyName}</p>
+          )}
+          <OnboardingBookingStep token={token} locale={locale} primaryColor={brandColor} />
+        </div>
+      </div>
+    );
+  }
+
   if (phase === "done") {
     return (
       <div className="min-h-screen bg-[#f5f5f3] py-8 px-4">
         <div className="max-w-[680px] mx-auto">
           <div
             className="w-[52px] h-[52px] rounded-full flex items-center justify-center text-2xl mb-4"
-            style={{ background: "#E1F5EE", color: BRAND }}
+            style={{ background: "#E1F5EE", color: brandColor }}
           >
             ✓
           </div>
-          <p className="text-[#5f5e5a] text-sm mb-1">{data.company_name}</p>
+          <p className="text-[#5f5e5a] text-sm mb-1">{companyName}</p>
           <h1 className="text-lg font-semibold text-[#1a1a18] mb-3">
             {wasAlreadyDone ? t.already : t.thanks}
           </h1>
           {!wasAlreadyDone && (
             <div className="space-y-3 mt-6">
               {summarySections(responses, locale).map((section) => (
-                <SummaryCard key={section.title} title={section.title} lines={section.lines} />
+                <SummaryCard key={section.title} title={section.title} lines={section.lines} accentColor={brandColor} />
               ))}
             </div>
           )}
@@ -243,10 +272,15 @@ export function PublicOnboardingPage({ token }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f5f3] py-8 px-4">
+    <div className="min-h-screen bg-[#f5f5f3] py-8 px-4" style={{ fontFamily: brandFont }}>
       <div className="max-w-[680px] mx-auto">
         <header className="mb-8">
-          <p className="text-xs uppercase tracking-wide text-[#5f5e5a] mb-1">{data.company_name}</p>
+          {data.branding.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={data.branding.logo_url} alt="" className="max-h-12 mb-4 object-contain" />
+          ) : (
+            <p className="text-xs uppercase tracking-wide text-[#5f5e5a] mb-1">{companyName}</p>
+          )}
           <h1 className="text-[22px] font-semibold text-[#1a1a18] mb-1.5">{t.pageTitle}</h1>
           <p className="text-sm text-[#5f5e5a] leading-relaxed">{t.pageSubtitle}</p>
         </header>
@@ -254,7 +288,7 @@ export function PublicOnboardingPage({ token }: Props) {
         <div className="h-[3px] bg-[#e5e5e3] rounded-sm mb-8 overflow-hidden">
           <div
             className="h-full rounded-sm transition-all duration-300"
-            style={{ width: `${progressPct}%`, background: BRAND }}
+            style={{ width: `${progressPct}%`, background: brandColor }}
           />
         </div>
 
@@ -262,7 +296,7 @@ export function PublicOnboardingPage({ token }: Props) {
           <div>
             <div
               className="w-[52px] h-[52px] rounded-full flex items-center justify-center text-2xl mb-4"
-              style={{ background: "#E1F5EE", color: BRAND }}
+              style={{ background: "#E1F5EE", color: brandColor }}
             >
               ✓
             </div>
@@ -270,8 +304,29 @@ export function PublicOnboardingPage({ token }: Props) {
             <p className="text-sm text-[#5f5e5a] mb-6">{t.summarySubtitle}</p>
             <div className="space-y-3 mb-6">
               {summarySections(responses, locale).map((section) => (
-                <SummaryCard key={section.title} title={section.title} lines={section.lines} />
+                <SummaryCard key={section.title} title={section.title} lines={section.lines} accentColor={brandColor} />
               ))}
+            </div>
+            <div className="mb-6 rounded-lg border border-[#e5e5e3] p-4 bg-[#fafaf8]">
+              <p className="text-sm font-semibold text-[#1a1a18] mb-3">
+                {locale === "es" ? "Stack de integración sugerido" : "Suggested integration stack"}
+              </p>
+              <ul className="space-y-2">
+                {suggestedStack.map((item) => (
+                  <li key={item.name} className="text-sm">
+                    <span className="font-medium">{item.name}</span>
+                    <span className="text-[#5f5e5a]">
+                      {" — "}
+                      {locale === "es" ? item.reason_es : item.reason_en}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-[#5f5e5a] mt-3">
+                {locale === "es"
+                  ? "Esta es la configuración recomendada basada en tus respuestas. El equipo de ClickIn 360 la confirmará durante tu reunión de inicio."
+                  : "This is the recommended setup based on your answers. The ClickIn 360 team will confirm this during your kickoff meeting."}
+              </p>
             </div>
             <div className="flex flex-wrap gap-2.5 mb-6">
               <button
@@ -308,7 +363,7 @@ export function PublicOnboardingPage({ token }: Props) {
               <Button
                 type="button"
                 className="text-white border-0"
-                style={{ background: BRAND }}
+                style={{ background: brandColor }}
                 disabled={submitting}
                 onClick={() => void submitQuestionnaire()}
               >
@@ -318,7 +373,7 @@ export function PublicOnboardingPage({ token }: Props) {
           </div>
         ) : (
           <>
-            <p className="text-[11px] font-semibold tracking-widest uppercase mb-1" style={{ color: BRAND }}>
+            <p className="text-[11px] font-semibold tracking-widest uppercase mb-1" style={{ color: brandColor }}>
               {t.sectionLabel(step, total)}
             </p>
             <h2 className="text-lg font-semibold text-[#1a1a18] mb-6">
@@ -335,10 +390,17 @@ export function PublicOnboardingPage({ token }: Props) {
                   <TextField label={t.fields.email} type="email" value={responses.project.email} onChange={(v) => updateProject("email", v)} />
                   <TextField label={t.fields.whatsapp} value={responses.project.whatsapp} onChange={(v) => updateProject("whatsapp", v)} />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <TextField label={t.fields.launchDate} value={responses.project.launch_date} onChange={(v) => updateProject("launch_date", v)} />
-                  <TextField label={t.fields.approver} value={responses.project.approver} onChange={(v) => updateProject("approver", v)} />
-                </div>
+                <TextField
+                  label={locale === "es" ? "URL del sitio web" : "Website URL"}
+                  value={websiteUrl}
+                  onChange={setWebsiteUrl}
+                />
+                <TextField
+                  label={locale === "es" ? "Colores de marca" : "Brand colors"}
+                  value={brandColors}
+                  placeholder="#1D9E75, #FFFFFF"
+                  onChange={setBrandColors}
+                />
               </div>
             )}
 
@@ -389,46 +451,48 @@ export function PublicOnboardingPage({ token }: Props) {
 
             {step === 4 && (
               <div className="space-y-5">
-                <CheckboxGroup
-                  label={t.escalationHint}
-                  options={ESCALATION_TRIGGER_OPTIONS}
-                  selected={responses.escalation.triggers}
-                  locale={locale}
-                  onToggle={toggleEscalation}
-                />
-                <TextArea
-                  label={t.fields.escalationOther}
-                  value={responses.escalation.other}
-                  placeholder={locale === "en" ? "Describe any other situations…" : "Describe otras situaciones…"}
-                  onChange={(v) =>
-                    setResponses((prev) => ({ ...prev, escalation: { ...prev.escalation, other: v } }))
-                  }
-                />
-                <Divider />
-                <TextField
-                  label={t.escalationWho}
-                  value={responses.escalation.contact_name}
-                  onChange={(v) =>
-                    setResponses((prev) => ({ ...prev, escalation: { ...prev.escalation, contact_name: v } }))
-                  }
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <TextField
-                    label={t.fields.escalationWa}
-                    value={responses.escalation.contact_wa}
-                    onChange={(v) =>
-                      setResponses((prev) => ({ ...prev, escalation: { ...prev.escalation, contact_wa: v } }))
-                    }
-                  />
-                  <TextField
-                    label={t.fields.escalationHours}
-                    value={responses.escalation.contact_hours}
-                    placeholder={locale === "en" ? "e.g. Mon–Fri 9am–6pm CST" : "ej. Lun–Vie 9am–6pm CST"}
-                    onChange={(v) =>
-                      setResponses((prev) => ({ ...prev, escalation: { ...prev.escalation, contact_hours: v } }))
-                    }
-                  />
+                <p className="text-sm font-medium text-[#1a1a18]">
+                  {locale === "es" ? "Canal de Escalamiento" : "Escalation channel"}
+                </p>
+                <div className="flex flex-wrap gap-4">
+                  {(["whatsapp", "email"] as const).map((ch) => (
+                    <label key={ch} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={escalationChannel.channels.includes(ch)}
+                        onChange={() => {
+                          setEscalationChannel((prev) => {
+                            const has = prev.channels.includes(ch);
+                            const channels = has
+                              ? prev.channels.filter((c) => c !== ch)
+                              : [...prev.channels, ch];
+                            return { ...prev, channels };
+                          });
+                        }}
+                      />
+                      {ch === "whatsapp" ? "WhatsApp" : "Email"}
+                    </label>
+                  ))}
                 </div>
+                {escalationChannel.channels.includes("whatsapp") && (
+                  <TextField
+                    label={locale === "es" ? "Número de WhatsApp" : "WhatsApp number"}
+                    value={escalationChannel.whatsapp ?? ""}
+                    onChange={(v) =>
+                      setEscalationChannel((prev) => ({ ...prev, whatsapp: v }))
+                    }
+                  />
+                )}
+                {escalationChannel.channels.includes("email") && (
+                  <TextField
+                    label={locale === "es" ? "Correo de escalamiento" : "Escalation email"}
+                    type="email"
+                    value={escalationChannel.email ?? ""}
+                    onChange={(v) =>
+                      setEscalationChannel((prev) => ({ ...prev, email: v }))
+                    }
+                  />
+                )}
               </div>
             )}
 
@@ -517,29 +581,6 @@ export function PublicOnboardingPage({ token }: Props) {
                   </>
                 )}
                 <Divider />
-                <CheckboxGroup
-                  label={t.integrationsHint}
-                  options={INTEGRATION_OPTIONS}
-                  selected={responses.integrations.confirmed}
-                  locale={locale}
-                  onToggle={toggleIntegration}
-                />
-                <TextField
-                  label={t.fields.integrationsOther}
-                  value={responses.integrations.other}
-                  placeholder={t.placeholders.integrationsOther}
-                  onChange={(v) =>
-                    setResponses((prev) => ({
-                      ...prev,
-                      integrations: { ...prev.integrations, other: v },
-                    }))
-                  }
-                />
-              </div>
-            )}
-
-            {step === 7 && (
-              <div className="space-y-5">
                 <TextField
                   label={t.fields.techContactName}
                   value={responses.contacts.technical.name}
@@ -550,70 +591,16 @@ export function PublicOnboardingPage({ token }: Props) {
                     }))
                   }
                 />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <TextField
-                    label={t.fields.techContactEmail}
-                    type="email"
-                    value={responses.contacts.technical.email}
-                    onChange={(v) =>
-                      setResponses((prev) => ({
-                        ...prev,
-                        contacts: { ...prev.contacts, technical: { ...prev.contacts.technical, email: v } },
-                      }))
-                    }
-                  />
-                  <TextField
-                    label={t.fields.techContactWa}
-                    value={responses.contacts.technical.whatsapp}
-                    onChange={(v) =>
-                      setResponses((prev) => ({
-                        ...prev,
-                        contacts: { ...prev.contacts, technical: { ...prev.contacts.technical, whatsapp: v } },
-                      }))
-                    }
-                  />
-                </div>
-                <Divider />
                 <TextField
-                  label={t.fields.commercialContactName}
-                  value={responses.contacts.commercial.name}
+                  label={t.fields.techContactEmail}
+                  type="email"
+                  value={responses.contacts.technical.email}
                   onChange={(v) =>
                     setResponses((prev) => ({
                       ...prev,
-                      contacts: { ...prev.contacts, commercial: { ...prev.contacts.commercial, name: v } },
+                      contacts: { ...prev.contacts, technical: { ...prev.contacts.technical, email: v } },
                     }))
                   }
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <TextField
-                    label={t.fields.commercialContactEmail}
-                    type="email"
-                    value={responses.contacts.commercial.email}
-                    onChange={(v) =>
-                      setResponses((prev) => ({
-                        ...prev,
-                        contacts: { ...prev.contacts, commercial: { ...prev.contacts.commercial, email: v } },
-                      }))
-                    }
-                  />
-                  <TextField
-                    label={t.fields.commercialContactWa}
-                    value={responses.contacts.commercial.whatsapp}
-                    onChange={(v) =>
-                      setResponses((prev) => ({
-                        ...prev,
-                        contacts: { ...prev.contacts, commercial: { ...prev.contacts.commercial, whatsapp: v } },
-                      }))
-                    }
-                  />
-                </div>
-                <Divider />
-                <TextArea
-                  label={t.fields.criticalDates}
-                  value={responses.critical_dates}
-                  placeholder={t.placeholders.criticalDates}
-                  hint={t.criticalDatesHint}
-                  onChange={(v) => setResponses((prev) => ({ ...prev, critical_dates: v }))}
                 />
               </div>
             )}
@@ -643,7 +630,7 @@ export function PublicOnboardingPage({ token }: Props) {
                   }
                 }}
                 className="text-[13px] font-medium px-5 py-2 rounded-lg text-white"
-                style={{ background: BRAND }}
+                style={{ background: brandColor }}
               >
                 {step === total ? `${t.finish} ✓` : `${t.next} →`}
               </button>
@@ -659,12 +646,20 @@ function Divider() {
   return <div className="h-px bg-[#e5e5e3]" />;
 }
 
-function SummaryCard({ title, lines }: { title: string; lines: string[] }) {
+function SummaryCard({
+  title,
+  lines,
+  accentColor,
+}: {
+  title: string;
+  lines: string[];
+  accentColor: string;
+}) {
   const visible = lines.filter((l) => !l.endsWith(": —") && !l.endsWith(": "));
   if (visible.length === 0) return null;
   return (
     <div className="bg-[#f5f5f3] border border-[#e5e5e3] rounded-xl p-5">
-      <p className="text-[11px] font-semibold tracking-widest uppercase mb-2.5" style={{ color: BRAND }}>
+      <p className="text-[11px] font-semibold tracking-widest uppercase mb-2.5" style={{ color: accentColor }}>
         {title}
       </p>
       {visible.map((line) => {
