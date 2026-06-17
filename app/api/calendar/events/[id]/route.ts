@@ -15,6 +15,7 @@ import {
 } from "@/lib/google/calendar";
 import { assertCalendarAssigneePermission } from "@/lib/calendar/assert-assignee";
 import { resolveGoogleSyncUserId } from "@/lib/calendar/resolve-sync-user";
+import { buildGoogleSyncAttendees } from "@/lib/calendar/google-sync-attendees";
 import { notifyAppointmentEvent } from "@/lib/webhooks/notify-events";
 import {
   listCalendarEventAttendees,
@@ -228,13 +229,12 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           }
         }
 
-        const googleAttendees = [
-          ...(primaryContactEmail ? [primaryContactEmail] : []),
-          ...extraAttendees.map((a) => ({
-            email: a.email,
-            displayName: a.name,
-          })),
-        ];
+        const googleAttendees = await buildGoogleSyncAttendees(supabase, {
+          syncUserId,
+          assigneeId: eventRow.assigned_to as string | null,
+          primaryContact: primaryContactEmail,
+          extraAttendees,
+        });
 
         await updateGoogleCalendarEvent(syncUserId, String(eventRow.google_event_id), {
           title: String(eventRow.title),

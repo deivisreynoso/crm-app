@@ -149,6 +149,9 @@ export async function createGoogleCalendarEvent(
   if (event.addGoogleMeet) {
     url.searchParams.set("conferenceDataVersion", "1");
   }
+  if (event.attendees?.length) {
+    url.searchParams.set("sendUpdates", "all");
+  }
 
   const res = await fetch(url.toString(), {
     method: "POST",
@@ -194,31 +197,35 @@ export async function updateGoogleCalendarEvent(
 
   const calendarId = calendarIdForRow(tokenRow as TokenRow | null);
 
-  const res = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(googleEventId)}`,
-    {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        summary: event.title,
-        description: event.description ?? undefined,
-        location: event.location ?? undefined,
-        start: { dateTime: new Date(event.start_time).toISOString() },
-        end: { dateTime: new Date(event.end_time).toISOString() },
-        ...(event.attendees?.length
-          ? {
-              attendees: event.attendees.map((a) => ({
-                email: a.email,
-                displayName: a.displayName,
-              })),
-            }
-          : {}),
-      }),
-    }
+  const patchUrl = new URL(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(googleEventId)}`
   );
+  if (event.attendees?.length) {
+    patchUrl.searchParams.set("sendUpdates", "all");
+  }
+
+  const res = await fetch(patchUrl.toString(), {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      summary: event.title,
+      description: event.description ?? undefined,
+      location: event.location ?? undefined,
+      start: { dateTime: new Date(event.start_time).toISOString() },
+      end: { dateTime: new Date(event.end_time).toISOString() },
+      ...(event.attendees?.length
+        ? {
+            attendees: event.attendees.map((a) => ({
+              email: a.email,
+              displayName: a.displayName,
+            })),
+          }
+        : {}),
+    }),
+  });
 
   if (!res.ok) {
     console.error("Google Calendar update failed:", await res.text());

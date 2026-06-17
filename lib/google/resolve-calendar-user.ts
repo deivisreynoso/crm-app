@@ -1,8 +1,8 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { getGoogleCalendarAccessToken } from "@/lib/google/calendar";
 
-/** Pick a user id that has Google Calendar tokens (assignee → actor → workspace owner). */
+/** Pick a user id with a working Google Calendar connection (assignee → actor → workspace owner). */
 export async function resolveCalendarUserId(
-  supabase: SupabaseClient,
+  _supabase: unknown,
   preferredUserIds: Array<string | null | undefined>,
   workspaceOwnerId: string
 ): Promise<string> {
@@ -16,13 +16,8 @@ export async function resolveCalendarUserId(
     if (seen.has(id)) continue;
     seen.add(id);
 
-    const { data } = await supabase
-      .from("google_calendar_tokens")
-      .select("id")
-      .eq("user_id", id)
-      .maybeSingle();
-
-    if (data?.id) return id;
+    const accessToken = await getGoogleCalendarAccessToken(id);
+    if (accessToken) return id;
   }
 
   return candidates[0] ?? workspaceOwnerId;
