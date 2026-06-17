@@ -551,10 +551,12 @@ Open **Calendars**.
 
 ### Available views
 
-- **Month view** — all events for the month
+- **Month view** — events for the month; each day shows up to three timed chips; **+N more** opens a scrollable list for that day
 - **Upcoming list** — future events in chronological order
 - **My calendar** — only your events
 - **All calendars** — team events with color per user; color legend at top
+
+Times on chips and in the event detail modal use your **display timezone** (see [My account → Display timezone](#16-my-account)). This matches confirmation emails and Google Calendar when your zone is set correctly.
 
 ### Create event
 
@@ -572,7 +574,7 @@ Open **Calendars**.
 |---|---|---|
 | Website bookings | Pink | Leads booking from site or chat |
 | Internal meetings | Assignee color | Created in CRM by team |
-| Client meetings | Assignee color + "Client" label | Kickoff and project meetings via `/book/[token]` |
+| Client meetings | Assignee color | Kickoff booked inline at end of `/onboarding/[token]` (`customer_meeting`) |
 
 ### Automatic reminders
 
@@ -586,11 +588,7 @@ Both reminders are sent in the contact's **preferred language**.
 
 ### Booking availability
 
-**Settings → Booking availability** — days, hours, and duration for website lead booking flow.
-
-**Settings → Automations → Customer Meeting** — separate availability for client meetings (kickoff, project meetings). Used by `/book/[token]`.
-
-> **Important:** Website lead availability and client meeting availability are **independent** configurations. This lets you set different hours for each meeting type.
+**Settings → Booking availability** — days, hours, timezone, and duration for website lead booking and the **onboarding kickoff picker** at the end of `/onboarding/[token]`.
 
 > Each member connects their Google Calendar in **Settings → Integrations**.
 
@@ -680,7 +678,7 @@ Available actions:
 
 ## 15. Notifications
 
-Click the **bell** in the header.
+Click the **bell** in the header. The panel **closes when you click outside** it. **Clear all** removes every notification immediately (no confirmation dialog).
 
 ### Notification types
 
@@ -698,10 +696,11 @@ Click the **bell** in the header.
 | Feedback received | Client submitted feedback form |
 | Negative feedback | Alert — rating below threshold |
 | Onboarding started | N8N started onboarding flow |
+| Onboarding kickoff booked | Client scheduled kickoff at end of `/onboarding/[token]` (sales group alerted) |
 
 ### Preferences
 
-**My account → Notification preferences** — toggle each type. Set your timezone for correct timestamps.
+**My account → Notifications** — toggle each in-app alert type and email digest frequency.
 
 Configurable groups (owner/admin in Settings):
 - **Sales group** — leads, quotes, paid invoices
@@ -716,12 +715,18 @@ Open **My account** (`/account`).
 | Section | Purpose |
 |---|---|
 | Profile | Name, email, profile photo |
+| **Display timezone** | How calendar, timelines, and CRM dates/times are shown (`Use device timezone` or a fixed region) |
 | Password | Change password (current password required) |
 | Email signature | HTML signature appended in Gmail composer |
-| Notifications | Per-type toggles and timezone |
+| Notifications | Per-type toggles and email digest |
 | Currency | Display preference in finances |
 
 All roles can edit their account. Viewers only update profile and password.
+
+**Display timezone tips:**
+- Choose **US Central** or **Mexico City** if you work in CST/CDT and want calendar chips to match client confirmation emails.
+- **Use device timezone** follows your laptop or phone clock when you travel.
+- A live preview shows the current time in your selected zone before you leave the page.
 
 ---
 
@@ -777,7 +782,7 @@ These pages are sent to clients by email via N8N automations. **Each page langua
 |---|---|---|---|
 | Quote acceptance | `/quote/[token]` | When quote is sent | Sales team (manual) |
 | Onboarding questionnaire | `/onboarding/[token]` | When onboarding starts | N8N automatic |
-| Kickoff booking | `/book/[token]` | In onboarding welcome email | N8N automatic |
+| Kickoff booking | Inline on `/onboarding/[token]` (date + time calendar) | After questionnaire | Customer self-serve |
 | Day 14 feedback | `/feedback/[token]` | 14 days after kickoff | N8N automatic |
 | Project feedback | `/project-feedback/[token]` | When project marked Complete | N8N automatic |
 | Support | `/support` | Link in CID emails and communications | Always available |
@@ -789,8 +794,7 @@ Quote sent
     → Client opens /quote/[token] → accepts
 
 Onboarding starts
-    → Client receives /onboarding/[token] → completes questionnaire
-    → Client receives /book/[token] → books kickoff
+    → Client receives /onboarding/[token] → completes questionnaire → picks kickoff date/time on same page
     → Day 14: client receives /feedback/[token] → onboarding feedback
 
 Project Complete
@@ -811,6 +815,7 @@ Anytime
 |---|---|
 | Cannot send email | Settings → Integrations — connect Gmail |
 | Calendar sync fails | Connect Google Calendar; event still saves in CRM |
+| Calendar time looks wrong | **My account → Display timezone** — pick your region (e.g. US Central); not the browser default if you work remotely |
 | Empty web analytics | GA4 property + service account in Admin integrations |
 | Missing Pay Now on quote | Stripe keys in Integrations; quote with payments enabled |
 | Inbound email not syncing | Mailbox that sent the thread must be connected with read permission |

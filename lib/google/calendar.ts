@@ -1,4 +1,5 @@
 import { createServerSideClient } from "@/lib/supabase";
+import { parseStoredTimestamp } from "@/lib/utils/datetime";
 
 import {
   getGoogleCalendarRedirectUri,
@@ -123,8 +124,8 @@ export async function createGoogleCalendarEvent(
     summary: event.title,
     description: event.description ?? undefined,
     location: event.location ?? undefined,
-    start: { dateTime: new Date(event.start_time).toISOString() },
-    end: { dateTime: new Date(event.end_time).toISOString() },
+    start: { dateTime: parseStoredTimestamp(event.start_time).toISOString() },
+    end: { dateTime: parseStoredTimestamp(event.end_time).toISOString() },
   };
 
   if (event.addGoogleMeet) {
@@ -214,8 +215,8 @@ export async function updateGoogleCalendarEvent(
       summary: event.title,
       description: event.description ?? undefined,
       location: event.location ?? undefined,
-      start: { dateTime: new Date(event.start_time).toISOString() },
-      end: { dateTime: new Date(event.end_time).toISOString() },
+      start: { dateTime: parseStoredTimestamp(event.start_time).toISOString() },
+      end: { dateTime: parseStoredTimestamp(event.end_time).toISOString() },
       ...(event.attendees?.length
         ? {
             attendees: event.attendees.map((a) => ({

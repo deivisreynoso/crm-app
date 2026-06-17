@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
-import { useNotificationPreferences } from "@/hooks/useNotificationPreferences";
+import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { getGreeting, getUserDisplayName } from "@/lib/user-display";
 
 interface DashboardHeaderProps {
@@ -15,14 +15,9 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ user }: DashboardHeaderProps) {
   const router = useRouter();
-  const { data: prefs } = useNotificationPreferences();
+  const timeZone = useViewerTimeZone();
   const { firstName } = getUserDisplayName(user);
-  const greeting = useMemo(() => {
-    const tz =
-      prefs?.timezone?.trim() ||
-      Intl.DateTimeFormat().resolvedOptions().timeZone;
-    return getGreeting(tz);
-  }, [prefs?.timezone]);
+  const greeting = useMemo(() => getGreeting(timeZone), [timeZone]);
 
   function handleSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

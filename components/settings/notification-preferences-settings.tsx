@@ -21,7 +21,6 @@ export function NotificationPreferencesSettings() {
   const [salesNotifs, setSalesNotifs] = useState(true);
   const [supportNotifs, setSupportNotifs] = useState(true);
   const [frequency, setFrequency] = useState("daily");
-  const [timezone, setTimezone] = useState("UTC");
 
   useEffect(() => {
     if (!data) return;
@@ -33,7 +32,6 @@ export function NotificationPreferencesSettings() {
     setSalesNotifs(data.sales_notifications ?? true);
     setSupportNotifs(data.support_notifications ?? true);
     setFrequency(data.email_frequency);
-    setTimezone(data.timezone || "UTC");
   }, [data]);
 
   async function save(patch: Parameters<typeof update.mutateAsync>[0]) {
@@ -140,26 +138,6 @@ export function NotificationPreferencesSettings() {
           />
           WhatsApp and webchat conversations needing review
         </label>
-      </div>
-      <div>
-        <label className="text-xs font-medium text-body-muted block mb-1">
-          Display time zone
-        </label>
-        <input
-          className="input-field max-w-md"
-          value={timezone}
-          placeholder="America/Mexico_City"
-          disabled={update.isPending}
-          onChange={(e) => setTimezone(e.target.value)}
-          onBlur={() => {
-            if (timezone.trim()) {
-              void save({ timezone: timezone.trim() });
-            }
-          }}
-        />
-        <p className="text-xs text-body-muted mt-1">
-          Used for activity timelines when a contact has no time zone set.
-        </p>
       </div>
       <div>
         <label className="text-xs font-medium text-body-muted block mb-1">

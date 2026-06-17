@@ -1290,7 +1290,7 @@ Legacy `GET /api/payments` may still exist for compatibility; UI uses `/api/fina
 | **Custom fields** | `GET|POST /api/custom-fields`, `GET|PATCH|DELETE /api/custom-fields/[id]` |
 | **Tags** | `GET|POST /api/contact-tags`, `GET|PATCH|DELETE /api/contact-tags/[id]` |
 | **Notifications** | `GET|POST /api/notifications`, `PATCH /api/notifications/[id]` |
-| **Notification prefs** | `GET|PATCH /api/notification-preferences` — includes `email_notifications` (inbound email), `conversation_notifications`, `finance_notifications`, `task_reminders`, `opportunity_reminders`, `ticket_notifications`, `email_frequency`, `timezone` |
+| **Notification prefs** | `GET|PATCH /api/notification-preferences` — includes `email_notifications` (inbound email), `conversation_notifications`, `finance_notifications`, `task_reminders`, `opportunity_reminders`, `ticket_notifications`, `email_frequency`, **`timezone`** (`auto` = device clock, or IANA e.g. `America/Mexico_City`; legacy `UTC` treated as `auto`) |
 | **Saved filters** | `GET|POST /api/saved-filters`, `GET|PATCH|DELETE /api/saved-filters/[id]` |
 | **Quotes (documents)** | `/api/documents`, line-items, pdf, send-via-gmail, `/api/quote-services` |
 | **Templates** | `/api/document-templates`, `/api/email-templates` (list excludes `automation` and `review_request` categories; use `GET /api/email-templates/[id]` for any template by id) |

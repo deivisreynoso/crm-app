@@ -24,4 +24,4 @@ The CRM interface follows **Settings → Platform language** (`English` / `Spani
 - [CLICKIN360-CRM-API.md](../CLICKIN360-CRM-API.md) — HTTP API reference
 - [n8n/automations-setup-guide.md](../n8n/automations-setup-guide.md) — automation workflows
 
-*Last updated: 2026-06-15*
+*Last updated: 2026-06-16*

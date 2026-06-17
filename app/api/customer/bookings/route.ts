@@ -5,6 +5,11 @@ import { resolveSlotStart } from "@/lib/website/booking-slots-core";
 import { getBookingAvailabilityForWebsite } from "@/lib/website/booking-availability";
 import { createGoogleCalendarEvent } from "@/lib/google/calendar";
 import { notifyAppointmentEvent } from "@/lib/webhooks/notify-events";
+import { upsertCalendarEventAttendees } from "@/lib/calendar/event-attendees";
+import {
+  listSalesGroupMemberIds,
+  notifySalesGroupInApp,
+} from "@/lib/notifications/workspace-groups";
 
 const bodySchema = z.object({
   token: z.string().min(1),
@@ -94,12 +99,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const salesMemberIds = await listSalesGroupMemberIds(supabase, workspaceOwnerId);
+    const additionalUsers = salesMemberIds.filter((id) => id !== assigneeId);
+    if (additionalUsers.length > 0) {
+      await upsertCalendarEventAttendees(
+        supabase,
+        event.id as string,
+        { additional_users: additionalUsers },
+        { primaryUserId: assigneeId, primaryContactId: contact.id as string }
+      );
+    }
+
+    const contactName = [contact.first_name, contact.last_name]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || "Customer";
+
+    void notifySalesGroupInApp(supabase, workspaceOwnerId, {
+      kind: "sales_website_lead",
+      title:
+        lang === "es"
+          ? `Kickoff de onboarding agendado — ${contactName}`
+          : `Onboarding kickoff booked — ${contactName}`,
+      message: contactName,
+      related_entity_type: "contact",
+      related_entity_id: contact.id as string,
+    });
+
     let meetLink: string | null = null;
     try {
-      const contactName = [contact.first_name, contact.last_name]
-        .filter(Boolean)
-        .join(" ")
-        .trim();
       const google = await createGoogleCalendarEvent(assigneeId, {
         title,
         description: event.description as string,

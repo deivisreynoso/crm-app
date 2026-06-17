@@ -15,6 +15,7 @@ import { ContactForm } from "@/components/forms/ContactForm";
 import { OpportunityForm } from "@/components/opportunities/opportunity-form";
 import { ProjectStageBadge } from "@/components/opportunities/project-stage-badge";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
+import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { formatCurrency } from "@/lib/utils";
 import { useCreateContact } from "@/hooks/useContacts";
@@ -110,6 +111,7 @@ export function EntityRelatedPanel({
   const defaultPipeline = pipelines[0];
   const createOpportunity = useCreateOpportunity(defaultPipeline?.id ?? "");
   const { canWrite } = useWorkspaceCapabilities();
+  const timeZone = useViewerTimeZone();
   const { dict } = useCrmLocale();
   const rel = dict.related;
   const router = useRouter();
@@ -442,7 +444,7 @@ export function EntityRelatedPanel({
                 (t) => t.value === e.location_type
               )?.label;
               const whenWhere = [
-                formatEventRange(e.start_time, e.end_time),
+                formatEventRange(e.start_time, e.end_time, timeZone),
                 locLabel || e.location,
               ]
                 .filter(Boolean)

@@ -17,6 +17,14 @@ export type BookingOffersResult = {
   timezone_label: string;
   meeting_duration_minutes: number;
   buffer_minutes: number;
+  /** Booking window for self-serve date/time pickers (onboarding, website). */
+  availability: {
+    days: number[];
+    start_time: string;
+    end_time: string;
+    min_notice_hours: number;
+    max_days_ahead: number;
+  };
   /** ISO start times — store in N8N session as `available_slots` (GHL parity) */
   available_slots: string[];
   offers: BookingOffer[];
@@ -104,6 +112,13 @@ export async function getBookingOffers(input: {
     timezone_label: timezoneLabel(config, lang),
     meeting_duration_minutes: config.meeting_duration_minutes,
     buffer_minutes: config.buffer_minutes,
+    availability: {
+      days: config.days,
+      start_time: config.start_time,
+      end_time: config.end_time,
+      min_notice_hours: config.min_notice_hours,
+      max_days_ahead: config.max_days_ahead,
+    },
     available_slots,
     offers,
     message,

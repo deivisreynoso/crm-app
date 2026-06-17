@@ -12,9 +12,10 @@ import { useOpportunityPicker } from "@/hooks/useOpportunities";
 import { useWorkspace } from "@/components/crm/workspace-provider";
 import type { CalendarEvent, CalendarEventFormInput } from "@/types";
 import { formatApiError } from "@/lib/validation-errors";
+import { parseStoredTimestamp } from "@/lib/utils/datetime";
 
 function toLocalInput(iso: string) {
-  const d = new Date(iso);
+  const d = parseStoredTimestamp(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }

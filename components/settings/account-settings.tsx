@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { FormLabel } from "@/components/ui/form-label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CurrencySettings } from "@/components/settings/currency-settings";
+import { DisplayTimezoneSettings } from "@/components/settings/display-timezone-settings";
 import { NotificationPreferencesSettings } from "@/components/settings/notification-preferences-settings";
 import { SettingsSection } from "@/components/settings/settings-section";
 import { Avatar } from "@/components/ui/avatar";
@@ -202,6 +203,13 @@ export function AccountSettings() {
             Save profile
           </Button>
         </form>
+      </SettingsSection>
+
+      <SettingsSection
+        title="Display timezone"
+        description="How dates and times appear across the CRM — calendar, timelines, and activity."
+      >
+        <DisplayTimezoneSettings />
       </SettingsSection>
 
       <SettingsSection

@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
 import { notificationPreferencesSchema } from "@/lib/validators";
 import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
+import { AUTO_DISPLAY_TIMEZONE } from "@/lib/constants/display-timezones";
 
 const DEFAULTS = {
   task_reminders: true,
@@ -13,7 +14,7 @@ const DEFAULTS = {
   sales_notifications: true,
   support_notifications: true,
   email_frequency: "daily",
-  timezone: "UTC",
+  timezone: AUTO_DISPLAY_TIMEZONE,
 };
 
 function newPreferencesRow(
@@ -89,7 +90,8 @@ export async function PATCH(req: NextRequest) {
     const supabase = createServerSideClient();
     const updates: Record<string, unknown> = { ...parsed.data };
     if (parsed.data.timezone !== undefined) {
-      updates.timezone = parsed.data.timezone?.trim() || DEFAULTS.timezone;
+      const tz = parsed.data.timezone?.trim();
+      updates.timezone = tz || AUTO_DISPLAY_TIMEZONE;
     }
 
     const { data: existing, error: fetchError } = await supabase

@@ -9,6 +9,7 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
+import { parseStoredTimestamp } from "@/lib/utils/datetime";
 import { resolveCalendarOwnerColor } from "@/lib/users/calendar-colors";
 
 export type LocationType = "physical" | "google_meet" | "other";
@@ -91,13 +92,78 @@ export function shiftMonth(anchor: Date, delta: number) {
   return addMonths(anchor, delta);
 }
 
-export function formatEventRange(start: string, end: string) {
-  const s = new Date(start);
-  const e = new Date(end);
-  if (isSameDay(s, e)) {
-    return `${format(s, "MMM d, yyyy")} · ${format(s, "h:mm a")} – ${format(e, "h:mm a")}`;
+export function parseEventTime(value: string): Date {
+  return parseStoredTimestamp(value);
+}
+
+function dateKeyInTimeZone(d: Date, timeZone?: string | null): string {
+  const tz = timeZone?.trim();
+  const opts: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    ...(tz ? { timeZone: tz } : {}),
+  };
+  try {
+    return new Intl.DateTimeFormat("en-CA", opts).format(d);
+  } catch {
+    return format(d, "yyyy-MM-dd");
   }
-  return `${format(s, "MMM d, yyyy h:mm a")} – ${format(e, "MMM d, yyyy h:mm a")}`;
+}
+
+/** Clock time for calendar chips and modals (stored UTC → viewer/workspace TZ). */
+export function formatEventClock(
+  value: string,
+  timeZone?: string | null,
+  locale = "en-US"
+): string {
+  const d = parseStoredTimestamp(value);
+  if (Number.isNaN(d.getTime())) return "";
+
+  const opts: Intl.DateTimeFormatOptions = {
+    hour: "numeric",
+    minute: "2-digit",
+    ...(timeZone?.trim() ? { timeZone: timeZone.trim() } : {}),
+  };
+
+  try {
+    return d.toLocaleTimeString(locale, opts);
+  } catch {
+    return d.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" });
+  }
+}
+
+export function formatEventRange(
+  start: string,
+  end: string,
+  timeZone?: string | null,
+  locale = "en-US"
+) {
+  const s = parseStoredTimestamp(start);
+  const e = parseStoredTimestamp(end);
+  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return "";
+
+  const tz = timeZone?.trim() || undefined;
+  const sameDay = dateKeyInTimeZone(s, tz) === dateKeyInTimeZone(e, tz);
+
+  const dateLabel = (d: Date) => {
+    try {
+      return d.toLocaleDateString(locale, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        timeZone: tz,
+      });
+    } catch {
+      return format(d, "MMM d, yyyy");
+    }
+  };
+
+  if (sameDay) {
+    return `${dateLabel(s)} · ${formatEventClock(start, tz, locale)} – ${formatEventClock(end, tz, locale)}`;
+  }
+
+  return `${dateLabel(s)} ${formatEventClock(start, tz, locale)} – ${dateLabel(e)} ${formatEventClock(end, tz, locale)}`;
 }
 
 export function isUrlLocation(location?: string | null) {

@@ -57,14 +57,21 @@ export function resolveDisplayTimeZone(
 }
 
 const LEGACY_DEFAULT_TIMEZONE = "UTC";
+const AUTO_DISPLAY_TIMEZONE = "auto";
 
-/** Viewer timezone: saved preference, treating legacy UTC default as unset, then browser. */
+/** Viewer timezone: saved preference, treating legacy UTC/auto as unset, then browser. */
 export function resolveViewerTimeZone(
   savedTimezone?: string | null,
   browserTimezone?: string | null
 ): string {
   const saved = savedTimezone?.trim();
-  if (saved && saved !== LEGACY_DEFAULT_TIMEZONE) return saved;
+  if (
+    saved &&
+    saved !== LEGACY_DEFAULT_TIMEZONE &&
+    saved !== AUTO_DISPLAY_TIMEZONE
+  ) {
+    return saved;
+  }
 
   const browser = browserTimezone?.trim();
   if (browser) return browser;
