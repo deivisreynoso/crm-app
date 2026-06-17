@@ -551,10 +551,12 @@ Abre **Calendarios**.
 
 ### Vistas disponibles
 
-- **Vista mensual** — todos los eventos del mes
+- **Vista mensual** — eventos del mes; cada día muestra hasta tres citas con hora; **+N más** abre la lista completa del día
 - **Lista próxima** — eventos futuros en orden cronológico
 - **Mi calendario** — solo tus eventos
 - **Todos los calendarios** — eventos del equipo con color por usuario; leyenda de colores visible en la parte superior
+
+Las horas en los chips y en el detalle del evento usan tu **zona horaria de visualización** (ver [Mi cuenta → Zona horaria de visualización](#16-mi-cuenta)).
 
 ### Crear evento
 
@@ -572,7 +574,7 @@ Abre **Calendarios**.
 |---|---|---|
 | Reservas del sitio web | Rosa | Leads que agendan desde el sitio o chat |
 | Reuniones internas | Color del responsable | Creadas en el CRM por el equipo |
-| Reuniones de cliente | Color del responsable + etiqueta "Cliente" | Kickoff y reuniones de proyecto vía `/book/[token]` |
+| Reuniones de cliente | Color del responsable | Kickoff agendado al final de `/onboarding/[token]` (`customer_meeting`) |
 
 ### Recordatorios automáticos
 
@@ -586,11 +588,7 @@ Ambos recordatorios se envían en el **idioma preferido del contacto**.
 
 ### Disponibilidad de reservas
 
-**Configuración → Disponibilidad de reservas** — días, horas y duración para el flujo de reservas de leads del sitio web.
-
-**Configuración → Automations → Customer Meeting** — disponibilidad separada para reuniones de clientes (kickoff, reuniones de proyecto). Esta disponibilidad es la que se usa en `/book/[token]`.
-
-> **Importante:** La disponibilidad para leads del sitio y la disponibilidad para clientes son configuraciones **independientes**. Esto te permite tener horarios diferentes para cada tipo de reunión.
+**Configuración → Disponibilidad de reservas** — días, horas, zona horaria y duración para reservas de leads del sitio y el **selector de kickoff** al final de `/onboarding/[token]`.
 
 > Cada miembro conecta su Google Calendar en **Configuración → Integraciones**.
 
@@ -680,7 +678,7 @@ Funciones disponibles:
 
 ## 15. Notificaciones
 
-Clic en la **campana** en el encabezado.
+Clic en la **campana** en el encabezado. El panel **se cierra al hacer clic fuera**. **Borrar todo** elimina las notificaciones de inmediato (sin diálogo de confirmación).
 
 ### Tipos de notificación
 
@@ -698,10 +696,11 @@ Clic en la **campana** en el encabezado.
 | Feedback recibido | Cliente envió formulario de feedback |
 | Feedback negativo | Alerta — calificación por debajo del umbral |
 | Onboarding iniciado | N8N inició el flujo de onboarding |
+| Kickoff de onboarding agendado | Cliente agendó kickoff al final de `/onboarding/[token]` (alerta al grupo de ventas) |
 
 ### Preferencias
 
-**Mi cuenta → Preferencias de notificación** — activa o desactiva cada tipo. Define tu zona horaria para marcas de tiempo correctas.
+**Mi cuenta → Notificaciones** — activa o desactiva cada tipo de alerta y la frecuencia del resumen por correo.
 
 Grupos configurables (propietario/admin en Configuración):
 - **Grupo de ventas** — leads, cotizaciones, facturas pagadas
@@ -716,14 +715,18 @@ Abre **Mi cuenta** (`/account`).
 | Sección | Propósito |
 |---|---|
 | Perfil | Nombre, correo, foto de perfil |
+| **Zona horaria de visualización** | Cómo se muestran calendario, líneas de tiempo y fechas/horas del CRM (`Usar zona del dispositivo` o una región fija) |
 | Contraseña | Cambiar contraseña (se requiere la actual) |
 | Firma de correo | Firma HTML que se adjunta en el compositor Gmail |
-| Notificaciones | Interruptores por tipo y zona horaria |
+| Notificaciones | Interruptores por tipo y resumen por correo |
 | Moneda | Preferencia de visualización en finanzas |
 
 Todos los roles pueden editar su cuenta. Los visores solo actualizan perfil y contraseña.
 
----
+**Consejos de zona horaria:**
+- Elige **US Central** o **Mexico City** si trabajas en CST/CDT y quieres que el calendario coincida con los correos de confirmación al cliente.
+- **Usar zona del dispositivo** sigue el reloj de tu laptop o teléfono cuando viajas.
+- Una vista previa en vivo muestra la hora actual en la zona seleccionada.
 
 ## 17. Configuración (workspace)
 
@@ -777,7 +780,7 @@ Estas páginas se envían al cliente por correo vía automatizaciones de N8N. **
 |---|---|---|---|
 | Aceptación de cotización | `/quote/[token]` | Al enviar la cotización | Equipo de ventas (manual) |
 | Cuestionario de onboarding | `/onboarding/[token]` | Al iniciarse el onboarding | N8N automático |
-| Reserva de kickoff | `/book/[token]` | En el correo de bienvenida de onboarding | N8N automático |
+| Reserva de kickoff | Inline en `/onboarding/[token]` (calendario fecha + hora) | Tras el cuestionario | Autoservicio del cliente |
 | Feedback día 14 | `/feedback/[token]` | 14 días después del kickoff | N8N automático |
 | Feedback del proyecto | `/project-feedback/[token]` | Al marcar el proyecto como Completo | N8N automático |
 | Soporte | `/support` | Enlace en correos de CID y comunicaciones | Siempre disponible |
@@ -789,8 +792,7 @@ Cotización enviada
     → Cliente abre /quote/[token] → acepta
 
 Onboarding inicia
-    → Cliente recibe /onboarding/[token] → completa cuestionario
-    → Cliente recibe /book/[token] → agenda kickoff
+    → Cliente recibe /onboarding/[token] → completa cuestionario → elige fecha y hora de kickoff en la misma página
     → Día 14: cliente recibe /feedback/[token] → feedback de onboarding
 
 Proyecto Completo
@@ -811,6 +813,7 @@ En cualquier momento
 |---|---|
 | No puedo enviar correo | Configuración → Integraciones — conectar Gmail |
 | Falla sincronización de calendario | Conectar Google Calendar; el evento igual se guarda en el CRM |
+| La hora del calendario no coincide | **Mi cuenta → Zona horaria de visualización** — elige tu región (p. ej. US Central) |
 | Analítica web vacía | Propiedad GA4 + cuenta de servicio en Admin integrations |
 | Falta Pay Now en cotización | Claves Stripe en Integraciones; cotización con pagos habilitados |
 | Correo entrante no sincroniza | El buzón que envió el hilo debe estar conectado con permiso de lectura |

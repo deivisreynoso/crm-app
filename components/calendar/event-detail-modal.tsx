@@ -10,6 +10,7 @@ import {
   isAppointmentEvent,
   isUrlLocation,
 } from "@/lib/calendar/utils";
+import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import type { CalendarEvent } from "@/types";
 
 interface EventDetailModalProps {
@@ -30,6 +31,7 @@ export function EventDetailModal({
   deleteLoading,
 }: EventDetailModalProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const timeZone = useViewerTimeZone();
 
   if (!event) return null;
 
@@ -50,7 +52,7 @@ export function EventDetailModal({
             />
             {appointment ? "Website appointment" : "Meeting"}
             {" · "}
-            {formatEventRange(event.start_time, event.end_time)}
+            {formatEventRange(event.start_time, event.end_time, timeZone)}
           </p>
           {event.owner_name && !appointment && (
             <p>

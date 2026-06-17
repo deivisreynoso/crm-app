@@ -73,7 +73,7 @@ flowchart TD
    - `POST /api/contacts/[id]/tasks` — create checklist from template (access credentials, brand assets, ad account linking).
    - Log contact activity: “Onboarding started — automated”.
 5. **Communications:**
-   - Mailgun: welcome email with kickoff link (booking offers URL or static Calendly).
+   - Mailgun: welcome email with link to `/onboarding/[token]` (questionnaire + inline kickoff calendar at the end).
    - Optional: WhatsApp template message via existing N8N WABA flow.
 6. **Notify internal:** Sales group email + in-app (`sales_notifications`) already wired for quote accept; add N8N Slack/email digest if needed.
 

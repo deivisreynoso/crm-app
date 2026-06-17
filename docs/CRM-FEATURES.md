@@ -31,7 +31,8 @@ git log -1 --format='%h %s (%cs)'
 
 | Date | Commit | Type | Summary |
 |------|--------|------|---------|
-| 2026-06-16 | *(pending)* | feature | **Sprint 6:** calendar multi-attendees + `customer_meeting` kind; onboarding form refresh (escalation channel, inline booking, workspace branding); `onboarding_responses` + `project_feedback` tables; close-won N8N API; partial-payment webhook; Spanish quote_send template; analytics TanStack Query caching; N8N UPDATE workflow exports (migrations **075–079**) |
+| 2026-06-16 | *(pending)* | fix + enhancement | **Calendar timezone display:** CRM parses stored UTC timestamps correctly; calendar chips, event modal, and related lists use **My account → Display timezone**. **Display timezone** picker in My Account (`auto` or IANA zone). **Calendar UX:** month cells show time + title; **+N more** day agenda popover. **Onboarding booking:** date/time calendar picker. **Onboarding kickoff** sales group notify + attendees. **Notifications:** outside-click close; **Clear all** without confirm |
+| 2026-06-16 | `1d02737` | feature | **Invoice-paid onboarding kickoff** in CRM (close won, active contact, tasks, CID); Onboarding A welcome email → `/onboarding/[token]` only; appointment reminder templates + webhook enrichment |
 | 2026-06-15 | *(pending)* | fix + qa | **QA sprint (round 2):** conversations last-message query fix; lazy AcceptedQuoteSelect; opportunities limit; custom-fields manage guard; auth/lead/health rate limits; full CRM E2E suite (`crm-full.spec.ts`); remove deprecated `usePayments` |
 | 2026-06-10 | *(pending)* | fix + qa | **QA sprint:** public form rate limits; Day-14 feedback timeline content; ContactSelect async combobox; E2E smoke harness; `docs/n8n/README.md`, `QA-SPRINT-REPORT.md` |
 | 2026-06-10 | `e976846` | fix | **Performance:** contact detail lazy tab loading; parallel activity-feed queries; project feedback in timeline |
@@ -128,7 +129,7 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 - **Login:** email/password (all roles) or **Google Workspace** (`@clickin360.com`; owner/admin/sales only — viewers use password)
 - **Dual-email owner:** personal Gmail + workspace email resolve to same CRM profile via `OWNER_LOGIN_ALIASES` / `team_members` (see [AUTH-ROADMAP.md](./AUTH-ROADMAP.md))
 - Forgot password / reset password (`/forgot-password`, `/reset-password`, `/auth/callback`) — reset email via `POST /api/auth/forgot-password`; production requires Supabase redirect URL `https://www.clickin360.com/auth/callback` and `NEXT_PUBLIC_APP_URL` on the server
-- **My Account** (`/account`): profile, **profile photo** upload, password, **HTML email signature** (appended on Gmail compose), notification prefs, currency
+- **My Account** (`/account`): profile, **profile photo** upload, password, **HTML email signature** (appended on Gmail compose), **display timezone** (calendar + CRM timestamps), notification prefs, currency
 - Workspace owner can delete own account (guarded)
 
 ### Home (dashboard)
@@ -147,7 +148,7 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 - Full contact profile (About/notes, website, source, insights, address, assignment, etc.)
 - Inline editing on detail view
 - Color-coded quick actions (call, email, note, task, review)
-- Activity timestamps use contact timezone → user notification timezone → browser
+- Activity timestamps use contact timezone → **user display timezone** (My account) → browser
 - Appointments appear on activity timeline; website reschedule updates existing event (no duplicate)
 - Notes, tasks (with assignee/due), activity feed (notes + activities including email metadata)
 - **Activity composer tabs:** Post | Email | Log a Call | New Task on contact detail
@@ -202,14 +203,18 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 
 ### Calendar
 
-- Month view, upcoming list, contact-related events
+- Month view with **day agenda popover** when a day has more than three events (time + title on each chip; click **+N more** to see the full list)
+- **Event times** shown in the viewer’s **display timezone** (My account); stored instants are UTC in the database (`parseStoredTimestamp` on read)
+- Upcoming list, contact-related events
 - **Requires linked contact** on create (website bookings always set `contact_id`)
+- **Additional team members** on events (`calendar_event_attendees`; migration 075)
 - **Location types:** in person, **Google Meet** (auto-generated link when Calendar connected), other
 - **Assignee** field on events (`calendar_events.assigned_to`; migration 050)
-- Google Calendar sync (per user who connected; Meet link created on sync when type is `google_meet`)
+- Google Calendar sync (assignee’s connected account when available; Meet link on sync when type is `google_meet`)
 - **Appointments** (website bookings) vs **meetings** — rose vs location-based colors, legend
+- **Onboarding kickoff** (`customer_meeting`) — booked at end of `/onboarding/[token]`; assigns default sales owner + **sales group** teammates as attendees; in-app alerts to sales group (`sales@clickin360.com`)
 - `event_kind` column (migration 032)
-- Booking availability in Settings (Lead API uses this)
+- Booking availability in Settings (onboarding picker + Lead API use this window)
 
 ### Finances
 
@@ -240,7 +245,9 @@ Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammat
 ### Notifications
 
 - In-app notifications (tickets, tasks, opportunities, inbound email, **conversations needing review**, finance events, **sales group events**, **support group events**, etc.)
-- Per-user notification preferences (`email_notifications`, `conversation_notifications`, `finance_notifications`, **`sales_notifications`**, **`support_notifications`**, task/opportunity/ticket toggles, timezone)
+- Bell panel **closes when clicking outside**; **Clear all** removes notifications immediately (no confirmation)
+- Per-user notification preferences (`email_notifications`, `conversation_notifications`, `finance_notifications`, **`sales_notifications`**, **`support_notifications`**, task/opportunity/ticket toggles, email digest frequency)
+- **Display timezone** stored on `notification_preferences.timezone` — value `auto` (default) follows device; otherwise IANA zone (e.g. `America/Chicago`). Configured under **My account → Display timezone** (not in notification toggles)
 - **Workspace group email routing** (migration **070**): configurable shared inboxes on `user_settings`
   - **Sales group** (default `sales@clickin360.com`) — website leads, invoice paid via payment link, quote accept/decline; in-app alerts to owner + sales/admin roles who opted in
   - **Support group** (default `support@clickin360.com`) — new service tickets (CRM + public widget); in-app alerts to owner/admin/support assignees who opted in
@@ -464,7 +471,7 @@ Historical phases map to git eras (not separate products):
 | `/tickets`, `/tickets/[id]` | Support |
 | `/quotes`, `/quotes/new`, `/quotes/[id]` | Quotes (tabs: all, templates, branding, products) |
 | `/services` | Redirects to `/quotes?tab=products` |
-| `/account` | My Account (profile, avatar, signature, password) |
+| `/account` | My Account (profile, avatar, signature, **display timezone**, password) |
 | `/attachments` | Supabase files linked to contacts |
 | `/media` | Workspace Google Drive browser |
 | `/calendar` | Events |

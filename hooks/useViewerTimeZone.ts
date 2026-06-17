@@ -6,6 +6,7 @@ import {
   useUpdateNotificationPreferences,
 } from "@/hooks/useNotificationPreferences";
 import { browserTimeZone, resolveViewerTimeZone } from "@/lib/utils/datetime";
+import { isAutoDisplayTimezone } from "@/lib/constants/display-timezones";
 
 const TIMEZONE_SEEDED_KEY = "clickin-viewer-timezone-seeded";
 
@@ -29,7 +30,7 @@ export function useViewerTimeZone() {
   );
 
   useEffect(() => {
-    if (!prefs || prefs.timezone !== "UTC") return;
+    if (!prefs || !isAutoDisplayTimezone(prefs.timezone)) return;
     if (browserTz === "UTC") return;
     if (window.localStorage.getItem(TIMEZONE_SEEDED_KEY)) return;
 

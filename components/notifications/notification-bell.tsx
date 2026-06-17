@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,16 +11,31 @@ import {
 } from "@/hooks/useNotifications";
 import { getNotificationHref } from "@/lib/notifications/notification-link";
 import { formatNotificationMessage } from "@/lib/notifications/format-message";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 export function NotificationBell() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
   const { data, isLoading } = useNotifications();
   const markRead = useMarkNotificationRead();
   const clearAll = useClearAllNotifications();
-  const { confirm, dialogProps } = useConfirmDialog();
+
+  useEffect(() => {
+    if (!open) return;
+
+    function handlePointerDown(event: MouseEvent | TouchEvent) {
+      const target = event.target as Node | null;
+      if (!target || panelRef.current?.contains(target)) return;
+      setOpen(false);
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, [open]);
 
   async function handleNotificationClick(
     id: string,
@@ -42,13 +57,13 @@ export function NotificationBell() {
   const unread = data?.unreadCount ?? 0;
 
   return (
-    <div className="relative">
-      <ConfirmDialog {...dialogProps} />
+    <div className="relative" ref={panelRef}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--card-border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--sidebar-hover)]"
         aria-label="Notifications"
+        aria-expanded={open}
       >
         <Bell className="h-5 w-5" strokeWidth={1.75} />
         {unread > 0 && (
@@ -59,48 +74,32 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <>
-          <button
-            type="button"
-            className="fixed inset-0 z-40"
-            aria-label="Close notifications"
-            onClick={() => setOpen(false)}
-          />
-          <div className="absolute right-0 top-full mt-2 z-50 w-80 max-h-96 overflow-y-auto rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-[var(--shadow-md)]">
-            <div className="px-4 py-3 border-b border-[var(--card-border)] flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-heading">Notifications</p>
-              {items.length > 0 && (
-                <button
-                  type="button"
-                  disabled={clearAll.isPending}
-                  onClick={() => {
-                    void (async () => {
-                      const ok = await confirm({
-                        title: "Clear all notifications?",
-                        description: "This cannot be undone.",
-                        confirmLabel: "Clear all",
-                        destructive: true,
-                      });
-                      if (!ok) return;
-                      await clearAll.mutateAsync();
-                    })();
-                  }}
-                  className="text-xs font-medium text-body-muted hover:text-heading disabled:opacity-50"
-                >
-                  Clear all
-                </button>
-              )}
-            </div>
-            {isLoading ? (
-              <p className="p-4 text-sm text-body-muted">Loading…</p>
-            ) : items.length === 0 ? (
-              <p className="p-4 text-sm text-body-muted">No notifications yet</p>
-            ) : (
-              <ul className="divide-y divide-[var(--card-border)]">
-                {items.map((n) => {
-                  const href = getNotificationHref(n);
-                  const message = formatNotificationMessage(n.message);
-                  return (
+        <div className="absolute right-0 top-full mt-2 z-50 w-80 max-h-96 overflow-y-auto rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-[var(--shadow-md)]">
+          <div className="px-4 py-3 border-b border-[var(--card-border)] flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-heading">Notifications</p>
+            {items.length > 0 && (
+              <button
+                type="button"
+                disabled={clearAll.isPending}
+                onClick={() => {
+                  void clearAll.mutateAsync();
+                }}
+                className="text-xs font-medium text-body-muted hover:text-heading disabled:opacity-50"
+              >
+                Clear all
+              </button>
+            )}
+          </div>
+          {isLoading ? (
+            <p className="p-4 text-sm text-body-muted">Loading…</p>
+          ) : items.length === 0 ? (
+            <p className="p-4 text-sm text-body-muted">No notifications yet</p>
+          ) : (
+            <ul className="divide-y divide-[var(--card-border)]">
+              {items.map((n) => {
+                const href = getNotificationHref(n);
+                const message = formatNotificationMessage(n.message);
+                return (
                   <li key={n.id}>
                     <button
                       type="button"
@@ -121,12 +120,11 @@ export function NotificationBell() {
                       )}
                     </button>
                   </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        </>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   );
