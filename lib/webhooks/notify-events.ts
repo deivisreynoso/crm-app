@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ensureContactOnboardingTokens } from "@/lib/onboarding/start";
+import { kickoffOnboardingFromInvoice } from "@/lib/onboarding/kickoff-from-invoice";
 import { fireWebhook } from "@/lib/webhooks/outbound";
 import { resolveAdditionalContactsForWebhook } from "@/lib/calendar/event-attendees";
 
@@ -24,6 +25,13 @@ export async function notifyInvoicePaid(
     typeof invoice.contact_id === "string" ? invoice.contact_id : null;
   const isQuoteInvoice =
     invoice.invoice_type === "quote" || Boolean(invoice.quote_id);
+  const paymentStatus = extra?.payment_status as string | undefined;
+  const invoiceTotal =
+    typeof extra?.invoice_total === "number"
+      ? extra.invoice_total
+      : Number(invoice.total ?? 0);
+  const documentId =
+    (invoice.quote_id as string | null | undefined)?.trim() || null;
 
   let onboardingToken: string | null = null;
 
@@ -39,11 +47,37 @@ export async function notifyInvoicePaid(
     if (nested && typeof nested === "object") {
       nested.onboarding_token = onboardingToken;
     }
+
+    if (
+      paymentStatus === "paid" ||
+      paymentStatus === "partially_paid"
+    ) {
+      try {
+        await kickoffOnboardingFromInvoice(supabase, workspaceOwnerId, {
+          contact_id: contactId,
+          document_id: documentId,
+          invoice_total: invoiceTotal,
+        });
+      } catch (kickoffErr) {
+        console.error("notifyInvoicePaid kickoff:", kickoffErr);
+      }
+    }
   }
+
+  const contact =
+    invoice.contact && typeof invoice.contact === "object"
+      ? (invoice.contact as Record<string, unknown>)
+      : null;
 
   void fireWebhook(supabase, workspaceOwnerId, "invoice.paid", {
     invoice_id: invoiceId,
     invoice,
+    contact_id: contactId,
+    contact,
+    document_id: documentId,
+    payment_status: paymentStatus ?? null,
+    amount_paid: extra?.amount_paid ?? null,
+    invoice_total: invoiceTotal,
     ...(onboardingToken ? { onboarding_token: onboardingToken } : {}),
     ...extra,
   });
