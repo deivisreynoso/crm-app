@@ -128,11 +128,17 @@ export async function POST(req: NextRequest) {
       console.error("customer booking Google sync:", syncErr);
     }
 
+    const { data: syncedEvent } = await supabase
+      .from("calendar_events")
+      .select("*")
+      .eq("id", event.id)
+      .maybeSingle();
+
     void notifyAppointmentEvent(
       supabase,
       workspaceOwnerId,
       "appointment.created",
-      event as Record<string, unknown>
+      (syncedEvent ?? event) as Record<string, unknown>
     );
 
     return NextResponse.json({

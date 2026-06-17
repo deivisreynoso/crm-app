@@ -59,7 +59,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const root = $input.first().json;\nconst event = root.event;\nconst payload = root.payload || {};\nconst ev = payload.calendar_event || {};\nconst start = ev.start_time || ev.start_at;\nconst contact = ev.contact || {};\nconst locale = contact.preferred_language === 'en' ? 'en' : 'es';\nconst additional_contacts = Array.isArray(payload.additional_contacts) ? payload.additional_contacts : [];\nreturn [{ json: { event, workspace_owner_id: root.workspace_owner_id, event_id: String(ev.id || payload.calendar_event_id), contact_id: String(ev.contact_id || contact.id || ''), start_time: start, meet_link: ev.meet_link || ev.google_meet_link || null, location_type: ev.location_type || 'other', location_details: ev.location || ev.location_details || null, contact_email: contact.email || ev.contact_email, contact_phone: contact.phone || ev.contact_phone, contact_name: [contact.first_name, contact.last_name].filter(Boolean).join(' ') || ev.contact_name || 'there', locale, additional_contacts } }];"
+        "jsCode": "const root = $input.first().json;\nconst body = root.body || root;\nconst event = body.event || root.event;\nconst payload = body.payload || root.payload || {};\nconst ev = payload.calendar_event || {};\nconst contact = payload.contact || ev.contact || {};\nconst start = ev.start_time || ev.start_at;\nconst locale = contact.preferred_language === 'en' ? 'en' : 'es';\nconst additional_contacts = Array.isArray(payload.additional_contacts) ? payload.additional_contacts : [];\nconst meet_link = ev.meet_link || ev.google_meet_link || (ev.location_type === 'google_meet' ? ev.location : null) || null;\nreturn [{ json: {\n  event,\n  workspace_owner_id: body.workspace_owner_id || root.workspace_owner_id,\n  event_id: String(ev.id || payload.calendar_event_id || ''),\n  contact_id: String(ev.contact_id || contact.id || ''),\n  start_time: start,\n  meet_link,\n  location_type: ev.location_type || 'other',\n  location_details: (ev.location_type === 'google_meet' ? null : ev.location) || ev.location_details || null,\n  contact_email: contact.email || ev.contact_email || null,\n  contact_phone: contact.phone || ev.contact_phone || null,\n  contact_name: [contact.first_name, contact.last_name].filter(Boolean).join(' ') || ev.contact_name || 'there',\n  locale,\n  additional_contacts,\n  title: ev.title || 'Appointment',\n} }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -105,7 +105,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const d = $input.first().json;\nconst start = new Date(d.start_time);\nconst now = new Date();\nconst h24 = new Date(start.getTime() - 24*60*60*1000);\nconst h1 = new Date(start.getTime() - 60*60*1000);\nreturn [{ json: { ...d, reminder_24h_at: h24.toISOString(), reminder_1h_at: h1.toISOString(), skip24: h24 <= now, skip1: h1 <= now, status: (h24 <= now && h1 <= now) ? 'skipped' : 'scheduled' } }];"
+        "jsCode": "const d = $input.first().json;\nif (!d.start_time) throw new Error('Missing start_time — check Parse Appointment Event output');\nconst start = new Date(d.start_time);\nif (Number.isNaN(start.getTime())) throw new Error('Invalid start_time: ' + d.start_time);\nconst now = new Date();\nconst h24 = new Date(start.getTime() - 24*60*60*1000);\nconst h1 = new Date(start.getTime() - 60*60*1000);\nreturn [{ json: { ...d, reminder_24h_at: h24.toISOString(), reminder_1h_at: h1.toISOString(), skip24: h24 <= now, skip1: h1 <= now, status: (h24 <= now && h1 <= now) ? 'skipped' : 'scheduled' } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -123,11 +123,11 @@
           "fieldValues": [
             {
               "fieldId": "event_id",
-              "fieldValue": "={{ $json.payload.event_id }}"
+              "fieldValue": "={{ $json.event_id }}"
             },
             {
               "fieldId": "contact_id",
-              "fieldValue": "={{ $json.payload.contact_id }}"
+              "fieldValue": "={{ $json.contact_id }}"
             },
             {
               "fieldId": "workspace_owner_id",
@@ -135,39 +135,39 @@
             },
             {
               "fieldId": "start_time",
-              "fieldValue": "={{ $json.payload.start_time }}"
+              "fieldValue": "={{ $json.start_time }}"
             },
             {
               "fieldId": "reminder_24h_at",
-              "fieldValue": "={{ $json.payload.reminder_24h_at }}"
+              "fieldValue": "={{ $json.reminder_24h_at }}"
             },
             {
               "fieldId": "reminder_1h_at",
-              "fieldValue": "={{ $json.payload.reminder_1h_at }}"
+              "fieldValue": "={{ $json.reminder_1h_at }}"
             },
             {
               "fieldId": "locale",
-              "fieldValue": "={{ $json.payload.locale || 'es' }}"
+              "fieldValue": "={{ $json.locale || 'es' }}"
             },
             {
               "fieldId": "meet_link",
-              "fieldValue": "={{ $json.payload.meet_link }}"
+              "fieldValue": "={{ $json.meet_link }}"
             },
             {
               "fieldId": "location_details",
-              "fieldValue": "={{ $json.payload.location_details }}"
+              "fieldValue": "={{ $json.location_details }}"
             },
             {
               "fieldId": "contact_email",
-              "fieldValue": "={{ $json.payload.contact.email }}"
+              "fieldValue": "={{ $json.contact_email }}"
             },
             {
               "fieldId": "contact_phone",
-              "fieldValue": "={{ $json.payload.contact.phone }}"
+              "fieldValue": "={{ $json.contact_phone }}"
             },
             {
               "fieldId": "contact_name",
-              "fieldValue": "={{ $json.payload.contact.first_name }}"
+              "fieldValue": "={{ $json.contact_name }}"
             },
             {
               "fieldId": "status",
@@ -175,7 +175,7 @@
             },
             {
               "fieldId": "location_type",
-              "fieldValue": "={{ $json.payload.location_type }}"
+              "fieldValue": "={{ $json.location_type }}"
             }
           ]
         }
@@ -310,6 +310,75 @@
       ],
       "id": "05e8f92f-0df3-404e-b400-bc8b387df77c",
       "name": "Expand Reminder Recipients"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f75e684b-7d79-42d4-a7a1-e18b89e08c28",
+              "leftValue": "={{ $json.event }}",
+              "rightValue": "appointment.created",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2096,
+        160
+      ],
+      "id": "ab838c7e-32a5-461b-9d04-ddbd8c1c0a95",
+      "name": "IF Created?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nif (d.event !== 'appointment.created' || !d.contact_email) {\n  return [{ json: { ...d, skip_confirmation: true } }];\n}\nconst isEn = d.locale === 'en';\nconst when = d.start_time ? new Date(d.start_time).toLocaleString(isEn ? 'en-US' : 'es-MX', { dateStyle: 'full', timeStyle: 'short' }) : '';\nlet text = isEn\n  ? 'Hi ' + d.contact_name + ',\\n\\nYour appointment \"' + (d.title || 'appointment') + '\" is confirmed.\\n\\n' + when\n  : 'Hola ' + d.contact_name + ',\\n\\nTu cita \"' + (d.title || 'cita') + '\" está confirmada.\\n\\n' + when;\nif (d.location_type === 'google_meet' && d.meet_link) {\n  text += '\\n\\n' + (isEn ? 'Join with Google Meet:' : 'Únete con Google Meet:') + '\\n' + d.meet_link;\n} else if (d.location_details) {\n  text += '\\n\\n' + d.location_details;\n}\nreturn [{ json: { ...d, toEmail: d.contact_email, subject: isEn ? 'Appointment confirmed — ClickIn 360' : 'Cita confirmada — ClickIn 360', text } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        64
+      ],
+      "id": "f571ad0a-e81f-4e33-abfc-486fe9d8ae83",
+      "name": "Build Confirmation Email"
+    },
+    {
+      "parameters": {
+        "fromEmail": "no-reply@clickin360.com",
+        "toEmail": "={{ $json.toEmail }}",
+        "subject": "={{ $json.subject }}",
+        "text": "={{ $json.text }}"
+      },
+      "type": "n8n-nodes-base.mailgun",
+      "typeVersion": 1,
+      "position": [
+        2544,
+        64
+      ],
+      "id": "e70680f9-853d-4f36-966c-d8a4b53581f9",
+      "name": "Mailgun: Confirmation",
+      "credentials": {
+        "mailgunApi": {
+          "id": "nyCSKNSycMl74trx",
+          "name": "Mailgun account"
+        }
+      },
+      "continueOnFail": true
     }
   ],
   "pinData": {},
@@ -352,7 +421,7 @@
         [],
         [
           {
-            "node": "Calculate Reminder Times",
+            "node": "IF Created?",
             "type": "main",
             "index": 0
           }
@@ -441,6 +510,46 @@
         [
           {
             "node": "IF Cancelled?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Created?": {
+      "main": [
+        [
+          {
+            "node": "Build Confirmation Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Calculate Reminder Times",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Confirmation Email": {
+      "main": [
+        [
+          {
+            "node": "Mailgun: Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mailgun: Confirmation": {
+      "main": [
+        [
+          {
+            "node": "Calculate Reminder Times",
             "type": "main",
             "index": 0
           }

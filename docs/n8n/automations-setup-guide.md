@@ -455,7 +455,7 @@ Canonical workflow exports live in `docs/n8n/Automations/` (do not edit in place
 | UPDATE file | Changes |
 |-------------|---------|
 | `ClickIn360 Onboarding A — Kickoff UPDATE.json` | `*2` path: `PATCH /api/opportunities/close-won` after token save; `POST /api/contacts/{id}/activities` after welcome email; `invoice.paid` accepts `payment_status: partially_paid` |
-| `ClickIn360 Appointment Reminders UPDATE.json` | Expands `additional_contacts` from webhook payload — one reminder sequence per attendee |
+| `ClickIn360 Appointment Reminders UPDATE.json` | Parses nested `body.payload` (n8n webhook shape); sends **confirmation** on `appointment.created`; expands `additional_contacts`; fixes Supabase schedule field mappings |
 | `ClickIn360 Onboarding B — Assets Reminders UPDATE.json` | `GET /api/contacts/{id}/calendar-events?kind=customer_meeting` — sends booking reminder only when no kickoff meeting exists |
 | `ClickIn360 Project Advocacy UPDATE.json` | `PATCH /api/project-feedback/{id}/google-review-sent` after Google review Mailgun |
 

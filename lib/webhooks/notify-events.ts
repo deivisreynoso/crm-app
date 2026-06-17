@@ -57,6 +57,18 @@ export async function notifyAppointmentEvent(
 ): Promise<void> {
   const eventId = calendarEvent.id as string | undefined;
   const primaryContactId = calendarEvent.contact_id as string | null | undefined;
+
+  let contact: Record<string, unknown> | null = null;
+  if (primaryContactId) {
+    const { data: contactRow } = await supabase
+      .from("contacts")
+      .select("id, first_name, last_name, email, phone, preferred_language")
+      .eq("id", primaryContactId)
+      .eq("user_id", workspaceOwnerId)
+      .maybeSingle();
+    contact = (contactRow as Record<string, unknown> | null) ?? null;
+  }
+
   const additional_contacts =
     eventId && event !== "appointment.cancelled"
       ? await resolveAdditionalContactsForWebhook(
@@ -66,9 +78,20 @@ export async function notifyAppointmentEvent(
         )
       : [];
 
+  const enrichedEvent = {
+    ...calendarEvent,
+    ...(contact ? { contact } : {}),
+    meet_link:
+      calendarEvent.meet_link ??
+      (calendarEvent.location_type === "google_meet"
+        ? calendarEvent.location
+        : null),
+  };
+
   void fireWebhook(supabase, workspaceOwnerId, event, {
     calendar_event_id: calendarEvent.id,
-    calendar_event: calendarEvent,
+    calendar_event: enrichedEvent,
+    ...(contact ? { contact } : {}),
     ...(additional_contacts.length ? { additional_contacts } : {}),
   });
 }

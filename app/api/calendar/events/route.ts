@@ -11,6 +11,7 @@ import {
 import { enrichCompanyIdFromContact } from "@/lib/contacts/enrich-company-from-contact";
 import { createGoogleCalendarEvent } from "@/lib/google/calendar";
 import { assertCalendarAssigneePermission } from "@/lib/calendar/assert-assignee";
+import { resolveGoogleSyncUserId } from "@/lib/calendar/resolve-sync-user";
 import { enrichCalendarEventsWithOwners } from "@/lib/calendar/enrich-events";
 import { notifyAppointmentEvent } from "@/lib/webhooks/notify-events";
 import {
@@ -204,8 +205,15 @@ export async function POST(req: NextRequest) {
 
     let googleEventId: string | null = null;
     let meetLink: string | null = null;
+    let googleSyncUserId: string | null = null;
     try {
-      const createdGoogle = await createGoogleCalendarEvent(userId!, {
+      googleSyncUserId = await resolveGoogleSyncUserId(supabase, {
+        actorUserId: userId!,
+        workspaceOwnerId: workspaceOwnerId!,
+        assignedTo: assigneeId,
+        preferActor: false,
+      });
+      const createdGoogle = await createGoogleCalendarEvent(googleSyncUserId, {
         title: row.title,
         description: row.description,
         location: row.location,
@@ -223,7 +231,7 @@ export async function POST(req: NextRequest) {
     if ((googleEventId || meetLink) && eventId) {
       const syncPatch: Record<string, unknown> = {
         is_synced: Boolean(googleEventId),
-        google_sync_user_id: googleEventId ? userId! : null,
+        google_sync_user_id: googleEventId ? googleSyncUserId : null,
         updated_at: new Date().toISOString(),
       };
       if (googleEventId) syncPatch.google_event_id = googleEventId;
