@@ -11,6 +11,7 @@ import {
   type EscalationChannel,
 } from "@/lib/onboarding/store-response";
 import { emailOnboardingCompletedToSales } from "@/lib/onboarding/notify-sales";
+import { assignCustomerIdIfEligible } from "@/lib/onboarding/kickoff-from-invoice";
 import { createNotification } from "@/lib/notifications/create-notification";
 import { listSalesGroupMemberIds } from "@/lib/notifications/workspace-groups";
 import { updateOpportunityProjectStage } from "@/lib/project-stages/update-stage";
@@ -165,6 +166,12 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     await supabase.from("onboarding_responses").insert([row]);
 
+    const assignedCustomerId = await assignCustomerIdIfEligible(
+      supabase,
+      workspaceOwnerId,
+      contact.id as string
+    );
+
     const contactName = [contact.first_name, contact.last_name].filter(Boolean).join(" ").trim() || "Contact";
 
     await logContactActivity(supabase, {
@@ -172,7 +179,10 @@ export async function POST(req: NextRequest, context: RouteContext) {
       contactId: contact.id as string,
       type: "onboarding",
       description: "Onboarding questionnaire completed",
-      metadata: { opportunity_id: opportunityId },
+      metadata: {
+        opportunity_id: opportunityId,
+        ...(assignedCustomerId ? { customer_id: assignedCustomerId } : {}),
+      },
     });
 
     if (opportunityId && projectMatch?.opportunity.project_stage === "onboarding") {

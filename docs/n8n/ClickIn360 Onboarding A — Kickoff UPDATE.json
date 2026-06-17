@@ -1169,7 +1169,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const d = $('Gate: Should Start Onboarding?2').first().json;\nconst contactRow = $input.first().json || {};\nconst crmBase = (d.crm_base_url || 'https://www.clickin360.com').replace(/\\/$/, '');\n\nlet existingToken = null;\nif (d.onboardingUrl) {\n  const parts = d.onboardingUrl.split('/onboarding/');\n  existingToken = parts[1] || null;\n}\nif (!existingToken) existingToken = contactRow.onboarding_token || null;\n\nlet token = existingToken;\nlet needTokenSave = false;\nif (!token) {\n  const { randomUUID } = require('crypto');\n  token = randomUUID().replace(/-/g, '');\n  needTokenSave = true;\n}\n\nconst locale = contactRow.preferred_language === 'en' || d.locale === 'en' ? 'en' : 'es';\nconst onboardingUrl = `${crmBase}/onboarding/${token}`;\nconst bookingUrl = locale === 'en'\n  ? `${crmBase}/en/book-call`\n  : `${crmBase}/es/book-call`;\n\nconst isEn = locale === 'en';\nconst subject = isEn ? 'Welcome to ClickIn 360 — next steps' : 'Bienvenido a ClickIn 360 — siguientes pasos';\nconst text = isEn\n  ? `Hi ${d.firstName},\\n\\nWelcome to ClickIn 360! Your onboarding has started.\\n\\n1) Complete the questionnaire: ${onboardingUrl}\\n2) Book your kickoff call: ${bookingUrl}\\n\\nThank you!`\n  : `Hola ${d.firstName},\\n\\n¡Bienvenido a ClickIn 360! Tu incorporación ha comenzado.\\n\\n1) Completa el cuestionario: ${onboardingUrl}\\n2) Agenda tu llamada de inicio: ${bookingUrl}\\n\\n¡Gracias!`;\n\nreturn [{ json: { ...d, locale, subject, text, toEmail: d.contactEmail, onboardingUrl, bookingUrl, needTokenSave, onboarding_token: token } }];"
+        "jsCode": "const d = $('Gate: Should Start Onboarding?2').first().json;\nconst contactRow = $input.first().json || {};\nconst crmBase = (d.crm_base_url || 'https://www.clickin360.com').replace(/\\/$/, '');\n\nlet token = null;\nif (d.onboardingUrl) {\n  const parts = d.onboardingUrl.split('/onboarding/');\n  token = parts[1] || null;\n}\nif (!token) token = d.payload?.onboarding_token || contactRow.onboarding_token || null;\n\nconst locale = contactRow.preferred_language === 'en' || d.locale === 'en' ? 'en' : 'es';\nconst onboardingUrl = token ? `${crmBase}/onboarding/${token}` : (d.onboardingUrl || crmBase);\nconst firstName = d.firstName || contactRow.first_name || 'there';\nconst isEn = locale === 'en';\nconst subject = isEn ? 'Welcome to ClickIn 360 — next steps' : 'Bienvenido a ClickIn 360 — siguientes pasos';\nconst text = isEn\n  ? `Hi ${firstName},\\n\\nWelcome to ClickIn 360! Your onboarding has started.\\n\\nComplete the questionnaire at the link below. At the end you can schedule your project kickoff meeting:\\n\\n${onboardingUrl}\\n\\nThank you!`\n  : `Hola ${firstName},\\n\\n¡Bienvenido a ClickIn 360! Tu incorporación ha comenzado.\\n\\nCompleta el cuestionario en el siguiente enlace. Al final podrás agendar tu reunión de inicio de proyecto:\\n\\n${onboardingUrl}\\n\\n¡Gracias!`;\n\nreturn [{ json: { ...d, locale, subject, text, toEmail: d.contactEmail || contactRow.email, onboardingUrl } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2009,7 +2009,7 @@
       "main": [
         [
           {
-            "node": "IF Save Token?1",
+            "node": "Mailgun: Welcome + Kickoff2",
             "type": "main",
             "index": 0
           }

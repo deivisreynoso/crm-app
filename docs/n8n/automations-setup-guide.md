@@ -454,8 +454,8 @@ Canonical workflow exports live in `docs/n8n/Automations/` (do not edit in place
 
 | UPDATE file | Changes |
 |-------------|---------|
-| `ClickIn360 Onboarding A — Kickoff UPDATE.json` | `*2` path: `PATCH /api/opportunities/close-won` after token save; `POST /api/contacts/{id}/activities` after welcome email; `invoice.paid` accepts `payment_status: partially_paid` |
-| `ClickIn360 Appointment Reminders UPDATE.json` | Parses nested `body.payload` (n8n webhook shape); sends **confirmation** on `appointment.created`; expands `additional_contacts`; fixes Supabase schedule field mappings |
+| `ClickIn360 Onboarding A — Kickoff UPDATE.json` | CRM runs kickoff on `invoice.paid` (close won, contact active, tasks); welcome email links only to `/onboarding/[token]` (booking is inline at end of questionnaire); `*2` path sends Mailgun then logs activity |
+| `ClickIn360 Appointment Reminders UPDATE.json` | Docx-style confirmation + 24h + 1h emails (Meet link, reschedule, cancel); **Calculate runs before Mailgun**; parse `body.payload` + `appointment_email` from CRM |
 | `ClickIn360 Onboarding B — Assets Reminders UPDATE.json` | `GET /api/contacts/{id}/calendar-events?kind=customer_meeting` — sends booking reminder only when no kickoff meeting exists |
 | `ClickIn360 Project Advocacy UPDATE.json` | `PATCH /api/project-feedback/{id}/google-review-sent` after Google review Mailgun |
 
@@ -463,7 +463,8 @@ Canonical workflow exports live in `docs/n8n/Automations/` (do not edit in place
 
 **CRM internal APIs** (N8N auth via `N8N_CRM_WEBHOOK_SECRET` / **CRM API** credential):
 
-- `PATCH /api/opportunities/close-won` — body: `{ contact_id, document_id, invoice_total }`
+- `POST /api/onboarding/kickoff` — body: `{ contact_id, document_id?, invoice_total }` (also invoked automatically from CRM on first `invoice.paid`)
+- `PATCH /api/opportunities/close-won` — body: `{ contact_id, document_id, invoice_total }` (legacy; prefer kickoff)
 - `POST /api/contacts/{id}/activities` — body: `{ body, type? }`
 - `GET /api/contacts/{id}/calendar-events?kind=customer_meeting`
 - `PATCH /api/project-feedback/{id}/google-review-sent`

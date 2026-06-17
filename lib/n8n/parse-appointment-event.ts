@@ -54,14 +54,28 @@ export function parseAppointmentWebhook(root: Record<string, unknown>) {
   };
 }
 
-export function calculateReminderTimes(d: { start_time?: string | null }) {
-  if (!d.start_time) {
+export function normalizeAppointmentStartTime(raw: string | null | undefined): string {
+  if (!raw) {
     throw new Error("Missing start_time — check Parse Appointment Event output");
   }
-  const start = new Date(d.start_time);
-  if (Number.isNaN(start.getTime())) {
-    throw new Error(`Invalid start_time: ${d.start_time}`);
+  const value = String(raw).trim();
+  if (!value) {
+    throw new Error("Missing start_time — check Parse Appointment Event output");
   }
+  let iso = value;
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(iso) && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(iso)) {
+    iso = `${iso}Z`;
+  }
+  const start = new Date(iso);
+  if (Number.isNaN(start.getTime())) {
+    throw new Error(`Invalid start_time: ${raw}`);
+  }
+  return iso;
+}
+
+export function calculateReminderTimes(d: { start_time?: string | null }) {
+  const iso = normalizeAppointmentStartTime(d.start_time);
+  const start = new Date(iso);
   const now = new Date();
   const h24 = new Date(start.getTime() - 24 * 60 * 60 * 1000);
   const h1 = new Date(start.getTime() - 60 * 60 * 1000);
@@ -71,5 +85,6 @@ export function calculateReminderTimes(d: { start_time?: string | null }) {
     skip24: h24 <= now,
     skip1: h1 <= now,
     status: h24 <= now && h1 <= now ? "skipped" : "scheduled",
+    start_time: iso,
   };
 }
