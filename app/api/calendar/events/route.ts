@@ -12,6 +12,7 @@ import { enrichCompanyIdFromContact } from "@/lib/contacts/enrich-company-from-c
 import { createGoogleCalendarEvent } from "@/lib/google/calendar";
 import { assertCalendarAssigneePermission } from "@/lib/calendar/assert-assignee";
 import { resolveGoogleSyncUserId } from "@/lib/calendar/resolve-sync-user";
+import { buildGoogleSyncAttendees } from "@/lib/calendar/google-sync-attendees";
 import { enrichCalendarEventsWithOwners } from "@/lib/calendar/enrich-events";
 import { notifyAppointmentEvent } from "@/lib/webhooks/notify-events";
 import {
@@ -195,14 +196,6 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    const googleAttendees = [
-      ...(primaryContactEmail ? [primaryContactEmail] : []),
-      ...extraAttendees.map((a) => ({
-        email: a.email,
-        displayName: a.name,
-      })),
-    ];
-
     let googleEventId: string | null = null;
     let meetLink: string | null = null;
     let googleSyncUserId: string | null = null;
@@ -213,6 +206,14 @@ export async function POST(req: NextRequest) {
         assignedTo: assigneeId,
         preferActor: false,
       });
+
+      const googleAttendees = await buildGoogleSyncAttendees(supabase, {
+        syncUserId: googleSyncUserId,
+        assigneeId,
+        primaryContact: primaryContactEmail,
+        extraAttendees,
+      });
+
       const createdGoogle = await createGoogleCalendarEvent(googleSyncUserId, {
         title: row.title,
         description: row.description,

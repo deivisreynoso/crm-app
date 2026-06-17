@@ -3,7 +3,7 @@ import { resolveCalendarUserId } from "@/lib/google/resolve-calendar-user";
 
 /**
  * Google Calendar user for sync operations.
- * New events: logged-in actor. Legacy events: stored google_sync_user_id or assignee fallback.
+ * CRM events sync to Owner (assigned_to) when connected; legacy rows keep google_sync_user_id.
  */
 export async function resolveGoogleSyncUserId(
   supabase: SupabaseClient,
@@ -19,18 +19,15 @@ export async function resolveGoogleSyncUserId(
     return opts.googleSyncUserId.trim();
   }
 
-  if (opts.preferActor !== false) {
-    const { data } = await supabase
-      .from("google_calendar_tokens")
-      .select("id")
-      .eq("user_id", opts.actorUserId)
-      .maybeSingle();
-    if (data?.id) return opts.actorUserId;
-  }
+  const preferred = [
+    opts.assignedTo,
+    opts.preferActor !== false ? opts.actorUserId : null,
+    opts.actorUserId,
+  ];
 
   return resolveCalendarUserId(
     supabase,
-    [opts.assignedTo, opts.actorUserId],
+    preferred,
     opts.workspaceOwnerId
   );
 }
