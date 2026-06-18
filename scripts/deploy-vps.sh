@@ -48,7 +48,21 @@ fi
 
 docker compose --env-file "$ENV_FILE" up -d app caddy
 
-sleep 3
+echo "Waiting for app health…"
+for i in $(seq 1 30); do
+  if curl -fsS "http://127.0.0.1:3000/api/health" >/dev/null 2>&1; then
+    echo "App healthy."
+    break
+  fi
+  if [[ "$i" -eq 30 ]]; then
+    echo "Health check timed out. Logs:" >&2
+    docker logs crm-app --tail 40 2>&1 || true
+    exit 1
+  fi
+  sleep 2
+done
+
+sleep 1
 if ! docker ps --format '{{.Names}}' | grep -qE '^crm-app$'; then
   echo "Container crm-app is not running. Logs:" >&2
   docker logs crm-app --tail 40 2>&1 || true

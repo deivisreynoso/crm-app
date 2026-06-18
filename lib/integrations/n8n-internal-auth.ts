@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClickIn360OrgUserIdOptional } from "@/lib/org/constants";
+import { matchesAnySecret } from "@/lib/integrations/secret-compare";
 
 function getIntegrationSecretHeader(req: NextRequest): string | null {
   return (
@@ -9,16 +10,23 @@ function getIntegrationSecretHeader(req: NextRequest): string | null {
   );
 }
 
-function isValidIntegrationSecret(header: string | null): boolean {
-  if (!header) return false;
-  const allowed = [
+function integrationSecrets(): string[] {
+  return [
     process.env.WEBSITE_LEADS_API_SECRET,
     process.env.N8N_CRM_WEBHOOK_SECRET,
     process.env.N8N_WEBHOOK_SECRET,
   ]
     .map((s) => s?.trim())
     .filter(Boolean) as string[];
-  return allowed.some((secret) => secret === header);
+}
+
+function isValidIntegrationSecret(header: string | null): boolean {
+  return matchesAnySecret(header, integrationSecrets());
+}
+
+/** Used by middleware to skip session auth for secret-authenticated N8N routes. */
+export function hasValidN8nIntegrationSecret(req: NextRequest): boolean {
+  return isValidIntegrationSecret(getIntegrationSecretHeader(req));
 }
 
 /** Auth for N8N → CRM internal endpoints (close-won, activity log, google-review-sent). */

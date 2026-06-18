@@ -1,14 +1,15 @@
 "use client";
 
-import type { TeamRole } from "@/lib/team/workspace";
+import type { TeamRole } from "@/lib/team/roles";
 import {
   canAccessFinances,
   canDeleteRecords,
+  canExportCrmData,
   canManageTeamRoles,
   canViewAllContacts,
   canViewAllOpportunities,
 } from "@/lib/auth/permissions";
-import { canWriteWorkspace } from "@/lib/team/workspace";
+import { canWriteWorkspace } from "@/lib/team/capabilities";
 
 type MatrixRole = Exclude<TeamRole, "owner">;
 
@@ -33,6 +34,10 @@ const ROWS: {
   {
     label: "Delete contacts & opportunities",
     check: (role) => canDeleteRecords(role, false),
+  },
+  {
+    label: "Export CRM data (CSV)",
+    check: (role) => canExportCrmData(role, false),
   },
   {
     label: "View all contacts",

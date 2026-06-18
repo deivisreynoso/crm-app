@@ -57,10 +57,12 @@ export function TransactionsTab({ filters, showAdd = true }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
-        <Button type="button" size="sm" variant="outline" onClick={exportCsv}>
-          <Download className="h-4 w-4 mr-1.5" />
-          Export CSV
-        </Button>
+        {canManage && (
+          <Button type="button" size="sm" variant="outline" onClick={exportCsv}>
+            <Download className="h-4 w-4 mr-1.5" />
+            Export CSV
+          </Button>
+        )}
         {showAdd && (canWrite || canManage) && (
           <>
             {canManage && (

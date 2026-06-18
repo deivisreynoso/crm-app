@@ -10,5 +10,7 @@ export function useWorkspaceCapabilities() {
     canManage: ctx?.canManage ?? false,
     isDemoViewer: ctx?.isDemoViewer ?? false,
     canAccessFinances: ctx?.canAccessFinances ?? false,
+    canExport: ctx?.canExport ?? false,
+    canManageRoles: ctx?.canManageRoles ?? false,
   };
 }

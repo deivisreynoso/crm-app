@@ -1,3 +1,4 @@
+import { matchesAnySecret } from "@/lib/integrations/secret-compare";
 import { NextRequest, NextResponse } from "next/server";
 import { getClickIn360OrgUserIdOptional } from "@/lib/org/constants";
 
@@ -6,7 +7,6 @@ export type ConversationIntegrationAuth = {
   error: null;
 };
 
-/** Shared secret sent by N8N "CRM API" header auth or x-n8n-secret. */
 function getIntegrationSecretHeader(req: NextRequest): string | null {
   return (
     req.headers.get("x-website-secret")?.trim() ||
@@ -15,16 +15,14 @@ function getIntegrationSecretHeader(req: NextRequest): string | null {
   );
 }
 
-function isValidIntegrationSecret(header: string | null): boolean {
-  if (!header) return false;
-  const allowed = [
+function integrationSecrets(): string[] {
+  return [
     process.env.WEBSITE_LEADS_API_SECRET,
     process.env.N8N_CRM_WEBHOOK_SECRET,
     process.env.N8N_WEBHOOK_SECRET,
   ]
     .map((s) => s?.trim())
     .filter(Boolean) as string[];
-  return allowed.some((secret) => secret === header);
 }
 
 /** Auth for N8N conversation sync endpoints. */
@@ -33,12 +31,8 @@ export function requireConversationIntegrationAuth(req: NextRequest):
   | { workspaceOwnerId: null; error: NextResponse } {
   const header = getIntegrationSecretHeader(req);
 
-  if (!isValidIntegrationSecret(header)) {
-    const hasAnySecret = Boolean(
-      process.env.WEBSITE_LEADS_API_SECRET?.trim() ||
-        process.env.N8N_CRM_WEBHOOK_SECRET?.trim() ||
-        process.env.N8N_WEBHOOK_SECRET?.trim()
-    );
+  if (!matchesAnySecret(header, integrationSecrets())) {
+    const hasAnySecret = integrationSecrets().length > 0;
     if (!hasAnySecret) {
       return {
         workspaceOwnerId: null,

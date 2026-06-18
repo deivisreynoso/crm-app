@@ -226,10 +226,12 @@ export function InvoicesTable() {
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => void exportCsv()}>
-            <Download className="h-4 w-4 mr-1.5" />
-            Export CSV
-          </Button>
+          {canManage && (
+            <Button type="button" variant="outline" size="sm" onClick={() => void exportCsv()}>
+              <Download className="h-4 w-4 mr-1.5" />
+              Export CSV
+            </Button>
+          )}
           {isOwner && selectedIds.size > 0 && (
             <Button
               type="button"

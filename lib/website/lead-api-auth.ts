@@ -1,16 +1,5 @@
-import { timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-
-function secretsMatch(provided: string, expected: string): boolean {
-  try {
-    const a = Buffer.from(provided);
-    const b = Buffer.from(expected);
-    if (a.length !== b.length) return false;
-    return timingSafeEqual(a, b);
-  } catch {
-    return false;
-  }
-}
+import { secretsMatch } from "@/lib/integrations/secret-compare";
 
 /** Shared secret for website / N8N → CRM lead endpoints. */
 export function requireWebsiteLeadAuth(req: NextRequest) {

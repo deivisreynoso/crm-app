@@ -8,6 +8,7 @@ import { DuplicateReviewsPanel } from "@/components/settings/duplicate-reviews-p
 import { GoogleWorkspacePanel } from "@/components/settings/google-workspace-panel";
 import { TeamSettings } from "@/components/settings/team-settings";
 import { RolePermissionsMatrix } from "@/components/settings/role-permissions-matrix";
+import { PermissionsAdminPanel } from "@/components/settings/permissions-admin-panel";
 import { WorkspaceLeadsSettings } from "@/components/settings/workspace-leads-settings";
 import { BookingAvailabilitySettings } from "@/components/settings/booking-availability-settings";
 import { GoogleReviewRequestSettings } from "@/components/settings/google-review-request-settings";
@@ -122,6 +123,13 @@ export function SettingsPageContent() {
             description="What each teammate role can do in this workspace."
           >
             <RolePermissionsMatrix />
+          </SettingsSection>
+
+          <SettingsSection
+            title="Custom roles & permission sets"
+            description="Salesforce-style access control: clone a standard role or stack permission sets on teammates."
+          >
+            <PermissionsAdminPanel />
           </SettingsSection>
 
           <SettingsSection title={s?.team ?? "Team"}>

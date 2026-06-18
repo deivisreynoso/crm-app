@@ -138,7 +138,6 @@ async function appendToExistingContact(
     first_name,
     last_name,
     email,
-    assigned_to: null,
   };
   if (phone) patch.phone = phone;
   if (company) patch.company = company;
@@ -154,7 +153,13 @@ async function appendToExistingContact(
   const signals = q.signals ?? q.friction_point;
   if (signals) patch.signals = signals;
 
-  await supabase.from("contacts").update(patch).eq("id", contactId);
+  const { error: contactUpdateError } = await supabase
+    .from("contacts")
+    .update(patch)
+    .eq("id", contactId);
+  if (contactUpdateError) {
+    throw new Error(contactUpdateError.message);
+  }
 
   const noteContent = buildNoteContent(input, true);
 

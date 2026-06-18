@@ -8,7 +8,9 @@ import { recordAuditLog } from "@/lib/audit/record";
 import { deleteAuthUser } from "@/lib/users/delete-auth-user";
 
 const patchMemberSchema = z.object({
-  role: z.enum(["sales", "viewer", "admin", "finance", "support"]),
+  role: z.enum(["sales", "viewer", "admin", "finance", "support"]).optional(),
+  custom_role_id: z.string().uuid().nullable().optional(),
+  permission_set_ids: z.array(z.string().uuid()).optional(),
 });
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -27,7 +29,15 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const body = await req.json();
     const parsed = patchMemberSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    }
+
+    if (
+      parsed.data.role === undefined &&
+      parsed.data.custom_role_id === undefined &&
+      parsed.data.permission_set_ids === undefined
+    ) {
+      return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
     }
 
     if (memberUserId === workspaceOwnerId) {
@@ -52,9 +62,14 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     const { data, error: dbError } = await supabase
       .from("team_members")
-      .update({ role: parsed.data.role })
+      .update({
+        ...(parsed.data.role !== undefined ? { role: parsed.data.role } : {}),
+        ...(parsed.data.custom_role_id !== undefined
+          ? { custom_role_id: parsed.data.custom_role_id }
+          : {}),
+      })
       .eq("id", row.id)
-      .select("member_user_id, email, display_name, role")
+      .select("id, member_user_id, email, display_name, role, custom_role_id")
       .single();
 
     if (dbError) {
@@ -62,6 +77,30 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         { error: humanizeDbError(dbError.message) },
         { status: 500 }
       );
+    }
+
+    if (parsed.data.permission_set_ids) {
+      await supabase
+        .from("team_member_permission_sets")
+        .delete()
+        .eq("member_id", row.id);
+
+      if (parsed.data.permission_set_ids.length > 0) {
+        const { error: linkError } = await supabase
+          .from("team_member_permission_sets")
+          .insert(
+            parsed.data.permission_set_ids.map((permission_set_id) => ({
+              member_id: row.id,
+              permission_set_id,
+            }))
+          );
+        if (linkError) {
+          return NextResponse.json(
+            { error: humanizeDbError(linkError.message) },
+            { status: 500 }
+          );
+        }
+      }
     }
 
     const label = (row.display_name as string | null)?.trim() || (row.email as string);
@@ -73,9 +112,20 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       entityType: "team_member",
       entityId: memberUserId,
       entityName: label,
-      oldValues: { role: row.role },
-      newValues: { role: parsed.data.role },
-      changeSummary: `Changed ${label} role from ${row.role} to ${parsed.data.role}`,
+      oldValues: {
+        role: row.role,
+        custom_role_id: (row as { custom_role_id?: string | null }).custom_role_id ?? null,
+      },
+      newValues: {
+        ...(parsed.data.role !== undefined ? { role: parsed.data.role } : {}),
+        ...(parsed.data.custom_role_id !== undefined
+          ? { custom_role_id: parsed.data.custom_role_id }
+          : {}),
+        ...(parsed.data.permission_set_ids
+          ? { permission_set_ids: parsed.data.permission_set_ids }
+          : {}),
+      },
+      changeSummary: `Updated permissions for ${label}`,
       req,
     });
 

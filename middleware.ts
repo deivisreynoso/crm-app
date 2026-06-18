@@ -5,6 +5,7 @@ import {
   isApiWriteMethod,
   isPublicApiRoute,
   financeAccessForbidden,
+  crmDataExportForbidden,
   workspaceManageForbidden,
   workspaceOwnerOnlyForbidden,
   workspaceWriteForbidden,
@@ -14,6 +15,8 @@ import { createServerSideClient } from "@/lib/supabase";
 import { resolveWorkspaceContext } from "@/lib/team/workspace";
 import { isWorkspaceAccessDeniedError } from "@/lib/team/workspace-access";
 import { canAccessFinances } from "@/lib/auth/permissions";
+import { isN8nIntegrationRoute } from "@/lib/integrations/n8n-integration-routes";
+import { hasValidN8nIntegrationSecret } from "@/lib/integrations/n8n-internal-auth";
 import { isLocale } from "@/lib/website/i18n";
 import {
   LOCALE_COOKIE,
@@ -71,6 +74,10 @@ export async function middleware(req: NextRequest) {
   });
 
   if (pathname.startsWith("/api/") && !isPublicApiRoute(pathname)) {
+    if (isN8nIntegrationRoute(pathname) && hasValidN8nIntegrationSecret(req)) {
+      return NextResponse.next();
+    }
+
     const userId =
       (token as { id?: string; sub?: string } | null)?.id ??
       (token as { sub?: string } | null)?.sub;
@@ -103,6 +110,17 @@ export async function middleware(req: NextRequest) {
         workspace.role,
         workspace.isWorkspaceOwner,
         pathname
+      )
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    if (
+      crmDataExportForbidden(
+        workspace.role,
+        workspace.isWorkspaceOwner,
+        pathname,
+        req.method
       )
     ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });

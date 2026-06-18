@@ -4,6 +4,7 @@ import { ilikePattern } from "@/lib/api/sanitize-search";
 import {
   applyContactScope,
   applyOpportunityScope,
+  applyTicketScope,
 } from "@/lib/api/data-scope";
 import { createServerSideClient } from "@/lib/supabase";
 
@@ -48,16 +49,24 @@ export async function GET(req: NextRequest) {
       userId!
     );
 
+    let ticketsQuery = supabase
+      .from("tickets")
+      .select("id, title, subject, ticket_number, status")
+      .eq("user_id", workspaceOwnerId!)
+      .or(
+        `title.ilike.${pattern},subject.ilike.${pattern},ticket_number.ilike.${pattern}`
+      )
+      .limit(5);
+    ticketsQuery = applyTicketScope(
+      ticketsQuery,
+      role!,
+      isWorkspaceOwner,
+      userId!
+    );
+
     const [contacts, tickets, opportunities] = await Promise.all([
       contactsQuery,
-      supabase
-        .from("tickets")
-        .select("id, title, subject, ticket_number, status")
-        .eq("user_id", workspaceOwnerId!)
-        .or(
-          `title.ilike.${pattern},subject.ilike.${pattern},ticket_number.ilike.${pattern}`
-        )
-        .limit(5),
+      ticketsQuery,
       opportunitiesQuery,
     ]);
 

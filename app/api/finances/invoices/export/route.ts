@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth";
+import { requireAuth, requireCrmDataExport } from "@/lib/api/auth";
 import { toCsv } from "@/lib/finances/csv";
 import { createServerSideClient } from "@/lib/supabase";
 
 export async function GET(req: NextRequest) {
   try {
-    const { workspaceOwnerId, error } = await requireAuth();
+    const { workspaceOwnerId, role, isWorkspaceOwner, effectivePermissions, error } = await requireAuth();
     if (error) return error;
+    const exportDenied = requireCrmDataExport(
+      role!,
+      isWorkspaceOwner,
+      effectivePermissions
+    );
+    if (exportDenied) return exportDenied;
 
     const params = new URL(req.url).searchParams;
     const status = params.get("status");

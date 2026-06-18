@@ -6,6 +6,23 @@ import {
   isPrivilegedRole,
 } from "@/lib/auth/permissions";
 
+/** Sales sees tickets assigned to them or unassigned queue items. */
+export function applyTicketScope<Q>(
+  query: Q,
+  role: TeamRole,
+  isWorkspaceOwner: boolean,
+  actorUserId: string
+): Q {
+  if (isPrivilegedRole(role, isWorkspaceOwner) || role === "support") {
+    return query;
+  }
+  if (role === "sales") {
+    const q = query as Q & { or: (filters: string) => Q };
+    return q.or(`assigned_to.eq.${actorUserId},assigned_to.is.null`);
+  }
+  return query;
+}
+
 /** Apply sales ownership filter on contacts (assigned_to). */
 export function applyContactScope<Q>(query: Q, role: TeamRole, isWorkspaceOwner: boolean, actorUserId: string): Q {
   if (canViewAllContacts(role, isWorkspaceOwner)) return query;

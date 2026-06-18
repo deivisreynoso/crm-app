@@ -1,8 +1,6 @@
 import { getServerSession, type Session } from "next-auth";
-import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
-import { readTrustedWorkspaceHeaders } from "@/lib/api/workspace-headers";
 import {
   canManageWorkspace,
   canWriteWorkspace,
@@ -10,7 +8,8 @@ import {
   type TeamRole,
 } from "@/lib/team/workspace";
 import { isWorkspaceAccessDeniedError } from "@/lib/team/workspace-access";
-import { canAccessFinances } from "@/lib/auth/permissions";
+import type { EffectivePermissions } from "@/lib/auth/effective-permissions";
+import { canAccessFinances, canExportCrmData } from "@/lib/auth/permissions";
 
 export type AuthContext = {
   session: Session;
@@ -18,6 +17,7 @@ export type AuthContext = {
   workspaceOwnerId: string;
   role: TeamRole;
   isWorkspaceOwner: boolean;
+  effectivePermissions: EffectivePermissions;
   error: null;
 };
 
@@ -29,6 +29,7 @@ export async function requireAuth(): Promise<
       workspaceOwnerId: null;
       role: null;
       isWorkspaceOwner: false;
+      effectivePermissions: null;
       error: NextResponse;
     }
 > {
@@ -42,22 +43,14 @@ export async function requireAuth(): Promise<
       workspaceOwnerId: null,
       role: null,
       isWorkspaceOwner: false,
+      effectivePermissions: null,
       error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
     };
   }
 
-  const headerStore = await headers();
-  const cached = readTrustedWorkspaceHeaders(headerStore, userId);
   let workspace;
   try {
-    workspace = cached
-      ? {
-          actorUserId: userId,
-          workspaceOwnerId: cached.workspaceOwnerId,
-          role: cached.role,
-          isWorkspaceOwner: cached.isWorkspaceOwner,
-        }
-      : await resolveWorkspaceContext(userId);
+    workspace = await resolveWorkspaceContext(userId);
   } catch (err) {
     if (isWorkspaceAccessDeniedError(err)) {
       return {
@@ -66,6 +59,7 @@ export async function requireAuth(): Promise<
         workspaceOwnerId: null,
         role: null,
         isWorkspaceOwner: false,
+        effectivePermissions: null,
         error: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
       };
     }
@@ -78,6 +72,7 @@ export async function requireAuth(): Promise<
     workspaceOwnerId: workspace.workspaceOwnerId,
     role: workspace.role,
     isWorkspaceOwner: workspace.isWorkspaceOwner,
+    effectivePermissions: workspace.effectivePermissions,
     error: null,
   };
 }
@@ -111,6 +106,21 @@ export function requireFinanceAccess(
   isWorkspaceOwner: boolean
 ) {
   if (!canAccessFinances(role, isWorkspaceOwner)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  return null;
+}
+
+export function requireCrmDataExport(
+  role: TeamRole,
+  isWorkspaceOwner: boolean,
+  effective?: EffectivePermissions
+) {
+  if (effective?.check("crm.export") === false) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (effective?.check("crm.export") === true) return null;
+  if (!canExportCrmData(role, isWorkspaceOwner)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   return null;

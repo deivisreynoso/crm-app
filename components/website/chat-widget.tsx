@@ -398,10 +398,10 @@ export function ChatWidget({
 
   const panel = (
     <div
-      className={`flex flex-col bg-[var(--card)] text-[var(--foreground)] border border-[var(--card-border)] shadow-2xl overflow-hidden ${
+      className={`flex flex-col bg-[var(--card)] text-[var(--foreground)] border border-[var(--card-border)] shadow-2xl overflow-hidden min-h-0 ${
         variant === "inline"
-          ? "h-[min(520px,70vh)] w-full rounded-2xl"
-          : "h-full w-full sm:h-[min(640px,85vh)] sm:max-w-lg sm:rounded-2xl sm:m-auto"
+          ? "h-[min(520px,70dvh)] w-full rounded-2xl"
+          : "h-full max-h-[100dvh] w-full sm:h-[min(640px,85dvh)] sm:max-w-lg sm:rounded-2xl sm:m-auto"
       }`}
       onKeyDown={handleKeyDown}
     >
@@ -474,7 +474,7 @@ export function ChatWidget({
 
       <form
         onSubmit={handleSubmit}
-        className="flex gap-2 p-3 border-t border-[var(--card-border)] bg-[var(--card)] shrink-0"
+        className="flex gap-2 p-3 border-t border-[var(--card-border)] bg-[var(--card)] shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
       >
         <label htmlFor={`${titleId}-input`} className="sr-only">
           {inputPlaceholder}
@@ -525,9 +525,10 @@ export function ChatWidget({
           tabIndex={open && !minimized ? 0 : -1}
         />
         <div
-          className={`relative flex flex-col h-full w-full sm:p-4 chat-widget-panel-enter ${
+          className={`relative flex flex-col w-full h-[100dvh] max-h-[100dvh] sm:h-full sm:max-h-none sm:p-4 chat-widget-panel-enter ${
             open && !minimized ? "chat-widget-panel-visible" : ""
           }`}
+          style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}

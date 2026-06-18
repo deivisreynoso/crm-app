@@ -3,6 +3,7 @@ import {
   canAccessFinances,
   canDeleteInvoice,
   canDeleteRecords,
+  canExportCrmData,
   canManageTeamRoles,
   canViewAllContacts,
   canViewContact,
@@ -44,5 +45,13 @@ describe("permissions", () => {
     expect(canManageTeamRoles("owner", true)).toBe(true);
     expect(canManageTeamRoles("admin", false)).toBe(true);
     expect(canManageTeamRoles("sales", false)).toBe(false);
+  });
+
+  test("only owner and admin can export CRM data", () => {
+    expect(canExportCrmData("owner", true)).toBe(true);
+    expect(canExportCrmData("admin", false)).toBe(true);
+    expect(canExportCrmData("finance", false)).toBe(false);
+    expect(canExportCrmData("sales", false)).toBe(false);
+    expect(canExportCrmData("support", false)).toBe(false);
   });
 });

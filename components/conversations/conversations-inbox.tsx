@@ -402,6 +402,14 @@ export function ConversationsInbox() {
                   <p className="text-xs text-body-muted truncate">
                     {detail.channel} · {detail.external_session_id}
                   </p>
+                  {detail.contact_id && (
+                    <Link
+                      href={`/contacts/${detail.contact_id}`}
+                      className="inline-flex mt-1 text-xs font-medium text-[var(--primary)] hover:underline lg:hidden"
+                    >
+                      Open contact
+                    </Link>
+                  )}
                 </div>
                 {canWrite && (
                   <>
