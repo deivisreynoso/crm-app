@@ -1,36 +1,51 @@
 import { createServerSideClient } from "@/lib/supabase";
 import { resolveWebLeadsAssignee } from "@/lib/leads/resolve-web-leads-assignee";
 import { canAccessFinances } from "@/lib/auth/permissions";
+import type { EffectivePermissions } from "@/lib/auth/effective-permissions";
+import { resolveMemberEffectivePermissions } from "@/lib/auth/resolve-member-permissions";
 import { getClickIn360OrgUserId } from "@/lib/org/constants";
 import { WorkspaceAccessDeniedError } from "@/lib/team/workspace-access";
+import {
+  canManageWorkspace,
+  canWriteWorkspace,
+} from "@/lib/team/capabilities";
 
-export type TeamRole = "owner" | "admin" | "finance" | "sales" | "support" | "viewer";
+import type { TeamRole } from "@/lib/team/roles";
+
+export type { TeamRole };
 
 export type WorkspaceCapabilities = {
   canWrite: boolean;
   canManage: boolean;
   isDemoViewer: boolean;
   canAccessFinances: boolean;
+  canExport: boolean;
+  canManageRoles: boolean;
 };
 
 export function workspaceCapabilities(
   role: TeamRole,
-  isWorkspaceOwner: boolean
-): WorkspaceCapabilities {
+  isWorkspaceOwner: boolean,
+  effective?: EffectivePermissions
+) {
   return {
-    canWrite: canWriteWorkspace(role),
-    canManage: canManageWorkspace(role, isWorkspaceOwner),
+    canWrite: effective?.check("crm.write") ?? canWriteWorkspace(role),
+    canManage:
+      effective?.check("team.manage") ?? canManageWorkspace(role, isWorkspaceOwner),
     isDemoViewer: role === "viewer",
-    canAccessFinances: canAccessFinances(role, isWorkspaceOwner),
+    canAccessFinances:
+      effective?.check("finances.access") ??
+      canAccessFinances(role, isWorkspaceOwner),
+    canExport:
+      effective?.check("crm.export") ??
+      (isWorkspaceOwner || role === "admin"),
+    canManageRoles:
+      effective?.check("team.manage_roles") ??
+      canManageWorkspace(role, isWorkspaceOwner),
   };
 }
 
-export function canManageWorkspace(
-  role: TeamRole,
-  isWorkspaceOwner: boolean
-): boolean {
-  return isWorkspaceOwner || role === "admin";
-}
+export { canManageWorkspace, canWriteWorkspace } from "@/lib/team/capabilities";
 
 export type WorkspaceContext = {
   /** Authenticated user */
@@ -39,6 +54,9 @@ export type WorkspaceContext = {
   workspaceOwnerId: string;
   role: TeamRole;
   isWorkspaceOwner: boolean;
+  memberId?: string | null;
+  customRoleId?: string | null;
+  effectivePermissions: EffectivePermissions;
 };
 
 function mapTeamRole(dbRole: string): TeamRole {
@@ -56,17 +74,22 @@ export async function resolveWorkspaceContext(
   const orgOwnerId = getClickIn360OrgUserId();
 
   if (actorUserId === orgOwnerId) {
+    const effectivePermissions = await resolveMemberEffectivePermissions(supabase, {
+      role: "owner",
+      isWorkspaceOwner: true,
+    });
     return {
       actorUserId,
       workspaceOwnerId: orgOwnerId,
       role: "owner",
       isWorkspaceOwner: true,
+      effectivePermissions,
     };
   }
 
   const { data: membership } = await supabase
     .from("team_members")
-    .select("owner_user_id, role")
+    .select("id, owner_user_id, role, custom_role_id")
     .eq("member_user_id", actorUserId)
     .eq("owner_user_id", orgOwnerId)
     .maybeSingle();
@@ -75,21 +98,23 @@ export async function resolveWorkspaceContext(
     throw new WorkspaceAccessDeniedError();
   }
 
+  const role = mapTeamRole(membership.role as string);
+  const effectivePermissions = await resolveMemberEffectivePermissions(supabase, {
+    role,
+    isWorkspaceOwner: false,
+    memberId: membership.id as string,
+    customRoleId: (membership.custom_role_id as string | null) ?? null,
+  });
+
   return {
     actorUserId,
     workspaceOwnerId: membership.owner_user_id,
-    role: mapTeamRole(membership.role as string),
+    role,
     isWorkspaceOwner: false,
+    memberId: membership.id as string,
+    customRoleId: (membership.custom_role_id as string | null) ?? null,
+    effectivePermissions,
   };
-}
-
-export function canWriteWorkspace(role: TeamRole): boolean {
-  return (
-    role === "owner" ||
-    role === "admin" ||
-    role === "sales" ||
-    role === "support"
-  );
 }
 
 export async function getWorkspaceWebsiteLeadsConfig(workspaceOwnerId: string) {

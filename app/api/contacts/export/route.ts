@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth";
+import { requireAuth, requireCrmDataExport } from "@/lib/api/auth";
+import { applyContactScope } from "@/lib/api/data-scope";
 import { contactsToCsv } from "@/lib/contacts/csv";
 import { createServerSideClient } from "@/lib/supabase";
 import { ilikePattern } from "@/lib/api/sanitize-search";
@@ -10,8 +11,15 @@ const PAGE_SIZE = 500;
 
 export async function GET(req: NextRequest) {
   try {
-    const { workspaceOwnerId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, effectivePermissions, error } =
+      await requireAuth();
     if (error) return error;
+    const exportDenied = requireCrmDataExport(
+      role!,
+      isWorkspaceOwner,
+      effectivePermissions
+    );
+    if (exportDenied) return exportDenied;
 
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search")?.trim();
@@ -30,6 +38,7 @@ export async function GET(req: NextRequest) {
         .select("*")
         .eq("user_id", workspaceOwnerId!)
         .order("created_at", { ascending: false });
+      query = applyContactScope(query, role!, isWorkspaceOwner, userId!);
 
       if (status) query = query.eq("status", status);
       if (createdFrom) {

@@ -12,7 +12,11 @@ export async function GET() {
 
     const ctx = await resolveWorkspaceContext(userId!);
 
-    const caps = workspaceCapabilities(ctx.role, ctx.isWorkspaceOwner);
+    const caps = workspaceCapabilities(
+      ctx.role,
+      ctx.isWorkspaceOwner,
+      ctx.effectivePermissions
+    );
 
     return NextResponse.json({
       workspaceOwnerId: ctx.workspaceOwnerId,

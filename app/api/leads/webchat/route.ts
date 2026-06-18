@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { checkRateLimit, clientIpFromRequest } from "@/lib/api/rate-limit";
 import { createLeadFromWebsite } from "@/lib/leads/website-leads";
 import {
   leadContactInfoSchema,
@@ -7,6 +8,11 @@ import {
   type LeadQualificationPayload,
 } from "@/lib/leads/lead-schemas";
 import { requireWebsiteLeadAuth } from "@/lib/website/lead-api-auth";
+import {
+  getBookingAvailabilityForWebsite,
+  isBookingSlotAvailable,
+} from "@/lib/website/booking-availability";
+import { getClickIn360OrgUserId } from "@/lib/org/constants";
 
 const webchatSchema = z.object({
   contact_info: leadContactInfoSchema,
@@ -30,6 +36,20 @@ export async function POST(req: NextRequest) {
   const auth = requireWebsiteLeadAuth(req);
   if (auth.error) return auth.error;
 
+  const ip = clientIpFromRequest(req);
+  const limit = checkRateLimit(`lead-webchat:${ip}`, 20, 3_600_000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      {
+        status: 429,
+        headers: limit.retryAfterSec
+          ? { "Retry-After": String(limit.retryAfterSec) }
+          : undefined,
+      }
+    );
+  }
+
   try {
     const body = await req.json();
     const parsed = webchatSchema.safeParse(body);
@@ -38,6 +58,24 @@ export async function POST(req: NextRequest) {
         { error: "Validation failed", details: parsed.error.flatten() },
         { status: 400 }
       );
+    }
+
+    const cal = parsed.data.calendar_selection;
+    if (cal?.date && cal?.time && !parsed.data.reschedule) {
+      const ownerId = getClickIn360OrgUserId();
+      const availability = await getBookingAvailabilityForWebsite();
+      const slotCheck = await isBookingSlotAvailable(
+        cal.date,
+        cal.time,
+        availability,
+        ownerId
+      );
+      if (!slotCheck.ok) {
+        return NextResponse.json(
+          { error: slotCheck.message, code: slotCheck.code },
+          { status: 409 }
+        );
+      }
     }
 
     const q = (parsed.data.ai_insights ?? {}) as LeadQualificationPayload;

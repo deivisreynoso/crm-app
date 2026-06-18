@@ -1,6 +1,6 @@
-import type { TeamRole } from "@/lib/team/workspace";
-import { canManageWorkspace, canWriteWorkspace } from "@/lib/team/workspace";
-import { canAccessFinances } from "@/lib/auth/permissions";
+import type { TeamRole } from "@/lib/team/roles";
+import { canManageWorkspace, canWriteWorkspace } from "@/lib/team/capabilities";
+import { canAccessFinances, canExportCrmData } from "@/lib/auth/permissions";
 
 const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
@@ -134,6 +134,24 @@ export function financeAccessForbidden(
 ): boolean {
   if (!requiresFinanceAccess(pathname)) return false;
   return !canAccessFinances(role, isWorkspaceOwner);
+}
+
+/** Bulk CSV export routes — owner and admin only. */
+export function requiresDataExportAccess(pathname: string): boolean {
+  return pathname.startsWith("/api/") && pathname.endsWith("/export");
+}
+
+export function crmDataExportForbidden(
+  role: TeamRole,
+  isWorkspaceOwner: boolean,
+  pathname: string,
+  method: string
+): boolean {
+  if (method.toUpperCase() !== "GET" && method.toUpperCase() !== "HEAD") {
+    return false;
+  }
+  if (!requiresDataExportAccess(pathname)) return false;
+  return !canExportCrmData(role, isWorkspaceOwner);
 }
 
 export function workspaceWriteForbidden(

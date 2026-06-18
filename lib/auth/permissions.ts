@@ -1,4 +1,4 @@
-import type { TeamRole } from "@/lib/team/workspace";
+import type { TeamRole } from "@/lib/team/roles";
 
 export type { TeamRole };
 
@@ -40,6 +40,14 @@ export function canVoidInvoice(
 }
 
 export function canManageTeamRoles(
+  role: TeamRole,
+  isWorkspaceOwner: boolean
+): boolean {
+  return isPrivilegedRole(role, isWorkspaceOwner);
+}
+
+/** Owner and admin only — bulk CSV export of CRM data. */
+export function canExportCrmData(
   role: TeamRole,
   isWorkspaceOwner: boolean
 ): boolean {

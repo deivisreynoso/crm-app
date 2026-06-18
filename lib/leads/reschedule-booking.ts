@@ -11,7 +11,7 @@ import {
 } from "@/lib/website/booking-availability";
 import { syncBookingToGoogleCalendar } from "@/lib/leads/booking-google-sync";
 import { formatBookingSlotLabel } from "@/lib/leads/format-booking-label";
-import { sendAppointmentConfirmationEmail } from "@/lib/leads/website-lead-notify";
+import { sendAppointmentConfirmationEmail } from "@/lib/leads/appointment-confirmation-email";
 import type { CrmLocale } from "@/lib/crm/i18n";
 
 /** Find the latest website discovery appointment for a contact. */

@@ -4,21 +4,11 @@ import {
   formSchema,
   processFormSubmission,
 } from "@/lib/leads/form-submission-handler";
-
-function sameOrigin(req: NextRequest): boolean {
-  const origin = req.headers.get("origin");
-  const host = req.headers.get("host");
-  if (!origin || !host) return process.env.NODE_ENV === "development";
-  try {
-    return new URL(origin).host === host;
-  } catch {
-    return false;
-  }
-}
+import { isSameOriginRequest } from "@/lib/website/same-origin";
 
 /** Public marketing-site proxy — adds server-side secret when calling lead ingestion. */
 export async function POST(req: NextRequest) {
-  if (!sameOrigin(req)) {
+  if (!isSameOriginRequest(req)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

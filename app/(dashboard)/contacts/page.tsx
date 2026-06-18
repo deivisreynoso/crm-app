@@ -164,9 +164,10 @@ function ContactsPageContent() {
       <ListFiltersPanel
         gridClassName="list-filters-panel__grid--contacts"
         toolbar={
-          canWrite ? (
+          canWrite || canManage ? (
             <ContactsImportExport
               compact
+              canExport={canManage}
               filters={{
                 search: search || undefined,
                 status: statusFilter || undefined,

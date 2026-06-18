@@ -19,6 +19,14 @@ This CRM is a **single-organization internal operations tool** for ClickIn 360 s
 | **Support** | All contacts; conversations; tickets |
 | **Viewer** | Read-only demo (optional; see `docs/PRODUCT-DECISIONS.md`) |
 
+### Custom roles & permission sets (Salesforce-style)
+
+- **Standard roles** — built-in templates (`sales`, `admin`, etc.).
+- **Custom roles** — full permission profile cloned from a standard role (`workspace_custom_roles`).
+- **Permission sets** — additive bundles; **deny wins** over allow when stacked.
+- Migration: `082_custom_roles_permission_sets.sql`
+- UI: Settings → Users & Roles → Custom roles & permission sets
+
 Login paths:
 
 1. **Google SSO** — `@clickin360.com` only (`hd=clickin360.com`).

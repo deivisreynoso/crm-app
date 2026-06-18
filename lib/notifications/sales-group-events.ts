@@ -43,6 +43,14 @@ function alertCopy(input: {
   };
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 /** Email + in-app alert to the sales group — appointment booked or human requested only. */
 export async function notifySalesGroupLeadAlert(
   supabase: SupabaseClient,
@@ -102,12 +110,17 @@ ${copy.detail}
 
 Open in CRM: ${cta.href}`;
 
+  const safeName = escapeHtml(input.leadName);
+  const safeEmail = escapeHtml(input.leadEmail);
+  const safeTitle = escapeHtml(copy.title);
+  const safeDetail = escapeHtml(copy.detail);
+
   const html = `<!DOCTYPE html>
 <html><body style="font-family:system-ui,sans-serif;line-height:1.5;color:#1a1a1a;max-width:32rem;margin:0 auto;padding:1.5rem">
   <p style="font-weight:600;font-size:1.125rem;margin:0 0 1rem">ClickIn 360</p>
-  <p><strong>${copy.title}</strong></p>
-  <p>${copy.detail}</p>
-  <p><strong>${input.leadName}</strong><br/>${input.leadEmail}</p>
+  <p><strong>${safeTitle}</strong></p>
+  <p>${safeDetail}</p>
+  <p><strong>${safeName}</strong><br/>${safeEmail}</p>
   <p><a href="${cta.href}" style="display:inline-block;padding:0.5rem 1rem;background:#0ea5e9;color:#fff;text-decoration:none;border-radius:6px">${cta.label}</a></p>
   <p style="margin-top:2rem;font-size:0.75rem;color:#666">ClickIn 360 LLC</p>
 </body></html>`;

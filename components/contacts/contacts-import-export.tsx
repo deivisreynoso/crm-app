@@ -26,6 +26,7 @@ type Props = {
   filters: ExportFilters;
   onImported: () => void;
   compact?: boolean;
+  canExport?: boolean;
 };
 
 function buildExportUrl(filters: ExportFilters) {
@@ -65,7 +66,12 @@ function templateCsv(): string {
   return `${header}\r\n${sample}`;
 }
 
-export function ContactsImportExport({ filters, onImported, compact = false }: Props) {
+export function ContactsImportExport({
+  filters,
+  onImported,
+  compact = false,
+  canExport = false,
+}: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -136,15 +142,17 @@ export function ContactsImportExport({ filters, onImported, compact = false }: P
       <div className={compact ? "flex flex-wrap items-center gap-1.5" : "flex flex-wrap items-center gap-2"}>
         {compact ? (
           <>
-            <button
-              type="button"
-              disabled={exporting}
-              onClick={() => void handleExport()}
-              className={btnClass}
-            >
-              <Download className="w-3.5 h-3.5" />
-              {exporting ? "Exporting…" : "Export"}
-            </button>
+            {canExport && (
+              <button
+                type="button"
+                disabled={exporting}
+                onClick={() => void handleExport()}
+                className={btnClass}
+              >
+                <Download className="w-3.5 h-3.5" />
+                {exporting ? "Exporting…" : "Export"}
+              </button>
+            )}
             <button
               type="button"
               disabled={importing}
@@ -164,16 +172,18 @@ export function ContactsImportExport({ filters, onImported, compact = false }: P
           </>
         ) : (
           <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={exporting}
-              onClick={() => void handleExport()}
-            >
-              <Download className="w-4 h-4 mr-1.5" />
-              {exporting ? "Exporting…" : "Export CSV"}
-            </Button>
+            {canExport && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={exporting}
+                onClick={() => void handleExport()}
+              >
+                <Download className="w-4 h-4 mr-1.5" />
+                {exporting ? "Exporting…" : "Export CSV"}
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"

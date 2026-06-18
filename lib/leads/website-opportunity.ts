@@ -1,7 +1,23 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolveQualifiedStageId } from "@/lib/pipelines/resolve-stage";
+import {
+  isLostStageId,
+  isLostStageName,
+  isWonStageName,
+} from "@/lib/opportunities/stage-outcome";
 
-const CLOSED_STAGES = new Set(["closed_won", "closed_lost", "won", "lost"]);
+const CLOSED_STAGE_IDS = new Set(["closed_won", "closed_lost", "won", "lost"]);
+
+function isClosedOpportunityStage(stage: string | null | undefined): boolean {
+  const raw = String(stage ?? "").trim();
+  if (!raw) return false;
+  const lower = raw.toLowerCase();
+  if (CLOSED_STAGE_IDS.has(lower)) return true;
+  if (isLostStageId(raw) || isLostStageName(raw) || isWonStageName(raw)) {
+    return true;
+  }
+  return false;
+}
 
 /** Reuse an open unassigned website opportunity or create one in Qualified. */
 export async function findOrCreateWebsiteOpportunity(
@@ -23,7 +39,7 @@ export async function findOrCreateWebsiteOpportunity(
     .limit(10);
 
   const open = (existingRows ?? []).find(
-    (row) => !CLOSED_STAGES.has(String(row.stage ?? "").toLowerCase())
+    (row) => !isClosedOpportunityStage(String(row.stage ?? ""))
   );
   if (open?.id) return open.id as string;
 

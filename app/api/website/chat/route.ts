@@ -3,6 +3,7 @@ import { z } from "zod";
 import { checkRateLimit, clientIpFromRequest } from "@/lib/api/rate-limit";
 import { getClickIn360OrgUserIdOptional } from "@/lib/org/constants";
 import { registerWebchatPollSecret } from "@/lib/website/webchat-poll-auth";
+import { isSameOriginRequest } from "@/lib/website/same-origin";
 
 const DEFAULT_WEBHOOK = "https://n8n.clickin360.com/webhook/webchat";
 
@@ -17,6 +18,10 @@ const bodySchema = z.object({
 /** Same-origin proxy for the marketing chat widget → N8N (avoids browser CORS). */
 export async function POST(req: NextRequest) {
   try {
+    if (!isSameOriginRequest(req)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const ip = clientIpFromRequest(req);
     const limit = checkRateLimit(`webchat-send:${ip}`, 60, 60_000);
     if (!limit.allowed) {

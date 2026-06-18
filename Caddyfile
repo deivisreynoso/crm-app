@@ -2,5 +2,13 @@
 # Ensure DNS for these hosts points at this server before first deploy.
 
 www.clickin360.com, clickin360.com {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+	}
+
 	reverse_proxy app:3000
 }
