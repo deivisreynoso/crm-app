@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getClickIn360OrgUserIdOptional } from "@/lib/org/constants";
 
 function getIntegrationSecretHeader(req: NextRequest): string | null {
   return (
@@ -50,14 +51,14 @@ export function requireN8nInternalAuth(req: NextRequest):
     };
   }
 
-  const workspaceOwnerId = process.env.WEBSITE_LEADS_USER_ID?.trim();
+  const workspaceOwnerId = getClickIn360OrgUserIdOptional();
   if (!workspaceOwnerId) {
     return {
       ok: false,
       error: NextResponse.json(
         {
           error:
-            "Integration API is not configured. Set WEBSITE_LEADS_USER_ID on the server.",
+            "Integration API is not configured. Set CLICKIN360_ORG_USER_ID on the server.",
         },
         { status: 503 }
       ),

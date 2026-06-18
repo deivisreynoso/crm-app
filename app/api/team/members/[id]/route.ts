@@ -8,7 +8,7 @@ import { recordAuditLog } from "@/lib/audit/record";
 import { deleteAuthUser } from "@/lib/users/delete-auth-user";
 
 const patchMemberSchema = z.object({
-  role: z.enum(["sales", "viewer", "admin"]),
+  role: z.enum(["sales", "viewer", "admin", "finance", "support"]),
 });
 
 type RouteContext = { params: Promise<{ id: string }> };

@@ -2,13 +2,67 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   createGoogleCalendarEvent,
   updateGoogleCalendarEvent,
+  type GoogleCalendarAttendee,
 } from "@/lib/google/calendar";
+import {
+  getWorkspaceGroupEmails,
+  listSalesGroupMemberIds,
+} from "@/lib/notifications/workspace-groups";
 
 export type BookingGoogleSyncResult = {
   googleEventId: string | null;
   meetLink: string | null;
   syncUserId: string | null;
 };
+
+async function salesGroupCalendarAttendees(
+  supabase: SupabaseClient,
+  workspaceOwnerId: string,
+  organizerUserId: string
+): Promise<GoogleCalendarAttendee[]> {
+  const [{ sales }, memberIds] = await Promise.all([
+    getWorkspaceGroupEmails(supabase, workspaceOwnerId),
+    listSalesGroupMemberIds(supabase, workspaceOwnerId),
+  ]);
+
+  const emails = new Set<string>();
+  if (sales) emails.add(sales.toLowerCase());
+
+  const others = memberIds.filter((id) => id !== organizerUserId);
+  if (others.length > 0) {
+    const { data: profiles } = await supabase
+      .from("user_profiles")
+      .select("id, email, display_name")
+      .in("id", others);
+
+    for (const profile of profiles ?? []) {
+      const email = (profile.email as string | null)?.trim();
+      if (email) {
+        emails.add(email.toLowerCase());
+      }
+    }
+  }
+
+  return [...emails].map((email) => ({ email }));
+}
+
+async function resolveSalesCalendarOrganizer(
+  supabase: SupabaseClient,
+  workspaceOwnerId: string
+): Promise<string | null> {
+  const memberIds = await listSalesGroupMemberIds(supabase, workspaceOwnerId);
+
+  for (const userId of memberIds) {
+    const { data: token } = await supabase
+      .from("google_calendar_tokens")
+      .select("user_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (token?.user_id) return userId;
+  }
+
+  return null;
+}
 
 /** Create or update a Google Calendar event with Meet for a website booking (best-effort). */
 export async function syncBookingToGoogleCalendar(
@@ -23,7 +77,15 @@ export async function syncBookingToGoogleCalendar(
     endTime: string;
   }
 ): Promise<BookingGoogleSyncResult> {
-  const syncUserId = input.assigneeId ?? input.workspaceOwnerId;
+  const syncUserId =
+    (await resolveSalesCalendarOrganizer(supabase, input.workspaceOwnerId)) ??
+    input.workspaceOwnerId;
+
+  const attendees = await salesGroupCalendarAttendees(
+    supabase,
+    input.workspaceOwnerId,
+    syncUserId
+  );
 
   const { data: existing } = await supabase
     .from("calendar_events")
@@ -48,6 +110,7 @@ export async function syncBookingToGoogleCalendar(
           start_time: input.startTime,
           end_time: input.endTime,
           location: existingMeetLink ?? undefined,
+          attendees,
         }
       );
 
@@ -62,7 +125,7 @@ export async function syncBookingToGoogleCalendar(
       await supabase
         .from("calendar_events")
         .update({
-          assigned_to: input.assigneeId ?? input.workspaceOwnerId,
+          assigned_to: null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", input.eventId)
@@ -81,6 +144,7 @@ export async function syncBookingToGoogleCalendar(
       start_time: input.startTime,
       end_time: input.endTime,
       addGoogleMeet: true,
+      attendees,
     });
 
     if (!created.eventId && !created.meetLink) {
@@ -88,7 +152,7 @@ export async function syncBookingToGoogleCalendar(
     }
 
     const patch: Record<string, unknown> = {
-      assigned_to: input.assigneeId ?? input.workspaceOwnerId,
+      assigned_to: null,
       is_synced: Boolean(created.eventId),
       google_sync_user_id: created.eventId ? syncUserId : null,
       updated_at: new Date().toISOString(),

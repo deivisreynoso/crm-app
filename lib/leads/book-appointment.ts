@@ -1,17 +1,19 @@
 import { createLeadFromWebsite, type WebsiteQualification } from "@/lib/leads/website-leads";
+import type { WebsiteLeadSource } from "@/lib/notifications/sales-group-events";
 import type { WebsiteContactInfo } from "@/lib/leads/website-leads";
 import {
   getBookingAvailabilityForWebsite,
   isBookingSlotAvailable,
 } from "@/lib/website/booking-availability";
 import { isoToWallClock } from "@/lib/website/booking-slots-core";
+import { getClickIn360OrgUserId } from "@/lib/org/constants";
 
 export type BookDiscoveryCallInput = {
   contact_info: WebsiteContactInfo;
   qualification?: WebsiteQualification;
   slot_start: string;
   conversation_transcript?: string | null;
-  source?: "webchat" | "whatsapp" | "form";
+  source?: WebsiteLeadSource;
   ga_client_id?: string | null;
   reschedule?: boolean;
 };
@@ -46,10 +48,7 @@ export async function bookDiscoveryCall(
   options?: { lang?: "es" | "en" }
 ): Promise<BookDiscoveryCallResult> {
   const lang = options?.lang === "en" ? "en" : "es";
-  const ownerId = process.env.WEBSITE_LEADS_USER_ID?.trim();
-  if (!ownerId) {
-    throw new Error("WEBSITE_LEADS_USER_ID is not configured.");
-  }
+  const ownerId = getClickIn360OrgUserId();
 
   const slotStart = new Date(input.slot_start);
   if (Number.isNaN(slotStart.getTime())) {
@@ -71,8 +70,12 @@ export async function bookDiscoveryCall(
     throw err;
   }
 
-  const source =
-    input.source === "whatsapp" ? "webchat" : (input.source ?? "webchat");
+  const source: WebsiteLeadSource =
+    input.source === "whatsapp"
+      ? "whatsapp"
+      : input.source === "form"
+        ? "form"
+        : "webchat";
 
   const lead = await createLeadFromWebsite({
     source,

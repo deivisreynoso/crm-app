@@ -9,6 +9,8 @@ import {
   resolveWorkspaceContext,
   type TeamRole,
 } from "@/lib/team/workspace";
+import { isWorkspaceAccessDeniedError } from "@/lib/team/workspace-access";
+import { canAccessFinances } from "@/lib/auth/permissions";
 
 export type AuthContext = {
   session: Session;
@@ -46,14 +48,29 @@ export async function requireAuth(): Promise<
 
   const headerStore = await headers();
   const cached = readTrustedWorkspaceHeaders(headerStore, userId);
-  const workspace = cached
-    ? {
-        actorUserId: userId,
-        workspaceOwnerId: cached.workspaceOwnerId,
-        role: cached.role,
-        isWorkspaceOwner: cached.isWorkspaceOwner,
-      }
-    : await resolveWorkspaceContext(userId);
+  let workspace;
+  try {
+    workspace = cached
+      ? {
+          actorUserId: userId,
+          workspaceOwnerId: cached.workspaceOwnerId,
+          role: cached.role,
+          isWorkspaceOwner: cached.isWorkspaceOwner,
+        }
+      : await resolveWorkspaceContext(userId);
+  } catch (err) {
+    if (isWorkspaceAccessDeniedError(err)) {
+      return {
+        session: null,
+        userId: null,
+        workspaceOwnerId: null,
+        role: null,
+        isWorkspaceOwner: false,
+        error: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+      };
+    }
+    throw err;
+  }
 
   return {
     session,
@@ -84,6 +101,16 @@ export function requireWorkspaceManage(
 
 export function requireWorkspaceWrite(role: TeamRole) {
   if (!canWriteWorkspace(role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  return null;
+}
+
+export function requireFinanceAccess(
+  role: TeamRole,
+  isWorkspaceOwner: boolean
+) {
+  if (!canAccessFinances(role, isWorkspaceOwner)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   return null;

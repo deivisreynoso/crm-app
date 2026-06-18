@@ -7,6 +7,7 @@ import { userCanAccessCrm } from "@/lib/team/access";
 import { resolveCanonicalCrmUserId } from "@/lib/auth/canonical-user";
 import { resolveGoogleLoginUser } from "@/lib/auth/google-user-link";
 import { findSupabaseAuthUserIdByEmail } from "@/lib/auth/supabase-auth-user";
+import { resolveWorkspaceContext, type TeamRole } from "@/lib/team/workspace";
 import {
   credentialsLoginAllowed,
   googleLoginAllowed,
@@ -44,7 +45,7 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials: any) {
+      async authorize(credentials: Record<"email" | "password", string> | undefined) {
         if (!credentials?.email || !credentials?.password) return null;
 
         const email = (credentials.email as string).trim().toLowerCase();
@@ -113,6 +114,7 @@ export const authOptions: NextAuthOptions = {
           authUserId: data.user.id,
           email: data.user.email,
           name: displayName,
+          role,
         };
 
         await ensureUserProfile(admin, {
@@ -160,6 +162,7 @@ export const authOptions: NextAuthOptions = {
       user.authUserId = authUserId;
       user.email = linked.email;
       user.name = linked.name;
+      user.role = role;
       return true;
     },
     async jwt({ token, user, account }) {
@@ -169,6 +172,14 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email;
         if (user.name) token.name = user.name;
         if (account?.provider) token.authProvider = account.provider;
+        if ("role" in user && user.role) {
+          token.role = user.role as TeamRole;
+        }
+      }
+      if (token.id && !token.role) {
+        const admin = createServerSideClient();
+        const ctx = await resolveWorkspaceContext(token.id as string);
+        token.role = ctx.role;
       }
       return token;
     },
@@ -178,6 +189,7 @@ export const authOptions: NextAuthOptions = {
         session.user.authUserId = (token.authUserId as string) ?? (token.id as string);
         if (token.email) session.user.email = token.email as string;
         if (token.name) session.user.name = token.name as string;
+        if (token.role) session.user.role = token.role as TeamRole;
       }
       return session;
     },

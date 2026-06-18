@@ -1,8 +1,9 @@
 import { createServerSideClient } from "@/lib/supabase";
+import { getClickIn360OrgUserIdOptional } from "@/lib/org/constants";
 
 /** Whether the public CID support widget is enabled for the website workspace. */
 export async function isSupportWidgetEnabled(): Promise<boolean> {
-  const ownerId = process.env.WEBSITE_LEADS_USER_ID?.trim();
+  const ownerId = getClickIn360OrgUserIdOptional();
   if (!ownerId) return false;
 
   const supabase = createServerSideClient();

@@ -9,6 +9,7 @@ import {
   getBookingAvailabilityForWebsite,
   type BookingAvailabilityConfig,
 } from "@/lib/website/booking-availability";
+import { getClickIn360OrgUserId } from "@/lib/org/constants";
 
 export type { BookingOffer };
 
@@ -88,9 +89,9 @@ export async function getBookingOffers(input: {
   const reschedule = input.reschedule ?? false;
   const limit = input.limit ?? (reschedule ? 6 : 3);
   const ownerId =
-    input.workspaceOwnerId?.trim() || process.env.WEBSITE_LEADS_USER_ID?.trim();
+    input.workspaceOwnerId?.trim() || getClickIn360OrgUserId();
   if (!ownerId) {
-    throw new Error("WEBSITE_LEADS_USER_ID is not configured.");
+    throw new Error("CLICKIN360_ORG_USER_ID is not configured.");
   }
 
   const config = await getBookingAvailabilityForWebsite();

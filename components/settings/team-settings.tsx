@@ -9,7 +9,7 @@ import axios from "axios";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
-type MemberRole = "sales" | "viewer" | "admin";
+type MemberRole = "sales" | "viewer" | "admin" | "finance" | "support";
 
 type TeamMember = {
   id: string;
@@ -19,13 +19,21 @@ type TeamMember = {
 };
 
 const ROLE_LABELS: Record<MemberRole, string> = {
-  sales: "Sales — full CRM",
-  admin: "Admin — owner access",
-  viewer: "Viewer — demo",
+  sales: "Sales — own CRM records + queue",
+  admin: "Admin — full workspace",
+  finance: "Finance — invoices & transactions",
+  support: "Support — all contacts, tickets, inbox",
+  viewer: "Viewer — read-only demo",
 };
 
 function isEditableRole(role: string | undefined): role is MemberRole {
-  return role === "sales" || role === "admin" || role === "viewer";
+  return (
+    role === "sales" ||
+    role === "admin" ||
+    role === "viewer" ||
+    role === "finance" ||
+    role === "support"
+  );
 }
 
 export function TeamSettings() {
@@ -271,9 +279,11 @@ export function TeamSettings() {
             value={role}
             onChange={(e) => setRole(e.target.value as MemberRole)}
           >
-            <option value="sales">Sales — full CRM (no settings)</option>
-            <option value="admin">Admin — same access as owner</option>
-            <option value="viewer">Viewer — demo (read-only, simulated saves)</option>
+            <option value="sales">Sales — own CRM records + queue</option>
+            <option value="support">Support — contacts, tickets, inbox</option>
+            <option value="finance">Finance — invoices & transactions</option>
+            <option value="admin">Admin — full workspace access</option>
+            <option value="viewer">Viewer — read-only demo</option>
           </select>
         </div>
         <div>

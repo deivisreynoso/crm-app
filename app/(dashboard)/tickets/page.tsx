@@ -31,8 +31,11 @@ import { FilterField } from "@/components/filters/filter-field";
 import { formatDate } from "@/lib/utils";
 import { formatApiError } from "@/lib/validation-errors";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
+import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 
 export default function ServiceTicketsPage() {
+  const { dict } = useCrmLocale();
+  const t = dict.ticketsPage ?? {};
   const [statusFilter, setStatusFilter] = useState("");
   const [createdFrom, setCreatedFrom] = useState("");
   const [createdTo, setCreatedTo] = useState("");
@@ -62,11 +65,11 @@ export default function ServiceTicketsPage() {
       <ConfirmDialog {...dialogProps} />
       <PageHeader
         title={SERVICE_TICKET_OBJECT.plural}
-        description="Support requests linked to accounts and contacts"
+        description={t.description ?? "Support requests linked to accounts and contacts"}
         actions={
           canWrite ? (
             <Button size="sm" onClick={() => setModalOpen(true)}>
-              + New service ticket
+              {t.newTicket ?? "+ New service ticket"}
             </Button>
           ) : undefined
         }

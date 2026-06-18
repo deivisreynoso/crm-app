@@ -1,5 +1,6 @@
 import type { TeamRole } from "@/lib/team/workspace";
 import { canManageWorkspace, canWriteWorkspace } from "@/lib/team/workspace";
+import { canAccessFinances } from "@/lib/auth/permissions";
 
 const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
@@ -17,6 +18,7 @@ const PUBLIC_API_PREFIXES = [
   "/api/integrations/n8n/",
   "/api/integrations/conversations/",
   "/api/public/support/",
+  "/api/customer/",
   "/api/cron/",
 ];
 
@@ -117,13 +119,34 @@ export function requiresWorkspaceOwnerOnly(pathname: string, method: string) {
   return false;
 }
 
+/** Finance routes — owner, admin, finance only */
+const FINANCE_API_PREFIX = "/api/finances";
+
+export function requiresFinanceAccess(pathname: string): boolean {
+  return pathname === FINANCE_API_PREFIX || pathname.startsWith(`${FINANCE_API_PREFIX}/`);
+}
+
+export function financeAccessForbidden(
+  role: TeamRole,
+  isWorkspaceOwner: boolean,
+  pathname: string
+): boolean {
+  if (!requiresFinanceAccess(pathname)) return false;
+  return !canAccessFinances(role, isWorkspaceOwner);
+}
+
 export function workspaceWriteForbidden(
   role: TeamRole,
+  isWorkspaceOwner: boolean,
   pathname: string,
   method: string
 ): boolean {
   if (!isApiWriteMethod(method)) return false;
   if (isPublicApiRoute(pathname)) return false;
+  if (requiresFinanceAccess(pathname)) {
+    return financeAccessForbidden(role, isWorkspaceOwner, pathname);
+  }
+  if (role === "finance") return true;
   if (canWriteWorkspace(role)) return false;
   if (role === "viewer" && isViewerWriteAllowed(pathname)) return false;
   return true;

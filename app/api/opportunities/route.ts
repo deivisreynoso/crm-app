@@ -18,7 +18,13 @@ export async function GET(req: NextRequest) {
     if (error) return error;
 
     const params = new URL(req.url).searchParams;
-    const data = await listOpportunitiesWithContacts(workspaceOwnerId!, {
+    const pageParam = params.get("page");
+    const page = pageParam ? Math.max(1, Number(pageParam)) : undefined;
+    const limit = params.get("limit")
+      ? Math.min(100, Math.max(1, Number(params.get("limit"))))
+      : undefined;
+
+    const result = await listOpportunitiesWithContacts(workspaceOwnerId!, {
       pipelineId: params.get("pipeline_id") ?? undefined,
       contactId: params.get("contact_id") ?? undefined,
       stage: params.get("stage") ?? undefined,
@@ -26,9 +32,22 @@ export async function GET(req: NextRequest) {
       createdFrom: params.get("created_from") ?? undefined,
       createdTo: params.get("created_to") ?? undefined,
       includeContactCounts: params.get("include_contact_counts") === "1",
+      actorUserId: userId!,
+      role: role!,
+      isWorkspaceOwner,
+      ...(page !== undefined ? { page, limit } : {}),
     });
 
-    return NextResponse.json({ data });
+    if (page !== undefined) {
+      return NextResponse.json({
+        data: result.data,
+        total: result.total ?? result.data.length,
+        page,
+        limit: limit ?? 25,
+      });
+    }
+
+    return NextResponse.json({ data: result.data });
   } catch (err) {
     console.error("GET /api/opportunities error:", err);
     return NextResponse.json(

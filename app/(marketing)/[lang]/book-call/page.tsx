@@ -1,8 +1,22 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { WebsiteBookingForm } from "@/components/website/website-booking-form";
 import { getDictionary, isLocale } from "@/lib/website/i18n";
+import { buildMarketingMetadata } from "@/lib/website/marketing-seo";
 
 type Props = { params: Promise<{ lang: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { lang } = await params;
+  if (!isLocale(lang)) return {};
+  const dict = await getDictionary(lang);
+  return buildMarketingMetadata({
+    lang,
+    title: dict.cta.book,
+    description: dict.cta.subtitle,
+    pathAfterLang: "book-call",
+  });
+}
 
 export default async function BookCallPage({ params }: Props) {
   const { lang } = await params;

@@ -12,6 +12,7 @@ export type WorkspaceContext = {
   canWrite: boolean;
   canManage: boolean;
   isDemoViewer: boolean;
+  canAccessFinances: boolean;
 };
 
 export function useWorkspaceContext() {

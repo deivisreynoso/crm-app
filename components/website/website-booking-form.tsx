@@ -196,7 +196,7 @@ export function WebsiteBookingForm({ lang }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/leads/form-submission", {
+      const res = await fetch("/api/website/form-submission", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

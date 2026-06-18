@@ -1,12 +1,16 @@
 import { createServerSideClient } from "@/lib/supabase";
 import { resolveWebLeadsAssignee } from "@/lib/leads/resolve-web-leads-assignee";
+import { canAccessFinances } from "@/lib/auth/permissions";
+import { getClickIn360OrgUserId } from "@/lib/org/constants";
+import { WorkspaceAccessDeniedError } from "@/lib/team/workspace-access";
 
-export type TeamRole = "owner" | "admin" | "sales" | "viewer";
+export type TeamRole = "owner" | "admin" | "finance" | "sales" | "support" | "viewer";
 
 export type WorkspaceCapabilities = {
   canWrite: boolean;
   canManage: boolean;
   isDemoViewer: boolean;
+  canAccessFinances: boolean;
 };
 
 export function workspaceCapabilities(
@@ -17,6 +21,7 @@ export function workspaceCapabilities(
     canWrite: canWriteWorkspace(role),
     canManage: canManageWorkspace(role, isWorkspaceOwner),
     isDemoViewer: role === "viewer",
+    canAccessFinances: canAccessFinances(role, isWorkspaceOwner),
   };
 }
 
@@ -36,52 +41,61 @@ export type WorkspaceContext = {
   isWorkspaceOwner: boolean;
 };
 
+function mapTeamRole(dbRole: string): TeamRole {
+  if (dbRole === "viewer") return "viewer";
+  if (dbRole === "admin") return "admin";
+  if (dbRole === "finance") return "finance";
+  if (dbRole === "support") return "support";
+  return "sales";
+}
+
 export async function resolveWorkspaceContext(
   actorUserId: string
 ): Promise<WorkspaceContext> {
   const supabase = createServerSideClient();
+  const orgOwnerId = getClickIn360OrgUserId();
+
+  if (actorUserId === orgOwnerId) {
+    return {
+      actorUserId,
+      workspaceOwnerId: orgOwnerId,
+      role: "owner",
+      isWorkspaceOwner: true,
+    };
+  }
 
   const { data: membership } = await supabase
     .from("team_members")
     .select("owner_user_id, role")
     .eq("member_user_id", actorUserId)
-    .order("created_at", { ascending: true })
-    .limit(1)
+    .eq("owner_user_id", orgOwnerId)
     .maybeSingle();
 
-  if (membership?.owner_user_id) {
-    const dbRole = membership.role as string;
-    const memberRole: TeamRole =
-      dbRole === "viewer"
-        ? "viewer"
-        : dbRole === "admin"
-          ? "admin"
-          : "sales";
-    return {
-      actorUserId,
-      workspaceOwnerId: membership.owner_user_id,
-      role: memberRole,
-      isWorkspaceOwner: false,
-    };
+  if (!membership?.owner_user_id) {
+    throw new WorkspaceAccessDeniedError();
   }
 
   return {
     actorUserId,
-    workspaceOwnerId: actorUserId,
-    role: "owner",
-    isWorkspaceOwner: true,
+    workspaceOwnerId: membership.owner_user_id,
+    role: mapTeamRole(membership.role as string),
+    isWorkspaceOwner: false,
   };
 }
 
 export function canWriteWorkspace(role: TeamRole): boolean {
-  return role === "owner" || role === "sales" || role === "admin";
+  return (
+    role === "owner" ||
+    role === "admin" ||
+    role === "sales" ||
+    role === "support"
+  );
 }
 
 export async function getWorkspaceWebsiteLeadsConfig(workspaceOwnerId: string) {
   const supabase = createServerSideClient();
 
-  const envOwner = process.env.WEBSITE_LEADS_USER_ID?.trim();
-  const ownerId = envOwner || workspaceOwnerId;
+  const ownerId = getClickIn360OrgUserId();
 
   const { data: settings } = await supabase
     .from("user_settings")

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
-import { Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -90,7 +90,7 @@ function QualificationPanel({
   const chips = qualification.signals ?? [];
 
   return (
-    <aside className="w-[260px] shrink-0 border-l border-[var(--card-border)] p-4 space-y-3 overflow-y-auto hidden xl:block">
+    <aside className="w-full sm:w-[260px] shrink-0 border-l border-[var(--card-border)] p-4 space-y-3 overflow-y-auto hidden lg:block">
       <h3 className="text-sm font-semibold text-heading">Qualification</h3>
       {qualification.temperature && (
         <span
@@ -309,7 +309,12 @@ export function ConversationsInbox() {
     <div className="flex flex-col h-[calc(100vh-8rem)] min-h-[480px] border border-[var(--card-border)] rounded-xl overflow-hidden bg-[var(--card)]">
       <ConfirmDialog {...dialogProps} />
       <div className="flex flex-1 min-h-0">
-        <div className="w-full sm:w-80 shrink-0 border-r border-[var(--card-border)] flex flex-col min-h-0">
+        <div
+          className={cn(
+            "w-full sm:w-80 shrink-0 border-r border-[var(--card-border)] flex flex-col min-h-0",
+            selectedId ? "hidden sm:flex" : "flex"
+          )}
+        >
           <div className="p-3 border-b border-[var(--card-border)] space-y-2">
             <input
               className="input-field w-full text-sm"
@@ -362,7 +367,12 @@ export function ConversationsInbox() {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col min-w-0 min-h-0">
+        <div
+          className={cn(
+            "flex-1 flex flex-col min-w-0 min-h-0",
+            !selectedId ? "hidden sm:flex" : "flex"
+          )}
+        >
           {!selectedId ? (
             <div className="flex-1 flex items-center justify-center text-sm text-body-muted">
               Select a conversation
@@ -374,6 +384,16 @@ export function ConversationsInbox() {
           ) : (
             <>
               <div className="px-4 py-3 border-b border-[var(--card-border)] flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="sm:hidden shrink-0"
+                  onClick={() => setSelectedId(null)}
+                  aria-label="Back to conversations"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-heading truncate">
                     {(detail.qualification as ConversationQualification)?.name ??

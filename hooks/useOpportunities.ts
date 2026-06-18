@@ -12,7 +12,16 @@ export interface OpportunityListFilters {
   createdFrom?: string;
   createdTo?: string;
   includeContactCounts?: boolean;
+  page?: number;
+  limit?: number;
 }
+
+export type OpportunityListResult = {
+  data: OpportunityWithContact[];
+  total?: number;
+  page?: number;
+  limit?: number;
+};
 
 export function useOpportunities(
   pipelineId?: string,
@@ -22,7 +31,7 @@ export function useOpportunities(
   return useQuery({
     queryKey: ["opportunities", pipelineId, contactId, filters],
     queryFn: async () => {
-      const { data } = await axios.get<{ data: OpportunityWithContact[] }>(
+      const { data } = await axios.get<OpportunityListResult>(
         "/api/opportunities",
         {
           params: {
@@ -35,10 +44,12 @@ export function useOpportunities(
             ...(filters.includeContactCounts
               ? { include_contact_counts: "1" }
               : {}),
+            ...(filters.page ? { page: filters.page } : {}),
+            ...(filters.limit ? { limit: filters.limit } : {}),
           },
         }
       );
-      return data.data;
+      return data;
     },
     enabled: !!(pipelineId || contactId),
   });
@@ -49,7 +60,7 @@ export function useOpportunityPicker(contactId?: string) {
   return useQuery({
     queryKey: ["opportunities", "picker", contactId ?? "all"],
     queryFn: async () => {
-      const { data } = await axios.get<{ data: OpportunityWithContact[] }>(
+      const { data } = await axios.get<OpportunityListResult>(
         "/api/opportunities",
         {
           params: contactId ? { contact_id: contactId } : {},

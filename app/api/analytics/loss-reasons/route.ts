@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { createServerSideClient } from "@/lib/supabase";
+import { isLostStageId } from "@/lib/opportunities/stage-outcome";
 
 export async function GET() {
   try {
@@ -8,15 +9,31 @@ export async function GET() {
     if (error) return error;
 
     const supabase = createServerSideClient();
-    const { data: docs } = await supabase
-      .from("documents")
-      .select("loss_reason")
-      .eq("user_id", workspaceOwnerId!)
-      .eq("status", "rejected")
-      .not("loss_reason", "is", null);
+
+    const [{ data: docs }, { data: opps }] = await Promise.all([
+      supabase
+        .from("documents")
+        .select("loss_reason")
+        .eq("user_id", workspaceOwnerId!)
+        .eq("status", "rejected")
+        .not("loss_reason", "is", null),
+      supabase
+        .from("opportunities")
+        .select("loss_reason, stage")
+        .eq("user_id", workspaceOwnerId!)
+        .not("loss_reason", "is", null),
+    ]);
 
     const counts: Record<string, number> = {};
+
     for (const row of docs ?? []) {
+      const key = (row.loss_reason as string) || "unknown";
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+
+    for (const row of opps ?? []) {
+      const stage = row.stage as string;
+      if (!isLostStageId(stage) && stage !== "closed_lost") continue;
       const key = (row.loss_reason as string) || "unknown";
       counts[key] = (counts[key] ?? 0) + 1;
     }
@@ -25,7 +42,13 @@ export async function GET() {
       .map(([reason, count]) => ({ reason, count }))
       .sort((a, b) => b.count - a.count);
 
-    return NextResponse.json({ data: chart, total: docs?.length ?? 0 });
+    const total =
+      (docs?.length ?? 0) +
+      (opps ?? []).filter(
+        (o) => isLostStageId(o.stage as string) || o.stage === "closed_lost"
+      ).length;
+
+    return NextResponse.json({ data: chart, total });
   } catch (err) {
     console.error("GET /api/analytics/loss-reasons:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

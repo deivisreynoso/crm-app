@@ -1,9 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getClickIn360OrgUserIdOptional } from "@/lib/org/constants";
 import { linkPendingTeamMemberByEmail } from "@/lib/team/link-member";
 
 /**
- * Whether this Supabase user may access the CRM (invite-based workspace model).
- * Owners without a team_members row are allowed when they own CRM data or env owner.
+ * Whether this Supabase user may access the ClickIn 360 internal CRM.
+ * Requires team_members row for the org owner, or being the org owner UUID.
  */
 export async function userCanAccessCrm(
   supabase: SupabaseClient,
@@ -13,36 +14,18 @@ export async function userCanAccessCrm(
   if (email) {
     await linkPendingTeamMemberByEmail(supabase, userId, email);
   }
-  const envOwner = process.env.WEBSITE_LEADS_USER_ID?.trim();
-  if (envOwner && userId === envOwner) return true;
 
-  const { data: memberships } = await supabase
+  const orgOwnerId = getClickIn360OrgUserIdOptional();
+  if (!orgOwnerId) return false;
+
+  if (userId === orgOwnerId) return true;
+
+  const { data: membership } = await supabase
     .from("team_members")
     .select("id")
     .eq("member_user_id", userId)
-    .limit(1);
-
-  if (memberships?.length) return true;
-
-  const { count: teamCount } = await supabase
-    .from("team_members")
-    .select("id", { count: "exact", head: true })
-    .eq("owner_user_id", userId);
-
-  if (teamCount && teamCount > 0) return true;
-
-  const { count: contactCount } = await supabase
-    .from("contacts")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId);
-
-  if (contactCount && contactCount > 0) return true;
-
-  const { data: settings } = await supabase
-    .from("user_settings")
-    .select("id")
-    .eq("user_id", userId)
+    .eq("owner_user_id", orgOwnerId)
     .maybeSingle();
 
-  return !!settings?.id;
+  return !!membership?.id;
 }

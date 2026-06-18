@@ -12,7 +12,7 @@ import { ensureUserCalendarColor } from "@/lib/users/assign-calendar-color";
 const addMemberSchema = z.object({
   email: z.string().email(),
   display_name: z.string().min(1).max(120).optional(),
-  role: z.enum(["sales", "viewer", "admin"]).optional(),
+  role: z.enum(["sales", "viewer", "admin", "finance", "support"]).optional(),
 });
 
 async function upsertProfile(

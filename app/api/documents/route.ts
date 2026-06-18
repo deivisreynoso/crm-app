@@ -59,6 +59,27 @@ export async function GET(req: NextRequest) {
       query = query.or("status.eq.accepted,status.eq.signed,accepted_at.not.is.null");
     }
 
+    if (role === "sales" && !isWorkspaceOwner) {
+      const [{ data: opps }, { data: contacts }] = await Promise.all([
+        supabase
+          .from("opportunities")
+          .select("id")
+          .eq("user_id", workspaceOwnerId!)
+          .or(`owner_id.eq.${userId},owner_id.is.null`),
+        supabase
+          .from("contacts")
+          .select("id")
+          .eq("user_id", workspaceOwnerId!)
+          .or(`assigned_to.eq.${userId},assigned_to.is.null`),
+      ]);
+      const oppIds = (opps ?? []).map((o) => o.id as string);
+      const contactIds = (contacts ?? []).map((c) => c.id as string);
+      const filters: string[] = ["and(contact_id.is.null,opportunity_id.is.null)"];
+      if (oppIds.length > 0) filters.push(`opportunity_id.in.(${oppIds.join(",")})`);
+      if (contactIds.length > 0) filters.push(`contact_id.in.(${contactIds.join(",")})`);
+      query = query.or(filters.join(","));
+    }
+
     const { data, error: dbError, count } = await query.range(from, to);
     if (dbError) {
       console.error("GET /api/documents db:", dbError);

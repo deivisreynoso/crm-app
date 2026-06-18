@@ -1,5 +1,8 @@
 import { createServerSideClient } from "@/lib/supabase";
 import { fetchContactRelatedCounts } from "@/lib/opportunities/contact-related-counts";
+import type { TeamRole } from "@/lib/team/workspace";
+import { applyOpportunityScope } from "@/lib/api/data-scope";
+import { ilikePattern } from "@/lib/api/sanitize-search";
 
 const CONTACT_FIELDS =
   "id, first_name, last_name, email, company, company_id, tags";
@@ -90,15 +93,40 @@ export async function listOpportunitiesWithContacts(
     createdFrom?: string;
     createdTo?: string;
     includeContactCounts?: boolean;
+    actorUserId?: string;
+    role?: TeamRole;
+    isWorkspaceOwner?: boolean;
+    page?: number;
+    limit?: number;
   }
-) {
+): Promise<{ data: Awaited<ReturnType<typeof enrichOpportunityRows>>; total?: number }> {
   const supabase = createServerSideClient();
+  const paginate = options?.page !== undefined;
+  const page = Math.max(1, options?.page ?? 1);
+  const limit = paginate
+    ? Math.min(100, Math.max(1, options?.limit ?? 25))
+    : Math.min(1000, options?.limit ?? 1000);
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
   let query = supabase
     .from("opportunities")
-    .select("*")
+    .select("*", paginate ? { count: "exact" } : undefined)
     .eq("user_id", userId)
-    .order("updated_at", { ascending: false })
-    .limit(1000);
+    .order("updated_at", { ascending: false });
+
+  if (!paginate) {
+    query = query.limit(limit);
+  }
+
+  if (options?.actorUserId && options?.role) {
+    query = applyOpportunityScope(
+      query,
+      options.role,
+      Boolean(options.isWorkspaceOwner),
+      options.actorUserId
+    );
+  }
 
   const pipelineId = options?.pipelineId;
   const contactId = options?.contactId;
@@ -118,19 +146,37 @@ export async function listOpportunitiesWithContacts(
   if (options?.createdTo) {
     query = query.lte("created_at", `${options.createdTo}T23:59:59.999Z`);
   }
-
-  const { data: opps, error } = await query;
-  if (error) throw error;
-  if (!opps?.length) return [];
-
-  let filtered = opps;
   if (options?.search?.trim()) {
-    const q = options.search.trim().toLowerCase();
-    filtered = opps.filter((o) => o.title?.toLowerCase().includes(q));
+    query = query.ilike("title", ilikePattern(options.search.trim()));
   }
-  if (!filtered.length) return [];
 
-  const contactIds = [...new Set(filtered.map((o) => o.contact_id))];
+  if (paginate) {
+    query = query.range(from, to);
+  }
+
+  const { data: opps, error, count } = await query;
+  if (error) throw error;
+  if (!opps?.length) {
+    return { data: [], ...(paginate ? { total: count ?? 0 } : {}) };
+  }
+
+  const data = await enrichOpportunityRows(
+    supabase,
+    userId,
+    opps,
+    Boolean(options?.includeContactCounts)
+  );
+  return { data, ...(paginate ? { total: count ?? data.length } : {}) };
+}
+
+async function enrichOpportunityRows(
+  supabase: ReturnType<typeof createServerSideClient>,
+  userId: string,
+  opps: Record<string, unknown>[],
+  includeContactCounts: boolean
+) {
+  const contactIds = [...new Set(opps.map((o) => o.contact_id as string))];
+
   const { data: contacts, error: contactsError } = await supabase
     .from("contacts")
     .select(CONTACT_FIELDS)
@@ -139,7 +185,7 @@ export async function listOpportunitiesWithContacts(
 
   if (contactsError) {
     console.error("listOpportunities contacts fetch:", contactsError.message);
-    return filtered.map((o) => ({ ...o, contact: null }));
+    return opps.map((o) => ({ ...o, contact: null }));
   }
 
   const companyIds = [
@@ -181,7 +227,7 @@ export async function listOpportunitiesWithContacts(
     string,
     { quotes: number; appointments: number; tasks: number }
   >();
-  if (options?.includeContactCounts) {
+  if (includeContactCounts) {
     countsByContact = await fetchContactRelatedCounts(
       supabase,
       userId,
@@ -189,12 +235,12 @@ export async function listOpportunitiesWithContacts(
     );
   }
 
-  return filtered.map((o) => ({
+  return opps.map((o) => ({
     ...o,
-    contact: contactMap.get(o.contact_id) ?? null,
-    ...(options?.includeContactCounts
+    contact: contactMap.get(o.contact_id as string) ?? null,
+    ...(includeContactCounts
       ? {
-          contact_counts: countsByContact.get(o.contact_id) ?? {
+          contact_counts: countsByContact.get(o.contact_id as string) ?? {
             quotes: 0,
             appointments: 0,
             tasks: 0,

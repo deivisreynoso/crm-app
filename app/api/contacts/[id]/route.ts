@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, requireWorkspaceWrite } from "@/lib/api/auth";
+import { canViewContact } from "@/lib/auth/permissions";
 import { deleteContactWithDependents } from "@/lib/contacts/delete-contact";
 import { createServerSideClient } from "@/lib/supabase";
 import { contactPatchSchema } from "@/lib/validators";
@@ -15,6 +16,7 @@ import { contactWriteErrorMessage } from "@/lib/identity/duplicate-errors";
 import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
 import { recordAuditLog } from "@/lib/audit/record";
 import { allocateCustomerId } from "@/lib/contacts/customer-id";
+import { contactVisibleToActor } from "@/lib/api/data-scope";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -34,6 +36,17 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       .single();
 
     if (dbError || !data) {
+      return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+    }
+
+    if (
+      !canViewContact(
+        role!,
+        isWorkspaceOwner,
+        data.assigned_to as string | null,
+        userId!
+      )
+    ) {
       return NextResponse.json({ error: "Contact not found" }, { status: 404 });
     }
 
@@ -86,6 +99,18 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     const supabase = createServerSideClient();
+
+    const visible = await contactVisibleToActor(
+      supabase,
+      workspaceOwnerId!,
+      id,
+      role!,
+      isWorkspaceOwner,
+      userId!
+    );
+    if (!visible) {
+      return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+    }
 
     if (parsed.data.email !== undefined || parsed.data.phone !== undefined) {
       const duplicate = await findDuplicateContact(supabase, workspaceOwnerId!, {
@@ -202,6 +227,18 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
 
     const { id } = await context.params;
     const supabase = createServerSideClient();
+
+    const visible = await contactVisibleToActor(
+      supabase,
+      workspaceOwnerId!,
+      id,
+      role!,
+      isWorkspaceOwner,
+      userId!
+    );
+    if (!visible) {
+      return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+    }
 
     const { data, error: dbError } = await deleteContactWithDependents(
       supabase,

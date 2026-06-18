@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
+import { canViewOpportunity } from "@/lib/auth/permissions";
 import { createServerSideClient } from "@/lib/supabase";
 import {
   opportunityPatchSchema,
@@ -17,6 +18,7 @@ import {
 } from "@/lib/opportunities/patch-helpers";
 import { isLostStageId, isLostStageName } from "@/lib/opportunities/stage-outcome";
 import { triggerN8NWebhook } from "@/lib/n8n";
+import { opportunityVisibleToActor } from "@/lib/api/data-scope";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -34,7 +36,7 @@ function isStageOnlyUpdate(body: Record<string, unknown>) {
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
-    const { workspaceOwnerId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;
@@ -54,6 +56,20 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       );
     }
 
+    if (
+      !canViewOpportunity(
+        role!,
+        isWorkspaceOwner,
+        data.owner_id as string | null,
+        userId!
+      )
+    ) {
+      return NextResponse.json(
+        { error: "Opportunity not found" },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json(await attachContactToOpportunity(data));
   } catch (err) {
     console.error("GET /api/opportunities/[id] error:", err);
@@ -66,10 +82,27 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
-    const { workspaceOwnerId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;
+    const supabase = createServerSideClient();
+
+    const visible = await opportunityVisibleToActor(
+      supabase,
+      workspaceOwnerId!,
+      id,
+      role!,
+      isWorkspaceOwner,
+      userId!
+    );
+    if (!visible) {
+      return NextResponse.json(
+        { error: "Opportunity not found" },
+        { status: 404 }
+      );
+    }
+
     const body = await req.json();
 
     let updates: Record<string, unknown>;
@@ -102,8 +135,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
       updates = buildOpportunityUpdate(parsed.data);
     }
-
-    const supabase = createServerSideClient();
 
     const { data: before } = await supabase
       .from("opportunities")
@@ -199,11 +230,26 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
 export async function DELETE(_req: NextRequest, context: RouteContext) {
   try {
-    const { workspaceOwnerId, error } = await requireAuth();
+    const { userId, workspaceOwnerId, role, isWorkspaceOwner, error } = await requireAuth();
     if (error) return error;
 
     const { id } = await context.params;
     const supabase = createServerSideClient();
+
+    const visible = await opportunityVisibleToActor(
+      supabase,
+      workspaceOwnerId!,
+      id,
+      role!,
+      isWorkspaceOwner,
+      userId!
+    );
+    if (!visible) {
+      return NextResponse.json(
+        { error: "Opportunity not found" },
+        { status: 404 }
+      );
+    }
 
     const { data, error: dbError } = await supabase
       .from("opportunities")

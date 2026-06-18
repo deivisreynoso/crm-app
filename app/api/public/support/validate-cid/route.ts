@@ -7,6 +7,7 @@ import {
   isValidCustomerIdFormat,
   normalizeCustomerId,
 } from "@/lib/support/public-support";
+import { recordCidFailure, validateCidAccess } from "@/lib/support/cid-auth";
 
 const bodySchema = z.object({
   customer_id: z.string().min(1).max(32),
@@ -39,7 +40,21 @@ export async function POST(req: NextRequest) {
 
     const customerId = normalizeCustomerId(parsed.data.customer_id);
     if (!isValidCustomerIdFormat(customerId)) {
+      recordCidFailure(customerId, ip);
       return NextResponse.json({ valid: false, error: GENERIC_ERROR }, { status: 400 });
+    }
+
+    const access = validateCidAccess(customerId, ip);
+    if (!access.allowed) {
+      return NextResponse.json(
+        { valid: false, error: GENERIC_ERROR },
+        {
+          status: 429,
+          headers: access.retryAfterSec
+            ? { "Retry-After": String(access.retryAfterSec) }
+            : undefined,
+        }
+      );
     }
 
     const supabase = createServerSideClient();
@@ -47,6 +62,7 @@ export async function POST(req: NextRequest) {
     const session = await createSupportCidSession(supabase, customerId, language);
 
     if (!session) {
+      recordCidFailure(customerId, ip);
       return NextResponse.json({ valid: false, error: GENERIC_ERROR }, { status: 400 });
     }
 
