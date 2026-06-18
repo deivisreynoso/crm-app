@@ -36,18 +36,21 @@ function NavLink({
   icon: Icon,
   iconAccent = "navy",
   isActive,
+  onNavigate,
 }: {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   iconAccent?: NavIconAccent;
   isActive: boolean;
+  onNavigate?: () => void;
 }) {
   const accent = navIconAccentStyles[iconAccent];
 
   return (
     <Link
       href={href}
+      onClick={onNavigate}
       className={cn(
         "group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-all duration-150",
         isActive
@@ -74,11 +77,13 @@ function NavSection({
   items,
   pathname,
   dict,
+  onNavigate,
 }: {
   title?: string;
   items: typeof MAIN_NAV;
   pathname: string;
   dict: Record<string, string>;
+  onNavigate?: () => void;
 }) {
   return (
     <div className="space-y-0.5">
@@ -100,6 +105,7 @@ function NavSection({
             icon={item.icon}
             iconAccent={item.iconAccent}
             isActive={isActive}
+            onNavigate={onNavigate}
           />
         );
       })}
@@ -134,7 +140,7 @@ function filterNavByRole(items: NavItem[], canWrite: boolean) {
   return items.filter((item) => !item.requiresWrite || canWrite);
 }
 
-export function SidebarNav() {
+export function SidebarNav({ onNavigate }: { onNavigate?: () => void } = {}) {
   const pathname = usePathname();
   const { dict } = useCrmLocale();
   const { canWrite } = useWorkspaceCapabilities();
@@ -143,7 +149,12 @@ export function SidebarNav() {
 
   return (
     <nav className="flex flex-col gap-5" aria-label="Main navigation">
-      <NavSection items={navItems} pathname={pathname} dict={navDict} />
+      <NavSection
+        items={navItems}
+        pathname={pathname}
+        dict={navDict}
+        onNavigate={onNavigate}
+      />
     </nav>
   );
 }

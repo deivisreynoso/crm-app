@@ -8,6 +8,8 @@ import { formatCurrency } from "@/lib/utils";
 import type { PublicQuoteView } from "@/lib/quotes/load-public-quote";
 import { getQuoteAcceptCopy } from "@/lib/quotes/public-accept-copy";
 import { PayNowSection } from "@/components/quotes/pay-now-section";
+import { LossReasonFields } from "@/components/forms/loss-reason-fields";
+import { DEFAULT_LOSS_REASON_OPTIONS } from "@/lib/constants/loss-reasons";
 
 export function QuoteAcceptCustomerPage({ token }: { token: string }) {
   const searchParams = useSearchParams();
@@ -243,26 +245,19 @@ export function QuoteAcceptCustomerPage({ token }: { token: string }) {
             {error && <p className="text-sm text-red-600">{error}</p>}
             <details className="text-sm">
               <summary className="cursor-pointer text-slate-600">
-                {quote.locale === "es" ? "¿Declinar? Cuéntanos por qué (opcional)" : "Declining? Tell us why (optional)"}
+                {quote.locale === "es"
+                  ? "¿Declinar? Cuéntanos por qué (opcional)"
+                  : "Declining? Tell us why (optional)"}
               </summary>
-              <div className="mt-2 space-y-2">
-                <select
-                  className="input-field w-full"
-                  value={lossReason}
-                  onChange={(e) => setLossReason(e.target.value)}
-                >
-                  <option value="">{quote.locale === "es" ? "Selecciona un motivo" : "Select a reason"}</option>
-                  <option value="price">{quote.locale === "es" ? "Precio" : "Price"}</option>
-                  <option value="timing">{quote.locale === "es" ? "Timing" : "Timing"}</option>
-                  <option value="competitor">{quote.locale === "es" ? "Competidor" : "Competitor"}</option>
-                  <option value="other">{quote.locale === "es" ? "Otro" : "Other"}</option>
-                </select>
-                <textarea
-                  className="input-field w-full"
-                  rows={2}
-                  placeholder={quote.locale === "es" ? "Notas adicionales" : "Additional notes"}
-                  value={lossNotes}
-                  onChange={(e) => setLossNotes(e.target.value)}
+              <div className="mt-2">
+                <LossReasonFields
+                  options={DEFAULT_LOSS_REASON_OPTIONS}
+                  locale={quote.locale === "es" ? "es" : "en"}
+                  reason={lossReason}
+                  notes={lossNotes}
+                  onReasonChange={setLossReason}
+                  onNotesChange={setLossNotes}
+                  idPrefix="public-quote-loss"
                 />
               </div>
             </details>

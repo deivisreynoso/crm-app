@@ -109,8 +109,22 @@ export function useMoveOpportunityStage(pipelineId?: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, stage }: { id: string; stage: string }) =>
-      axios.patch<OpportunityWithContact>(`/api/opportunities/${id}`, { stage }),
+    mutationFn: ({
+      id,
+      stage,
+      loss_reason,
+      loss_reason_notes,
+    }: {
+      id: string;
+      stage: string;
+      loss_reason?: string;
+      loss_reason_notes?: string;
+    }) =>
+      axios.patch<OpportunityWithContact>(`/api/opportunities/${id}`, {
+        stage,
+        ...(loss_reason ? { loss_reason } : {}),
+        ...(loss_reason_notes ? { loss_reason_notes } : {}),
+      }),
     onMutate: async ({ id, stage }) => {
       if (!pipelineId) return {};
       const key = pipelineQueryKey(pipelineId);

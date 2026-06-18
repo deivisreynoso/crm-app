@@ -139,6 +139,8 @@ export const opportunitySchema = z.object({
   tags: z.string().optional().or(z.literal('')),
   owner_id: z.string().uuid().optional().or(z.literal('')),
   company_id: z.string().uuid().optional().or(z.literal('')),
+  loss_reason: z.string().max(100).optional().or(z.literal('')),
+  loss_reason_notes: z.string().max(2000).optional().or(z.literal('')),
   custom_fields: customFieldValuesSchema,
 });
 
@@ -159,6 +161,8 @@ export type PipelineFormData = z.infer<typeof pipelineSchema>;
 
 export const moveOpportunityStageSchema = z.object({
   stage: z.string().min(1),
+  loss_reason: z.string().max(100).optional().or(z.literal("")),
+  loss_reason_notes: z.string().max(2000).optional().or(z.literal("")),
 });
 
 export type MoveOpportunityStageData = z.infer<typeof moveOpportunityStageSchema>;
@@ -283,6 +287,8 @@ export const documentPatchSchema = z.object({
   status: z
     .enum(["draft", "sent", "signed", "accepted", "rejected"])
     .optional(),
+  loss_reason: z.string().max(100).optional().or(z.literal("")),
+  loss_reason_notes: z.string().max(2000).optional().or(z.literal("")),
   valid_until: z.string().optional().or(z.literal("")),
   subtotal: z.coerce.number().nonnegative().optional(),
   tax_rate: z.coerce.number().min(0).max(100).optional(),

@@ -52,6 +52,12 @@ export function buildOpportunityUpdate(
   if (data.company_id !== undefined) {
     record.company_id = data.company_id?.trim() ? data.company_id : null;
   }
+  if (data.loss_reason !== undefined) {
+    record.loss_reason = emptyToNull(data.loss_reason);
+  }
+  if (data.loss_reason_notes !== undefined) {
+    record.loss_reason_notes = emptyToNull(data.loss_reason_notes);
+  }
   if (data.custom_fields !== undefined) {
     record.custom_fields = data.custom_fields ?? {};
   }
