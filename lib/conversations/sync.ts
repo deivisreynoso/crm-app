@@ -202,11 +202,25 @@ export async function syncConversationTurn(
 
   const wasReviewRequested = Boolean(existing?.human_review_requested);
   if (humanReviewRequested && !wasReviewRequested) {
+    const contactId = input.contact_id ?? null;
+    let leadEmail: string | null = null;
+    if (contactId) {
+      const { data: contact } = await supabase
+        .from("contacts")
+        .select("email")
+        .eq("id", contactId)
+        .eq("user_id", workspaceOwnerId)
+        .maybeSingle();
+      leadEmail = (contact?.email as string | null) ?? null;
+    }
+    const q = qualification as { email?: string | null };
     await notifyConversationHumanReview(supabase, {
       workspaceOwnerId,
       conversationId,
       channel: input.channel,
       label: reviewLabel(input),
+      contactId,
+      leadEmail: leadEmail ?? q.email ?? null,
     });
   }
 

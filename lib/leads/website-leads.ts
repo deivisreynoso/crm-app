@@ -6,10 +6,12 @@ import { findDuplicateContact } from "@/lib/identity/contact-duplicate";
 import { getWorkspaceWebsiteLeadsConfig } from "@/lib/team/workspace";
 import type { WebsiteCalendarSelection } from "@/lib/leads/booking-calendar-event";
 import { upsertBookingCalendarEvent, findContactDiscoveryAppointment } from "@/lib/leads/reschedule-booking";
-import { notifyWebsiteLeadAssignee } from "@/lib/leads/website-lead-notify";
-import { notifySalesGroupWebsiteLead } from "@/lib/notifications/sales-group-events";
+import {
+  notifySalesGroupLeadAlert,
+  type WebsiteLeadSource,
+} from "@/lib/notifications/sales-group-events";
 import type { CrmLocale } from "@/lib/crm/i18n";
-import { resolveQualifiedStageId } from "@/lib/pipelines/resolve-stage";
+import { findOrCreateWebsiteOpportunity } from "@/lib/leads/website-opportunity";
 
 export type WebsiteContactInfo = {
   name: string;
@@ -54,7 +56,7 @@ function frictionToString(value: WebsiteQualification["friction_area"]) {
 
 function buildNoteContent(
   input: {
-    source: "webchat" | "form";
+    source: WebsiteLeadSource;
     qualification?: WebsiteQualification;
     conversation_transcript?: string | null;
     language?: string | null;
@@ -77,42 +79,8 @@ function buildNoteContent(
   );
 }
 
-async function createOpportunityForContact(
-  supabase: ReturnType<typeof createServerSideClient>,
-  workspaceOwnerId: string,
-  contactId: string,
-  companyLabel: string,
-  summary: string | null
-) {
-  const { data: pipeline } = await supabase
-    .from("pipelines")
-    .select("id")
-    .eq("user_id", workspaceOwnerId)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (!pipeline?.id) return null;
-
-  const stageId = await resolveQualifiedStageId(supabase, workspaceOwnerId);
-
-  const { data: opportunity } = await supabase
-    .from("opportunities")
-    .insert([
-      {
-        user_id: workspaceOwnerId,
-        contact_id: contactId,
-        pipeline_id: pipeline.id,
-        stage: stageId,
-        title: `Discovery Call — ${companyLabel}`,
-        notes: summary,
-        status: "open",
-      },
-    ])
-    .select("id")
-    .single();
-
-  return (opportunity?.id as string) ?? null;
+function mapSourceForContact(source: WebsiteLeadSource): string {
+  return source === "whatsapp" ? "whatsapp" : source;
 }
 
 async function maybeCreateBookingCalendarEvent(
@@ -125,7 +93,6 @@ async function maybeCreateBookingCalendarEvent(
     company?: string | null;
     calendar?: WebsiteCalendarSelection | null;
     reschedule?: boolean;
-    assigneeId?: string | null;
     leadEmail?: string | null;
     locale?: CrmLocale;
   }
@@ -139,7 +106,7 @@ async function maybeCreateBookingCalendarEvent(
     company: input.company,
     calendar: input.calendar,
     reschedule: input.reschedule,
-    assigneeId: input.assigneeId,
+    assigneeId: null,
     leadEmail: input.leadEmail,
     locale: input.locale,
   });
@@ -150,15 +117,14 @@ async function appendToExistingContact(
   workspaceOwnerId: string,
   contactId: string,
   input: {
-    source: "webchat" | "form";
+    source: WebsiteLeadSource;
     contact_info: WebsiteContactInfo;
     qualification?: WebsiteQualification;
     conversation_transcript?: string | null;
     calendar_selection?: WebsiteCalendarSelection | null;
     language?: string | null;
     reschedule?: boolean;
-  },
-  defaultSalesAssignee: string | null
+  }
 ): Promise<WebsiteLeadResult> {
   const q = input.qualification ?? {};
   const phone = input.contact_info.phone?.trim() || null;
@@ -172,6 +138,7 @@ async function appendToExistingContact(
     first_name,
     last_name,
     email,
+    assigned_to: null,
   };
   if (phone) patch.phone = phone;
   if (company) patch.company = company;
@@ -186,7 +153,6 @@ async function appendToExistingContact(
   }
   const signals = q.signals ?? q.friction_point;
   if (signals) patch.signals = signals;
-  if (defaultSalesAssignee) patch.assigned_to = defaultSalesAssignee;
 
   await supabase.from("contacts").update(patch).eq("id", contactId);
 
@@ -216,7 +182,7 @@ async function appendToExistingContact(
 
   const opportunityId = isReschedule
     ? null
-    : await createOpportunityForContact(
+    : await findOrCreateWebsiteOpportunity(
         supabase,
         workspaceOwnerId,
         contactId,
@@ -234,7 +200,6 @@ async function appendToExistingContact(
       company,
       calendar: input.calendar_selection,
       reschedule: isReschedule,
-      assigneeId: defaultSalesAssignee,
       leadEmail: input.contact_info.email,
       locale: input.language === "en" ? "en" : "es",
     }
@@ -247,38 +212,27 @@ async function appendToExistingContact(
     description: isReschedule
       ? `Appointment rescheduled (${input.source})`
       : `Return visit — new ${input.source} request`,
-    metadata: { source: input.source, returning_visitor: true },
+    metadata: { source: input.source, returning_visitor: true, queue: "sales" },
   });
 
-  if (defaultSalesAssignee) {
-    await notifyWebsiteLeadAssignee(supabase, {
+  if (calendarEventId) {
+    void notifySalesGroupLeadAlert(supabase, {
       workspaceOwnerId,
-      assigneeId: defaultSalesAssignee,
       contactId,
       leadName: `${first_name} ${last_name}`.trim(),
-      leadEmail: input.contact_info.email.trim().toLowerCase(),
+      leadEmail: email,
       source: input.source,
-      hasAppointment: Boolean(calendarEventId),
+      reason: "appointment",
       returningVisitor: true,
     });
   }
-
-  void notifySalesGroupWebsiteLead(supabase, {
-    workspaceOwnerId,
-    contactId,
-    leadName: `${first_name} ${last_name}`.trim(),
-    leadEmail: input.contact_info.email.trim().toLowerCase(),
-    source: input.source,
-    hasAppointment: Boolean(calendarEventId),
-    returningVisitor: true,
-  });
 
   void triggerN8NWebhook("website.lead", {
     contact_id: contactId,
     opportunity_id: opportunityId,
     calendar_event_id: calendarEventId,
     source: input.source,
-    assigned_to: defaultSalesAssignee,
+    assigned_to: null,
     returning_visitor: true,
   });
 
@@ -286,13 +240,13 @@ async function appendToExistingContact(
     contact_id: contactId,
     opportunity_id: opportunityId,
     calendar_event_id: calendarEventId,
-    assigned_to: defaultSalesAssignee,
+    assigned_to: null,
     returning_visitor: true,
   };
 }
 
 export async function createLeadFromWebsite(input: {
-  source: "webchat" | "form";
+  source: WebsiteLeadSource;
   contact_info: WebsiteContactInfo;
   qualification?: WebsiteQualification;
   calendar_selection?: WebsiteCalendarSelection | null;
@@ -303,8 +257,7 @@ export async function createLeadFromWebsite(input: {
 }): Promise<WebsiteLeadResult> {
   const envOwner = getClickIn360OrgUserId();
 
-  const { workspaceOwnerId, defaultSalesAssignee } =
-    await getWorkspaceWebsiteLeadsConfig(envOwner);
+  const { workspaceOwnerId } = await getWorkspaceWebsiteLeadsConfig(envOwner);
 
   const supabase = createServerSideClient();
   const { first_name, last_name } = splitName(input.contact_info.name);
@@ -326,8 +279,7 @@ export async function createLeadFromWebsite(input: {
       {
         ...input,
         reschedule: input.reschedule ?? false,
-      },
-      defaultSalesAssignee
+      }
     );
   }
 
@@ -359,7 +311,7 @@ export async function createLeadFromWebsite(input: {
         company,
         preferred_language: preferredLanguage,
         status: "lead",
-        source: input.source,
+        source: mapSourceForContact(input.source),
         platform: q.platform ?? null,
         friction_area: frictionToString(q.friction_area),
         communication_channels: customFields.communication_channels as string,
@@ -389,7 +341,7 @@ export async function createLeadFromWebsite(input: {
     },
   ]);
 
-  const opportunityId = await createOpportunityForContact(
+  const opportunityId = await findOrCreateWebsiteOpportunity(
     supabase,
     workspaceOwnerId,
     contactId,
@@ -406,7 +358,6 @@ export async function createLeadFromWebsite(input: {
       contactName: `${first_name} ${last_name}`.trim(),
       company,
       calendar: input.calendar_selection,
-      assigneeId: defaultSalesAssignee,
       leadEmail: email,
       locale: preferredLanguage ?? "es",
     }
@@ -425,15 +376,17 @@ export async function createLeadFromWebsite(input: {
     },
   });
 
-  void notifySalesGroupWebsiteLead(supabase, {
-    workspaceOwnerId,
-    contactId,
-    leadName: `${first_name} ${last_name}`.trim(),
-    leadEmail: email,
-    source: input.source,
-    hasAppointment: Boolean(calendarEventId),
-    returningVisitor: false,
-  });
+  if (calendarEventId) {
+    void notifySalesGroupLeadAlert(supabase, {
+      workspaceOwnerId,
+      contactId,
+      leadName: `${first_name} ${last_name}`.trim(),
+      leadEmail: email,
+      source: input.source,
+      reason: "appointment",
+      returningVisitor: false,
+    });
+  }
 
   void triggerN8NWebhook("website.lead", {
     contact_id: contactId,

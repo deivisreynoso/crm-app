@@ -1,4 +1,5 @@
 import { createLeadFromWebsite, type WebsiteQualification } from "@/lib/leads/website-leads";
+import type { WebsiteLeadSource } from "@/lib/notifications/sales-group-events";
 import type { WebsiteContactInfo } from "@/lib/leads/website-leads";
 import {
   getBookingAvailabilityForWebsite,
@@ -12,7 +13,7 @@ export type BookDiscoveryCallInput = {
   qualification?: WebsiteQualification;
   slot_start: string;
   conversation_transcript?: string | null;
-  source?: "webchat" | "whatsapp" | "form";
+  source?: WebsiteLeadSource;
   ga_client_id?: string | null;
   reschedule?: boolean;
 };
@@ -69,8 +70,12 @@ export async function bookDiscoveryCall(
     throw err;
   }
 
-  const source =
-    input.source === "whatsapp" ? "webchat" : (input.source ?? "webchat");
+  const source: WebsiteLeadSource =
+    input.source === "whatsapp"
+      ? "whatsapp"
+      : input.source === "form"
+        ? "form"
+        : "webchat";
 
   const lead = await createLeadFromWebsite({
     source,
