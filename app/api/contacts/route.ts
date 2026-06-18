@@ -12,6 +12,7 @@ import { contactWriteErrorMessage } from "@/lib/identity/duplicate-errors";
 import { ilikePattern } from "@/lib/api/sanitize-search";
 import { enrichContactsCompanyNamesFromDb } from "@/lib/contacts/resolve-company-display";
 import { formatValidationDetails, humanizeDbError } from "@/lib/validation-errors";
+import { applyContactScope } from "@/lib/api/data-scope";
 
 export async function GET(req: NextRequest) {
   try {
@@ -35,6 +36,8 @@ export async function GET(req: NextRequest) {
       .select("*", { count: "exact" })
       .eq("user_id", workspaceOwnerId!)
       .order("created_at", { ascending: false });
+
+    query = applyContactScope(query, role!, isWorkspaceOwner, userId!);
 
     if (status) {
       query = query.eq("status", status);

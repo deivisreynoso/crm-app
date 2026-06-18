@@ -60,6 +60,8 @@ export default function OpportunitiesPage() {
   const [searchFilter, setSearchFilter] = useState("");
   const [createdFrom, setCreatedFrom] = useState("");
   const [createdTo, setCreatedTo] = useState("");
+  const [listPage, setListPage] = useState(1);
+  const listPageSize = 25;
   const [pendingLostMove, setPendingLostMove] = useState<{
     id: string;
     stage: string;
@@ -67,7 +69,7 @@ export default function OpportunitiesPage() {
 
   const selectedPipeline = pipelines.find((p) => p.id === selectedPipelineId);
 
-  const { data: opportunities = [], isLoading: oppsLoading } = useOpportunities(
+  const { data: oppResult, isLoading: oppsLoading } = useOpportunities(
     selectedPipelineId || undefined,
     undefined,
     {
@@ -76,8 +78,13 @@ export default function OpportunitiesPage() {
       ...(createdFrom ? { createdFrom } : {}),
       ...(createdTo ? { createdTo } : {}),
       ...(viewMode === "board" ? { includeContactCounts: true } : {}),
+      ...(viewMode === "list"
+        ? { page: listPage, limit: listPageSize }
+        : {}),
     }
   );
+  const opportunities = oppResult?.data ?? [];
+  const oppTotal = oppResult?.total ?? opportunities.length;
 
   const createPipeline = useCreatePipeline();
   const updatePipeline = useUpdatePipeline(selectedPipelineId);
@@ -93,6 +100,12 @@ export default function OpportunitiesPage() {
       setSelectedPipelineId(pipelines[0].id);
     }
   }, [pipelines, selectedPipelineId]);
+
+  useEffect(() => {
+    setListPage(1);
+  }, [stageFilter, searchFilter, createdFrom, createdTo, viewMode, selectedPipelineId]);
+
+  const listPageCount = Math.max(1, Math.ceil(oppTotal / listPageSize));
 
   function closePanel() {
     setPanel("none");
@@ -530,6 +543,35 @@ export default function OpportunitiesPage() {
                 deleteOpportunity.isPending ? deletingOpportunity?.id ?? null : null
               }
             />
+            {listPageCount > 1 && (
+              <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-[var(--card-border)]">
+                <p className="text-sm text-body-muted">
+                  Page {listPage} of {listPageCount} · {oppTotal} total
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={listPage <= 1}
+                    onClick={() => setListPage((p) => Math.max(1, p - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={listPage >= listPageCount}
+                    onClick={() =>
+                      setListPage((p) => Math.min(listPageCount, p + 1))
+                    }
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
           </DataTableShell>
         )
       ) : (

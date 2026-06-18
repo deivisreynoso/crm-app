@@ -5,6 +5,7 @@ import { Database, Shield, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SubtleCta } from "@/components/website/subtle-cta";
 import { getDictionary, isLocale, type Locale } from "@/lib/website/i18n";
+import { buildMarketingMetadata } from "@/lib/website/marketing-seo";
 
 type Props = { params: Promise<{ lang: string }> };
 
@@ -12,10 +13,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { lang } = await params;
   if (!isLocale(lang)) return {};
   const dict = await getDictionary(lang);
-  return {
+  return buildMarketingMetadata({
+    lang,
     title: dict.pages.about.title,
     description: dict.pages.about.description,
-  };
+    pathAfterLang: "about",
+  });
 }
 
 export default async function AboutPage({ params }: Props) {

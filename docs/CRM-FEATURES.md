@@ -107,7 +107,7 @@ git log -1 --format='%h %s (%cs)'
 
 ## Workspace & access control
 
-Multi-tenant by **workspace owner** (`user_id` on records = owner UUID). Teammates see shared CRM data.
+Single organization (**ClickIn 360**). All CRM records are scoped to `CLICKIN360_ORG_USER_ID` (owner UUID). Teammates access shared data via `team_members` + RBAC.
 
 | Role | Read CRM | Write CRM | Settings / team / audit log |
 |------|----------|-----------|------------------------------|

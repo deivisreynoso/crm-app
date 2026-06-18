@@ -8,7 +8,7 @@ const LOCALES = ["en", "es"] as const;
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = getSiteBaseUrl();
-  const lastModified = new Date();
+  const lastModified = new Date("2026-06-16");
 
   const entries: MetadataRoute.Sitemap = [];
 

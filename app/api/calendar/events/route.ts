@@ -20,6 +20,7 @@ import {
   resolveAttendeeEmails,
   upsertCalendarEventAttendees,
 } from "@/lib/calendar/event-attendees";
+import { applyCalendarScope } from "@/lib/api/data-scope";
 
 function emptyToNull(value: string | undefined): string | null {
   return value?.trim() ? value.trim() : null;
@@ -55,6 +56,8 @@ export async function GET(req: NextRequest) {
     if (endDate) {
       query = query.lte("start_time", `${endDate}T23:59:59.999Z`);
     }
+
+    query = applyCalendarScope(query, role!, isWorkspaceOwner, userId!);
 
     const { data, error: dbError } = await query;
     if (dbError) {

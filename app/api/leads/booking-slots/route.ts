@@ -3,6 +3,7 @@ import {
   getAvailableSlotsForDateWithCalendar,
   getBookingAvailabilityForWebsite,
 } from "@/lib/website/booking-availability";
+import { getClickIn360OrgUserIdOptional } from "@/lib/org/constants";
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
     }
 
     const config = await getBookingAvailabilityForWebsite();
-    const ownerId = process.env.WEBSITE_LEADS_USER_ID?.trim();
+    const ownerId = getClickIn360OrgUserIdOptional();
     const { slots, unavailable_reason } = ownerId
       ? await getAvailableSlotsForDateWithCalendar(date, config, lang, ownerId)
       : { slots: [], unavailable_reason: "invalid_date" as const };

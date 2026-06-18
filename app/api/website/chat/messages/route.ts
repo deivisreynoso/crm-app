@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRateLimit, clientIpFromRequest } from "@/lib/api/rate-limit";
+import { getClickIn360OrgUserIdOptional } from "@/lib/org/constants";
 import { getWebchatHumanMessagesForSession } from "@/lib/conversations/webchat-poll";
 import { createServerSideClient } from "@/lib/supabase";
 import {
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(emptyPollResponse);
     }
 
-    const workspaceOwnerId = process.env.WEBSITE_LEADS_USER_ID?.trim();
+    const workspaceOwnerId = getClickIn360OrgUserIdOptional();
     if (!workspaceOwnerId) {
       return NextResponse.json({ error: "Not configured" }, { status: 503 });
     }

@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { wrapMiddlewareWithSentry } from "@sentry/nextjs";
 import { getToken } from "next-auth/jwt";
+import { applySentryRequestContext } from "@/lib/monitoring/sentry-context";
 import {
   isApiWriteMethod,
   isPublicApiRoute,
+  financeAccessForbidden,
   workspaceManageForbidden,
   workspaceOwnerOnlyForbidden,
   workspaceWriteForbidden,
@@ -11,6 +14,8 @@ import {
 import { setTrustedWorkspaceHeaders } from "@/lib/api/workspace-headers";
 import { createServerSideClient } from "@/lib/supabase";
 import { resolveWorkspaceContext } from "@/lib/team/workspace";
+import { isWorkspaceAccessDeniedError } from "@/lib/team/workspace-access";
+import { canAccessFinances } from "@/lib/auth/permissions";
 import { isLocale } from "@/lib/website/i18n";
 import {
   LOCALE_COOKIE,
@@ -42,8 +47,12 @@ function isCrmProtected(pathname: string) {
   );
 }
 
-export async function middleware(req: NextRequest) {
+async function middlewareHandler(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  if (pathname === "/monitoring" || pathname.startsWith("/monitoring/")) {
+    return NextResponse.next();
+  }
 
   if (pathname === "/register" && !req.nextUrl.searchParams.get("invite")) {
     const url = new URL("/login", req.url);
@@ -67,17 +76,35 @@ export async function middleware(req: NextRequest) {
     secret: process.env.NEXTAUTH_SECRET,
   });
 
-  if (pathname.startsWith("/api/") && isApiWriteMethod(req.method)) {
-    if (!isPublicApiRoute(pathname)) {
-      const userId =
-        (token as { id?: string; sub?: string } | null)?.id ??
-        (token as { sub?: string } | null)?.sub;
-      if (!userId) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (pathname.startsWith("/api/") && !isPublicApiRoute(pathname)) {
+    const userId =
+      (token as { id?: string; sub?: string } | null)?.id ??
+      (token as { sub?: string } | null)?.sub;
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    let workspace;
+    try {
+      workspace = await resolveWorkspaceContext(userId);
+    } catch (err) {
+      if (isWorkspaceAccessDeniedError(err)) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
+      throw err;
+    }
 
-      const workspace = await resolveWorkspaceContext(userId);
+    if (
+      financeAccessForbidden(
+        workspace.role,
+        workspace.isWorkspaceOwner,
+        pathname
+      )
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
+    if (isApiWriteMethod(req.method)) {
       if (
         workspaceOwnerOnlyForbidden(
           workspace.isWorkspaceOwner,
@@ -99,24 +126,40 @@ export async function middleware(req: NextRequest) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
 
-      if (workspaceWriteForbidden(workspace.role, pathname, req.method)) {
+      if (
+        workspaceWriteForbidden(
+          workspace.role,
+          workspace.isWorkspaceOwner,
+          pathname,
+          req.method
+        )
+      ) {
         return NextResponse.json(
           { error: "Forbidden", demo: workspace.role === "viewer" },
           { status: 403 }
         );
       }
-
-      const requestHeaders = new Headers(req.headers);
-      setTrustedWorkspaceHeaders(requestHeaders, {
-        actorUserId: userId,
-        workspaceOwnerId: workspace.workspaceOwnerId,
-        role: workspace.role,
-        isWorkspaceOwner: workspace.isWorkspaceOwner,
-      });
-      return NextResponse.next({
-        request: { headers: requestHeaders },
-      });
     }
+
+    applySentryRequestContext(
+      {
+        id: userId,
+        email: (token as { email?: string | null } | null)?.email ?? null,
+        name: (token as { name?: string | null } | null)?.name ?? null,
+      },
+      pathname
+    );
+
+    const requestHeaders = new Headers(req.headers);
+    setTrustedWorkspaceHeaders(requestHeaders, {
+      actorUserId: userId,
+      workspaceOwnerId: workspace.workspaceOwnerId,
+      role: workspace.role,
+      isWorkspaceOwner: workspace.isWorkspaceOwner,
+    });
+    return NextResponse.next({
+      request: { headers: requestHeaders },
+    });
   }
 
   if (isCrmProtected(pathname)) {
@@ -129,6 +172,47 @@ export async function middleware(req: NextRequest) {
     const userId =
       (token as { id?: string; sub?: string } | null)?.id ??
       (token as { sub?: string } | null)?.sub;
+
+    if (userId) {
+      let workspace;
+      try {
+        workspace = await resolveWorkspaceContext(userId);
+      } catch (err) {
+        if (isWorkspaceAccessDeniedError(err)) {
+          const signIn = new URL("/login", req.url);
+          signIn.searchParams.set("error", "not_a_member");
+          return NextResponse.redirect(signIn);
+        }
+        throw err;
+      }
+
+      if (
+        workspace.role === "finance" &&
+        !pathname.startsWith("/finances") &&
+        pathname !== "/account" &&
+        !pathname.startsWith("/account/")
+      ) {
+        return NextResponse.redirect(new URL("/finances", req.url));
+      }
+
+      if (
+        workspace.role === "sales" &&
+        pathname.startsWith("/finances") &&
+        !canAccessFinances(workspace.role, workspace.isWorkspaceOwner)
+      ) {
+        return NextResponse.redirect(new URL("/dashboard", req.url));
+      }
+
+      applySentryRequestContext(
+        {
+          id: userId,
+          email: (token as { email?: string | null } | null)?.email ?? null,
+          name: (token as { name?: string | null } | null)?.name ?? null,
+        },
+        pathname
+      );
+    }
+
     const tokenIat = (token as { iat?: number } | null)?.iat;
 
     if (userId && tokenIat) {
@@ -158,6 +242,8 @@ export async function middleware(req: NextRequest) {
 
   return NextResponse.next();
 }
+
+export const middleware = wrapMiddlewareWithSentry(middlewareHandler);
 
 export const config = {
   matcher: [
@@ -192,6 +278,8 @@ export const config = {
     "/services/:path*",
     "/attachments",
     "/attachments/:path*",
+    "/media",
+    "/media/:path*",
     "/api/:path*",
   ],
 };

@@ -83,8 +83,8 @@ Status: **done** | **todo**
 | QA-4 | E2E smoke harness + `.env.local.example` | **done** |
 | QA-5 | `docs/n8n/README.md` | **done** |
 | QA-6 | Migrations 074–079 in production Supabase | **done** — applied manually (Sprint 6) |
-| QA-7 | Full role-matrix E2E (Admin/Sales/Viewer) | **pending** — needs credentials |
-| QA-8 | Mobile 390px audit | **pending** — Sprint 6 |
+| QA-7 | Full role-matrix E2E (Admin/Sales/Viewer) | **partial** — Vitest matrix for permissions, nav, workspace guards; Playwright still needs role credentials |
+| QA-8 | Mobile 390px audit | **partial** — conversations inbox stacks list/detail on mobile with back navigation |
 | QA-9 | Production RLS cross-tenant test | **pending** |
 | QA-10 | Webchat poll data leak (P1) | **done** — `session_secret` + HMAC in qualification |
 | QA-11 | Duplicate-reviews API viewer bypass (P1) | **done** — `requireWorkspaceManage()` on all routes |

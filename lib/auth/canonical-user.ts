@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getClickIn360OrgUserIdOptional } from "@/lib/org/constants";
 import { resolveWorkspaceContext } from "@/lib/team/workspace";
 
 function parseOwnerLoginAliases(): string[] {
@@ -9,7 +10,7 @@ function parseOwnerLoginAliases(): string[] {
 }
 
 function envCanonicalOwnerId(email: string): string | null {
-  const ownerId = process.env.WEBSITE_LEADS_USER_ID?.trim();
+  const ownerId = getClickIn360OrgUserIdOptional();
   if (!ownerId) return null;
 
   const normalized = email.toLowerCase().trim();
@@ -23,7 +24,7 @@ async function userOwnsWorkspace(
   supabase: SupabaseClient,
   userId: string
 ): Promise<boolean> {
-  const envOwner = process.env.WEBSITE_LEADS_USER_ID?.trim();
+  const envOwner = getClickIn360OrgUserIdOptional();
   if (envOwner && userId === envOwner) return true;
 
   const { count } = await supabase
@@ -77,7 +78,7 @@ export async function resolveCanonicalCrmUserId(
   const envOwner = envCanonicalOwnerId(normalized);
   if (envOwner) return envOwner;
 
-  const envOwnerId = process.env.WEBSITE_LEADS_USER_ID?.trim();
+  const envOwnerId = getClickIn360OrgUserIdOptional();
   if (envOwnerId && userId === envOwnerId) return userId;
 
   const { data: teamRows } = await supabase

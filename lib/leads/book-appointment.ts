@@ -5,6 +5,7 @@ import {
   isBookingSlotAvailable,
 } from "@/lib/website/booking-availability";
 import { isoToWallClock } from "@/lib/website/booking-slots-core";
+import { getClickIn360OrgUserId } from "@/lib/org/constants";
 
 export type BookDiscoveryCallInput = {
   contact_info: WebsiteContactInfo;
@@ -46,10 +47,7 @@ export async function bookDiscoveryCall(
   options?: { lang?: "es" | "en" }
 ): Promise<BookDiscoveryCallResult> {
   const lang = options?.lang === "en" ? "en" : "es";
-  const ownerId = process.env.WEBSITE_LEADS_USER_ID?.trim();
-  if (!ownerId) {
-    throw new Error("WEBSITE_LEADS_USER_ID is not configured.");
-  }
+  const ownerId = getClickIn360OrgUserId();
 
   const slotStart = new Date(input.slot_start);
   if (Number.isNaN(slotStart.getTime())) {

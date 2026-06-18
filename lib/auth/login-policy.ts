@@ -21,7 +21,14 @@ export async function resolveUserRole(
 
 /** Owner, admin, and sales may use email/password; viewers use it exclusively. */
 export function credentialsLoginAllowed(role: TeamRole): boolean {
-  return role === "owner" || role === "admin" || role === "sales" || role === "viewer";
+  return (
+    role === "owner" ||
+    role === "admin" ||
+    role === "sales" ||
+    role === "support" ||
+    role === "finance" ||
+    role === "viewer"
+  );
 }
 
 /** Google SSO requires a @clickin360.com address. */

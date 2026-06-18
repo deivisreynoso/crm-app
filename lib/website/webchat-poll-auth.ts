@@ -8,12 +8,9 @@ type PendingEntry = { hash: string; expiresAt: number };
 const pendingBySession = new Map<string, PendingEntry>();
 
 function serverKey(): string {
-  const key =
-    process.env.WEBCHAT_POLL_SECRET?.trim() ||
-    process.env.NEXTAUTH_SECRET?.trim() ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const key = process.env.WEBCHAT_POLL_SECRET?.trim();
   if (!key) {
-    throw new Error("WEBCHAT_POLL_SECRET or NEXTAUTH_SECRET must be set");
+    throw new Error("WEBCHAT_POLL_SECRET is not configured");
   }
   return key;
 }

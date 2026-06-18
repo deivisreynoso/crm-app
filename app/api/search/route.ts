@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { ilikePattern } from "@/lib/api/sanitize-search";
+import {
+  applyContactScope,
+  applyOpportunityScope,
+} from "@/lib/api/data-scope";
 import { createServerSideClient } from "@/lib/supabase";
 
 export async function GET(req: NextRequest) {
@@ -16,15 +20,36 @@ export async function GET(req: NextRequest) {
     const pattern = ilikePattern(q);
     const supabase = createServerSideClient();
 
+    let contactsQuery = supabase
+      .from("contacts")
+      .select("id, first_name, last_name, email, company")
+      .eq("user_id", workspaceOwnerId!)
+      .or(
+        `first_name.ilike.${pattern},last_name.ilike.${pattern},email.ilike.${pattern},company.ilike.${pattern}`
+      )
+      .limit(8);
+    contactsQuery = applyContactScope(
+      contactsQuery,
+      role!,
+      isWorkspaceOwner,
+      userId!
+    );
+
+    let opportunitiesQuery = supabase
+      .from("opportunities")
+      .select("id, title, stage, value")
+      .eq("user_id", workspaceOwnerId!)
+      .ilike("title", pattern)
+      .limit(5);
+    opportunitiesQuery = applyOpportunityScope(
+      opportunitiesQuery,
+      role!,
+      isWorkspaceOwner,
+      userId!
+    );
+
     const [contacts, tickets, opportunities] = await Promise.all([
-      supabase
-        .from("contacts")
-        .select("id, first_name, last_name, email, company")
-        .eq("user_id", workspaceOwnerId!)
-        .or(
-          `first_name.ilike.${pattern},last_name.ilike.${pattern},email.ilike.${pattern},company.ilike.${pattern}`
-        )
-        .limit(8),
+      contactsQuery,
       supabase
         .from("tickets")
         .select("id, title, subject, ticket_number, status")
@@ -33,12 +58,7 @@ export async function GET(req: NextRequest) {
           `title.ilike.${pattern},subject.ilike.${pattern},ticket_number.ilike.${pattern}`
         )
         .limit(5),
-      supabase
-        .from("opportunities")
-        .select("id, title, stage, value")
-        .eq("user_id", workspaceOwnerId!)
-        .ilike("title", pattern)
-        .limit(5),
+      opportunitiesQuery,
     ]);
 
     const results = [

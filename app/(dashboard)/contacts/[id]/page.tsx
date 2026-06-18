@@ -83,7 +83,8 @@ export default function ContactDetailPage({ params }: PageProps) {
   const createTask = useCreateContactTask(id);
   const deleteTask = useDeleteContactTask(id);
   const q = dict.quickActions;
-  const { data: contactOpportunities = [] } = useOpportunities(undefined, id);
+  const { data: contactOppResult } = useOpportunities(undefined, id);
+  const contactOpportunities = contactOppResult?.data ?? [];
   const { data: pipelines = [] } = usePipelines();
   const { data: contactTickets = [], isFetched: ticketsFetched } = useTickets(
     { contact_id: id },

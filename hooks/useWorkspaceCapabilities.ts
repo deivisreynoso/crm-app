@@ -9,5 +9,6 @@ export function useWorkspaceCapabilities() {
     canWrite: ctx?.canWrite ?? false,
     canManage: ctx?.canManage ?? false,
     isDemoViewer: ctx?.isDemoViewer ?? false,
+    canAccessFinances: ctx?.canAccessFinances ?? false,
   };
 }

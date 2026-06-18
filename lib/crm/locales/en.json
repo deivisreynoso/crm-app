@@ -344,5 +344,9 @@
     "new": "New",
     "upload": "Upload",
     "schedule": "Schedule"
+  },
+  "ticketsPage": {
+    "description": "Support requests linked to accounts and contacts",
+    "newTicket": "+ New service ticket"
   }
 }

@@ -345,5 +345,9 @@
     "new": "Nuevo",
     "upload": "Subir",
     "schedule": "Agendar"
+  },
+  "ticketsPage": {
+    "description": "Solicitudes de soporte vinculadas a cuentas y contactos",
+    "newTicket": "+ Nuevo ticket de servicio"
   }
 }

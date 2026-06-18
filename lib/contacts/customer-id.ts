@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getClickIn360OrgUserIdOptional } from "@/lib/org/constants";
 
 const CID_FORMAT = /^CID-\d{4}-\d{5}$/;
 
@@ -44,23 +45,24 @@ export async function findContactByCustomerId(
   const normalized = normalizeCustomerId(customerId);
   if (!isValidCustomerIdFormat(normalized)) return null;
 
-  const { data } = await supabase
+  const orgOwnerId = getClickIn360OrgUserIdOptional();
+  let dbQuery = supabase
     .from("contacts")
     .select("id, user_id, email, first_name, last_name, customer_id")
-    .not("customer_id", "is", null);
+    .eq("customer_id", normalized);
 
-  const match = (data ?? []).find(
-    (row) =>
-      typeof row.customer_id === "string" &&
-      row.customer_id.toUpperCase() === normalized
-  );
+  if (orgOwnerId) {
+    dbQuery = dbQuery.eq("user_id", orgOwnerId);
+  }
 
-  if (!match) return null;
+  const { data } = await dbQuery.maybeSingle();
+  if (!data) return null;
+
   return {
-    id: match.id as string,
-    user_id: match.user_id as string,
-    email: (match.email as string | null) ?? null,
-    first_name: match.first_name as string,
-    last_name: match.last_name as string,
+    id: data.id as string,
+    user_id: data.user_id as string,
+    email: (data.email as string | null) ?? null,
+    first_name: data.first_name as string,
+    last_name: data.last_name as string,
   };
 }

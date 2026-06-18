@@ -1,4 +1,16 @@
+import { timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+
+function secretsMatch(provided: string, expected: string): boolean {
+  try {
+    const a = Buffer.from(provided);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
 
 /** Shared secret for website / N8N → CRM lead endpoints. */
 export function requireWebsiteLeadAuth(req: NextRequest) {
@@ -16,7 +28,7 @@ export function requireWebsiteLeadAuth(req: NextRequest) {
   }
 
   const header = req.headers.get("x-website-secret");
-  if (header !== secret) {
+  if (!header || !secretsMatch(header, secret)) {
     return {
       error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
     };

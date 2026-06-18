@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRateLimit, clientIpFromRequest } from "@/lib/api/rate-limit";
+import { getClickIn360OrgUserIdOptional } from "@/lib/org/constants";
 import { registerWebchatPollSecret } from "@/lib/website/webchat-poll-auth";
 
 const DEFAULT_WEBHOOK = "https://n8n.clickin360.com/webhook/webchat";
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const workspaceOwnerId = process.env.WEBSITE_LEADS_USER_ID?.trim();
+    const workspaceOwnerId = getClickIn360OrgUserIdOptional();
     if (workspaceOwnerId && parsed.data.session_secret) {
       registerWebchatPollSecret(
         workspaceOwnerId,

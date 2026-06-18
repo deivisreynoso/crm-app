@@ -1,3 +1,4 @@
+import { getClickIn360OrgUserId } from "@/lib/org/constants";
 import { createServerSideClient } from "@/lib/supabase";
 import { logContactActivity } from "@/lib/activities/log-contact-activity";
 import { triggerN8NWebhook } from "@/lib/n8n";
@@ -8,6 +9,7 @@ import { upsertBookingCalendarEvent, findContactDiscoveryAppointment } from "@/l
 import { notifyWebsiteLeadAssignee } from "@/lib/leads/website-lead-notify";
 import { notifySalesGroupWebsiteLead } from "@/lib/notifications/sales-group-events";
 import type { CrmLocale } from "@/lib/crm/i18n";
+import { resolveQualifiedStageId } from "@/lib/pipelines/resolve-stage";
 
 export type WebsiteContactInfo = {
   name: string;
@@ -92,6 +94,8 @@ async function createOpportunityForContact(
 
   if (!pipeline?.id) return null;
 
+  const stageId = await resolveQualifiedStageId(supabase, workspaceOwnerId);
+
   const { data: opportunity } = await supabase
     .from("opportunities")
     .insert([
@@ -99,7 +103,7 @@ async function createOpportunityForContact(
         user_id: workspaceOwnerId,
         contact_id: contactId,
         pipeline_id: pipeline.id,
-        stage: "Qualified Lead",
+        stage: stageId,
         title: `Discovery Call — ${companyLabel}`,
         notes: summary,
         status: "open",
@@ -297,12 +301,7 @@ export async function createLeadFromWebsite(input: {
   language?: string | null;
   reschedule?: boolean;
 }): Promise<WebsiteLeadResult> {
-  const envOwner = process.env.WEBSITE_LEADS_USER_ID?.trim();
-  if (!envOwner) {
-    throw new Error(
-      "WEBSITE_LEADS_USER_ID is not configured. Set it to the CRM workspace owner user id."
-    );
-  }
+  const envOwner = getClickIn360OrgUserId();
 
   const { workspaceOwnerId, defaultSalesAssignee } =
     await getWorkspaceWebsiteLeadsConfig(envOwner);
@@ -352,7 +351,7 @@ export async function createLeadFromWebsite(input: {
     .insert([
       {
         user_id: workspaceOwnerId,
-        assigned_to: defaultSalesAssignee,
+        assigned_to: null,
         first_name,
         last_name,
         email,
@@ -421,22 +420,10 @@ export async function createLeadFromWebsite(input: {
     metadata: {
       source: input.source,
       qualified: q.qualified ?? null,
-      assigned_to: defaultSalesAssignee,
+      assigned_to: null,
+      queue: "sales",
     },
   });
-
-  if (defaultSalesAssignee) {
-    await notifyWebsiteLeadAssignee(supabase, {
-      workspaceOwnerId,
-      assigneeId: defaultSalesAssignee,
-      contactId,
-      leadName: `${first_name} ${last_name}`.trim(),
-      leadEmail: email,
-      source: input.source,
-      hasAppointment: Boolean(calendarEventId),
-      returningVisitor: false,
-    });
-  }
 
   void notifySalesGroupWebsiteLead(supabase, {
     workspaceOwnerId,
@@ -453,14 +440,14 @@ export async function createLeadFromWebsite(input: {
     opportunity_id: opportunityId,
     calendar_event_id: calendarEventId,
     source: input.source,
-    assigned_to: defaultSalesAssignee,
+    assigned_to: null,
   });
 
   return {
     contact_id: contactId,
     opportunity_id: opportunityId,
     calendar_event_id: calendarEventId,
-    assigned_to: defaultSalesAssignee,
+    assigned_to: null,
     returning_visitor: false,
   };
 }

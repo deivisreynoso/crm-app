@@ -5,6 +5,7 @@ import { Bot } from "lucide-react";
 import { WebsiteWebchatEmbed } from "@/components/website/website-webchat-embed";
 import { ContactPageCtas } from "@/components/website/contact-page-ctas";
 import { getDictionary, isLocale } from "@/lib/website/i18n";
+import { buildMarketingMetadata } from "@/lib/website/marketing-seo";
 
 type Props = { params: Promise<{ lang: string }> };
 
@@ -12,10 +13,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { lang } = await params;
   if (!isLocale(lang)) return {};
   const dict = await getDictionary(lang);
-  return {
+  return buildMarketingMetadata({
+    lang,
     title: lang === "es" ? "Contacto — ClickIn 360" : "Contact — ClickIn 360",
     description: dict.chat.desc,
-  };
+    pathAfterLang: "contact",
+  });
 }
 
 export default async function ContactPage({ params }: Props) {

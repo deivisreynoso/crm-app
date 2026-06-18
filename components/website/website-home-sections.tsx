@@ -18,7 +18,6 @@ import {
   Database,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { WebsiteWebchatEmbed } from "@/components/website/website-webchat-embed";
 import { WebsiteFaq } from "@/components/website/website-faq";
 import { WebsiteGoogleReviews } from "@/components/website/website-google-reviews";
 import { SubtleCta } from "@/components/website/subtle-cta";
@@ -58,14 +57,10 @@ export function WebsiteHomeSections({ lang, dict }: Props) {
                   href={`/${lang}/book-call`}
                   ctaName={dict.hero.ctaPrimary}
                   ctaLocation="hero"
+                  className="website-cta-primary inline-flex items-center justify-center gap-2 h-12 px-8 rounded-xl text-base w-full sm:w-auto"
                 >
-                  <button
-                    type="button"
-                    className="website-cta-primary inline-flex items-center justify-center gap-2 h-12 px-8 rounded-xl text-base w-full sm:w-auto"
-                  >
-                    {dict.hero.ctaPrimary}
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
+                  {dict.hero.ctaPrimary}
+                  <ArrowRight className="w-4 h-4" />
                 </TrackedLink>
                 <ChatOpenButton className="website-cta-secondary inline-flex items-center justify-center gap-2 h-12 px-8 rounded-xl text-base w-full sm:w-auto">
                   <MessageCircle className="w-4 h-4" />
@@ -279,7 +274,12 @@ export function WebsiteHomeSections({ lang, dict }: Props) {
             <h2 className="text-xl font-bold text-heading">{dict.chat.title}</h2>
             <p className="mt-2 text-sm text-body-muted max-w-md mx-auto">{dict.chat.desc}</p>
           </div>
-          <WebsiteWebchatEmbed lang={lang} dict={dict} />
+          <div className="flex justify-center">
+            <ChatOpenButton className="website-cta-primary inline-flex items-center justify-center gap-2 h-12 px-8 rounded-xl text-base">
+              <MessageCircle className="w-4 h-4" />
+              {dict.chat.title}
+            </ChatOpenButton>
+          </div>
           <div className="flex flex-wrap gap-3 justify-center pt-2">
             <TrackedLink
               href={`/${lang}/book-call`}

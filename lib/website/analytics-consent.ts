@@ -5,7 +5,11 @@ export const ANALYTICS_CONSENT_MAX_AGE = 60 * 60 * 24 * 365;
 export type AnalyticsConsent = "granted" | "denied";
 
 export const GA_MEASUREMENT_ID =
-  process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim() || "G-QRDLH77S1V";
+  process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim() || "";
+
+export function isGaConfigured() {
+  return Boolean(GA_MEASUREMENT_ID);
+}
 
 export function getAnalyticsConsent(): AnalyticsConsent | null {
   if (typeof document === "undefined") return null;

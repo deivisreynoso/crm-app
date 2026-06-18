@@ -22,7 +22,7 @@ ClickIn 360 — marketing site + CRM (Next.js, Supabase, Docker on VPS).
 - Run migrations **049**–**073** in Supabase if not applied (`052` = calendar colors, CID, support widget; **054–063** = Finances; **066–068** = conversations inbox; **069** = Google Drive OAuth + document external links; **070** = sales/support group emails + notification prefs; **071–073** = onboarding automation, quote expiry/versioning, invoice recurrence)
 - Supabase Auth → **Leaked password protection** — enable in the Supabase Dashboard (Authentication → Providers → Email); cannot be turned on via application code
 - Public customer support: enable in **Settings → Support widget**; page at `/support`
-- Set `WEBSITE_LEADS_USER_ID` to the workspace owner UUID; optional `OWNER_LOGIN_ALIASES` for owner dual-email login
+- Set `CLICKIN360_ORG_USER_ID` to the organization owner UUID; optional `OWNER_LOGIN_ALIASES` for owner dual-email login
 - Google Cloud OAuth redirect URIs (must match env / `NEXT_PUBLIC_APP_URL` exactly):
   - `{APP_URL}/api/auth/callback/google` — Workspace login
   - `{APP_URL}/api/auth/google-gmail/callback` — per-user Gmail

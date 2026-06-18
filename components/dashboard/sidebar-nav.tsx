@@ -6,7 +6,9 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import { MAIN_NAV, type NavIconAccent, type NavItem } from "@/lib/navigation";
+import { isNavItemVisible } from "@/lib/navigation-role";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
+import { useWorkspace } from "@/components/crm/workspace-provider";
 
 export const navIconAccentStyles: Record<
   NavIconAccent,
@@ -136,16 +138,29 @@ export function SidebarBrand() {
   );
 }
 
-function filterNavByRole(items: NavItem[], canWrite: boolean) {
-  return items.filter((item) => !item.requiresWrite || canWrite);
+function filterNavByRole(
+  items: NavItem[],
+  role: import("@/lib/team/workspace").TeamRole | undefined,
+  isWorkspaceOwner: boolean,
+  canWrite: boolean
+) {
+  return items.filter((item) =>
+    isNavItemVisible(item, role, isWorkspaceOwner, canWrite)
+  );
 }
 
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void } = {}) {
   const pathname = usePathname();
   const { dict } = useCrmLocale();
   const { canWrite } = useWorkspaceCapabilities();
+  const { ctx } = useWorkspace();
   const navDict = dict.nav as Record<string, string>;
-  const navItems = filterNavByRole(MAIN_NAV, canWrite);
+  const navItems = filterNavByRole(
+    MAIN_NAV,
+    ctx?.role,
+    ctx?.isWorkspaceOwner ?? false,
+    canWrite
+  );
 
   return (
     <nav className="flex flex-col gap-5" aria-label="Main navigation">

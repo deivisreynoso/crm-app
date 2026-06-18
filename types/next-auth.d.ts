@@ -10,6 +10,7 @@ declare module "next-auth" {
       email?: string | null;
       name?: string | null;
       image?: string | null;
+      role?: import("@/lib/team/workspace").TeamRole;
     };
   }
 
@@ -18,6 +19,7 @@ declare module "next-auth" {
     authUserId?: string;
     email?: string | null;
     name?: string | null;
+    role?: import("@/lib/team/workspace").TeamRole;
   }
 }
 
@@ -28,5 +30,6 @@ declare module "next-auth/jwt" {
     email?: string | null;
     name?: string | null;
     authProvider?: string;
+    role?: import("@/lib/team/workspace").TeamRole;
   }
 }

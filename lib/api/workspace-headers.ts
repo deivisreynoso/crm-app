@@ -51,7 +51,14 @@ export function readTrustedWorkspaceHeaders(
   const role = headers.get(WORKSPACE_HEADER_ROLE) as TeamRole | null;
   if (!workspaceOwnerId || !role) return null;
 
-  const validRoles: TeamRole[] = ["owner", "admin", "sales", "viewer"];
+  const validRoles: TeamRole[] = [
+    "owner",
+    "admin",
+    "finance",
+    "sales",
+    "support",
+    "viewer",
+  ];
   if (!validRoles.includes(role)) return null;
 
   return {
