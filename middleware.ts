@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { wrapMiddlewareWithSentry } from "@sentry/nextjs";
 import { getToken } from "next-auth/jwt";
-import { applySentryRequestContext } from "@/lib/monitoring/sentry-context";
 import {
   isApiWriteMethod,
   isPublicApiRoute,
@@ -47,12 +45,8 @@ function isCrmProtected(pathname: string) {
   );
 }
 
-async function middlewareHandler(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-
-  if (pathname === "/monitoring" || pathname.startsWith("/monitoring/")) {
-    return NextResponse.next();
-  }
 
   if (pathname === "/register" && !req.nextUrl.searchParams.get("invite")) {
     const url = new URL("/login", req.url);
@@ -141,15 +135,6 @@ async function middlewareHandler(req: NextRequest) {
       }
     }
 
-    applySentryRequestContext(
-      {
-        id: userId,
-        email: (token as { email?: string | null } | null)?.email ?? null,
-        name: (token as { name?: string | null } | null)?.name ?? null,
-      },
-      pathname
-    );
-
     const requestHeaders = new Headers(req.headers);
     setTrustedWorkspaceHeaders(requestHeaders, {
       actorUserId: userId,
@@ -203,14 +188,6 @@ async function middlewareHandler(req: NextRequest) {
         return NextResponse.redirect(new URL("/dashboard", req.url));
       }
 
-      applySentryRequestContext(
-        {
-          id: userId,
-          email: (token as { email?: string | null } | null)?.email ?? null,
-          name: (token as { name?: string | null } | null)?.name ?? null,
-        },
-        pathname
-      );
     }
 
     const tokenIat = (token as { iat?: number } | null)?.iat;
@@ -242,8 +219,6 @@ async function middlewareHandler(req: NextRequest) {
 
   return NextResponse.next();
 }
-
-export const middleware = wrapMiddlewareWithSentry(middlewareHandler);
 
 export const config = {
   matcher: [

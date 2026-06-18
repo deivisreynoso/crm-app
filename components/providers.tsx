@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { ThemeProvider } from "@/components/dashboard/theme-provider";
 import { SupabaseAuthHashHandler } from "@/components/auth/supabase-auth-hash-handler";
-import { SentryUserBridge } from "@/components/monitoring/sentry-user";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -25,7 +24,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <SupabaseAuthHashHandler />
-          <SentryUserBridge />
           {children}
         </ThemeProvider>
       </QueryClientProvider>
