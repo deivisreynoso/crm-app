@@ -8,8 +8,17 @@ echo "=== Memory / swap ==="
 free -h || true
 echo ""
 
-echo "=== Docker containers (crm-app) ==="
+echo "=== Docker containers (crm + caddy) ==="
 docker ps -a --filter "name=crm-app" --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' || true
+docker ps -a --filter "name=caddy" --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' || true
+echo ""
+
+echo "=== Listening on 80 / 443 ==="
+if command -v ss >/dev/null 2>&1; then
+  ss -tlnp | grep -E ':80 |:443 ' || echo "Nothing listening on 80/443"
+else
+  echo "(ss not available)"
+fi
 echo ""
 
 CONTAINER=$(docker ps --format '{{.Names}}' 2>/dev/null | grep -E '^crm-app$' | head -1 || true)

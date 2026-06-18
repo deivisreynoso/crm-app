@@ -37,12 +37,27 @@ if ! docker compose --env-file "$ENV_FILE" build "${NO_CACHE[@]}" app; then
   exit 1
 fi
 
-docker compose --env-file "$ENV_FILE" up -d --remove-orphans app
+# Replace a legacy standalone Caddy container (same name, different compose project).
+if docker inspect caddy >/dev/null 2>&1; then
+  caddy_project=$(docker inspect caddy --format '{{ index .Config.Labels "com.docker.compose.project" }}' 2>/dev/null || echo "")
+  if [[ "$caddy_project" != "$(basename "$(pwd)")" ]]; then
+    echo "Removing legacy caddy container (project: ${caddy_project:-unknown})..."
+    docker rm -f caddy
+  fi
+fi
+
+docker compose --env-file "$ENV_FILE" up -d app caddy
 
 sleep 3
 if ! docker ps --format '{{.Names}}' | grep -qE '^crm-app$'; then
   echo "Container crm-app is not running. Logs:" >&2
   docker logs crm-app --tail 40 2>&1 || true
+  exit 1
+fi
+
+if ! docker ps --format '{{.Names}}' | grep -qE '^caddy$'; then
+  echo "Container caddy is not running. Logs:" >&2
+  docker logs caddy --tail 40 2>&1 || true
   exit 1
 fi
 

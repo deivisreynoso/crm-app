@@ -1,0 +1,6 @@
+# TLS certificates are provisioned automatically by Caddy (Let's Encrypt).
+# Ensure DNS for these hosts points at this server before first deploy.
+
+www.clickin360.com, clickin360.com {
+	reverse_proxy app:3000
+}
