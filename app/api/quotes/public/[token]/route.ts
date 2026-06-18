@@ -11,6 +11,7 @@ import {
 } from "@/lib/notifications/workspace-groups";
 import { fireWebhook } from "@/lib/webhooks/outbound";
 import { isQuoteExpired } from "@/lib/quotes/expiry";
+import { buildQuoteStatusPatch } from "@/lib/quotes/apply-status-change";
 import { z } from "zod";
 
 type RouteContext = { params: Promise<{ token: string }> };
@@ -110,27 +111,18 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const responseEmail = parsed.data.email?.trim().toLowerCase() || null;
 
     const patch = isAccept
-      ? {
-          status: "accepted" as const,
-          accepted_at: now,
-          rejected_at: null,
-          signed_at: now,
+      ? buildQuoteStatusPatch(doc.status as string, {
+          status: "accepted",
           response_name: responseName,
           response_email: responseEmail,
-          acceptance_disclaimer_acknowledged_at: now,
-          updated_at: now,
-        }
-      : {
-          status: "rejected" as const,
-          rejected_at: now,
-          accepted_at: null,
-          signed_at: null,
+        })
+      : buildQuoteStatusPatch(doc.status as string, {
+          status: "rejected",
           response_name: responseName,
           response_email: responseEmail,
-          loss_reason: parsed.data.loss_reason?.trim() || null,
-          loss_reason_notes: parsed.data.loss_reason_notes?.trim() || null,
-          updated_at: now,
-        };
+          loss_reason: parsed.data.loss_reason,
+          loss_reason_notes: parsed.data.loss_reason_notes,
+        });
 
     const { data: updated, error: updateError } = await supabase
       .from("documents")

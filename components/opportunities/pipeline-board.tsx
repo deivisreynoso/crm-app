@@ -175,7 +175,7 @@ export function PipelineBoard({
         return (
           <div
             key={stage.id}
-            className="flex-shrink-0 w-72 bg-[var(--background)] rounded-lg flex flex-col border border-[var(--card-border)] overflow-hidden"
+            className="flex-shrink-0 w-[min(18rem,85vw)] sm:w-72 bg-[var(--background)] rounded-lg flex flex-col border border-[var(--card-border)] overflow-hidden"
             onDragOver={
               readOnly
                 ? undefined

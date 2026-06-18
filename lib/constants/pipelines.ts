@@ -10,6 +10,7 @@ export const DEFAULT_PIPELINE_STAGES: PipelineStage[] = [
   { id: "nurturing", name: "Nurturing", order: 2 },
   { id: "booked", name: "Booked", order: 3 },
   { id: "closed_won", name: "Closed - Won", order: 4 },
+  { id: "closed_lost", name: "Closed - Lost", order: 5 },
 ];
 
 export function getStageName(

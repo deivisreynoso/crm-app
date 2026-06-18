@@ -147,6 +147,8 @@ export interface User {
     feedback_score?: number | null;
     feedback_notes?: Record<string, unknown> | null;
     feedback_received_at?: string | null;
+    loss_reason?: string | null;
+    loss_reason_notes?: string | null;
     created_at: string;
     updated_at: string;
   }
@@ -164,6 +166,8 @@ export interface User {
     tags?: string;
     owner_id?: string;
     company_id?: string;
+    loss_reason?: string;
+    loss_reason_notes?: string;
     custom_fields?: Record<string, unknown>;
   }
 
@@ -309,6 +313,8 @@ export interface User {
     mime_type?: string;
     file_size_bytes?: number;
     storage_path?: string | null;
+    loss_reason?: string | null;
+    loss_reason_notes?: string | null;
     status: "draft" | "sent" | "signed" | "accepted" | "rejected";
     valid_until?: string;
     signed_at?: string;

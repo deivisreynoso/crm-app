@@ -13,6 +13,7 @@ import { QuotePreview } from "@/components/documents/quote-preview";
 import { QuoteAcceptLinkPanel } from "@/components/documents/quote-accept-link-panel";
 import { QuoteFinancesTab } from "@/components/documents/quote-finances-tab";
 import { SendQuoteEmailModal } from "@/components/documents/send-quote-email-modal";
+import { LossReasonModal } from "@/components/opportunities/loss-reason-modal";
 import { insertAtTextareaCursor } from "@/lib/documents/insert-at-cursor";
 import {
   useDocument,
@@ -70,6 +71,8 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
     null
   );
   const [quoteTab, setQuoteTab] = useState<"editor" | "billing">("editor");
+  const [statusDraft, setStatusDraft] = useState<CrmDocument["status"]>("draft");
+  const [pendingRejected, setPendingRejected] = useState(false);
 
   const linkedCompany = companies.find(
     (co) => co.id === (linkedContact?.company_id ?? doc?.company_id)
@@ -139,6 +142,7 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
     setContactId(doc.contact_id ?? "");
     setFooterHtml(doc.footer_html ?? "");
     setValidUntil(doc.valid_until ?? "");
+    setStatusDraft(doc.status);
     setLineItemsDraft(null);
   }, [doc]);
 
@@ -165,6 +169,7 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
   async function save(patch: Partial<CrmDocument>) {
     try {
       await updateDoc.mutateAsync(patch);
+      if (patch.status) setStatusDraft(patch.status);
       setToast({ text: "Saved", ok: true });
     } catch (err) {
       setToast({ text: formatApiError(err, "Save failed"), ok: false });
@@ -193,8 +198,8 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
 
   if (doc && isQuoteDoc) {
     return (
-      <div className="flex flex-col h-[calc(100vh-8rem)] min-h-[520px] -m-6 lg:-m-8">
-        <header className="shrink-0 flex flex-wrap items-center gap-3 px-4 lg:px-6 py-3 border-b border-[var(--card-border)] bg-[var(--card)]">
+      <div className="flex flex-col h-[calc(100dvh-5rem)] min-h-[520px] -m-3 sm:-m-6 lg:-m-8">
+        <header className="shrink-0 flex flex-wrap items-center gap-2 sm:gap-3 px-3 sm:px-4 lg:px-6 py-3 border-b border-[var(--card-border)] bg-[var(--card)]">
           <Link
             href="/quotes"
             className="text-xs text-body-muted hover:text-[var(--primary)]"
@@ -209,8 +214,8 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
             disabled={readOnly}
             readOnly={readOnly}
           />
-          <DocumentStatusBadge status={doc.status} />
-          <nav className="flex gap-1 ml-4 border-b border-transparent">
+          <DocumentStatusBadge status={statusDraft} />
+          <nav className="flex gap-1 order-3 sm:order-none w-full sm:w-auto border-b border-transparent sm:ml-4">
             {(
               [
                 { id: "editor" as const, label: "Quote" },
@@ -231,7 +236,7 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
               </button>
             ))}
           </nav>
-          <div className="flex flex-wrap items-center gap-2 ml-auto">
+          <div className="flex flex-wrap items-center gap-2 ml-auto order-2 sm:order-none w-full sm:w-auto justify-end">
             {toast && (
               <span
                 className={`text-xs font-medium px-2 py-1 rounded-md ${
@@ -349,12 +354,17 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
                     </label>
                     <select
                       className="input-field w-full"
-                      value={doc.status}
+                      value={statusDraft}
                       disabled={readOnly}
-                      onChange={(e) =>
-                        !readOnly &&
-                        void save({ status: e.target.value as CrmDocument["status"] })
-                      }
+                      onChange={(e) => {
+                        if (readOnly) return;
+                        const next = e.target.value as CrmDocument["status"];
+                        if (next === "rejected") {
+                          setPendingRejected(true);
+                          return;
+                        }
+                        void save({ status: next });
+                      }}
                     >
                       <option value="draft">Draft</option>
                       <option value="sent">Sent</option>
@@ -456,6 +466,22 @@ export function DocumentEditor({ documentId, mode = "auto" }: DocumentEditorProp
             setToast({ text: "Quote sent via email", ok: true });
             void queryClient.invalidateQueries({ queryKey: ["document", documentId] });
             void queryClient.invalidateQueries({ queryKey: ["quote-analytics"] });
+          }}
+        />
+        <LossReasonModal
+          open={pendingRejected}
+          title="Why was this quote declined?"
+          description="Record why the customer did not move forward."
+          confirmLabel="Mark as rejected"
+          loading={updateDoc.isPending}
+          onCancel={() => setPendingRejected(false)}
+          onConfirm={(payload) => {
+            setStatusDraft("rejected");
+            void save({
+              status: "rejected",
+              loss_reason: payload.loss_reason,
+              loss_reason_notes: payload.loss_reason_notes,
+            }).finally(() => setPendingRejected(false));
           }}
         />
       </div>

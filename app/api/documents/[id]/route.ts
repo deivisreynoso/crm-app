@@ -13,6 +13,11 @@ import {
 } from "@/lib/api/assert-workspace-parents";
 import { coerceQuoteDocumentType, isQuoteDocument } from "@/lib/documents/kinds";
 import { ensureQuoteReference } from "@/lib/quotes/reference";
+import {
+  buildQuoteStatusPatch,
+  runQuoteStatusSideEffects,
+  type QuoteStatus,
+} from "@/lib/quotes/apply-status-change";
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, context: RouteContext) {
@@ -97,9 +102,23 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     let targetId = id;
     let workingDoc = existing;
+    const statusOnlyChange =
+      parsed.data.status !== undefined &&
+      parsed.data.content === undefined &&
+      parsed.data.title === undefined &&
+      parsed.data.subtotal === undefined &&
+      parsed.data.tax_rate === undefined &&
+      parsed.data.tax_amount === undefined &&
+      parsed.data.total_amount === undefined;
+
+    const normalizedExistingContent = (existing.content as string | null) ?? "";
+    const normalizedPatchContent =
+      parsed.data.content !== undefined ? (parsed.data.content ?? "") : undefined;
     const hasContentChange =
-      parsed.data.content !== undefined && parsed.data.content !== existing.content;
-    if (hasContentChange && isQuoteDocument(existing.type as string)) {
+      normalizedPatchContent !== undefined &&
+      normalizedPatchContent !== normalizedExistingContent;
+
+    if (hasContentChange && isQuoteDocument(existing.type as string) && !statusOnlyChange) {
       const fork = await forkQuoteRevisionIfNeeded(
         supabase,
         workspaceOwnerId!,
@@ -151,7 +170,23 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
     if (d.title !== undefined) updates.title = d.title;
     if (d.content !== undefined) updates.content = d.content?.trim() || null;
-    if (d.status !== undefined) updates.status = d.status;
+    if (d.status !== undefined) {
+      const statusPatch = buildQuoteStatusPatch(existing.status as string, {
+        status: d.status as QuoteStatus,
+        loss_reason: d.loss_reason,
+        loss_reason_notes: d.loss_reason_notes,
+      });
+      Object.assign(updates, statusPatch);
+    } else {
+      if (d.loss_reason !== undefined) {
+        updates.loss_reason = d.loss_reason?.trim() ? d.loss_reason.trim() : null;
+      }
+      if (d.loss_reason_notes !== undefined) {
+        updates.loss_reason_notes = d.loss_reason_notes?.trim()
+          ? d.loss_reason_notes.trim()
+          : null;
+      }
+    }
     if (d.valid_until !== undefined) {
       updates.valid_until = d.valid_until?.trim() ? d.valid_until : null;
     }
@@ -176,6 +211,11 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       updates.currency = (settings?.default_currency as string) === "MXN" ? "MXN" : "USD";
     }
 
+    const nextStatus =
+      (updates.status as string | undefined) ?? (existing.status as string);
+    const statusChanged =
+      d.status !== undefined && d.status !== (existing.status as string);
+
     const { data, error: dbError } = await supabase
       .from("documents")
       .update(updates)
@@ -186,6 +226,24 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     if (dbError) {
       return NextResponse.json({ error: dbError.message }, { status: 500 });
+    }
+
+    if (
+      statusChanged &&
+      isQuoteDocument(existing.type as string) &&
+      (nextStatus === "accepted" || nextStatus === "rejected")
+    ) {
+      await runQuoteStatusSideEffects(
+        supabase,
+        workspaceOwnerId!,
+        data as Record<string, unknown>,
+        {
+          status: nextStatus as QuoteStatus,
+          loss_reason: (data.loss_reason as string | null) ?? null,
+          loss_reason_notes: (data.loss_reason_notes as string | null) ?? null,
+        },
+        { manual: true }
+      );
     }
 
     await recordAuditLog({

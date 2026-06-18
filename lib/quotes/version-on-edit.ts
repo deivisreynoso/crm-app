@@ -40,7 +40,7 @@ export async function forkQuoteRevisionIfNeeded(
       currency: existing.currency,
       version: nextVersion,
       parent_document_id: parentId,
-      quote_reference: existing.quote_reference,
+      quote_reference: null,
     })
     .select("id")
     .single();

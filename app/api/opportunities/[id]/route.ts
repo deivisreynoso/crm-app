@@ -15,13 +15,21 @@ import {
   applyWonProjectStageInit,
   fetchPipelineStages,
 } from "@/lib/opportunities/patch-helpers";
+import { isLostStageId, isLostStageName } from "@/lib/opportunities/stage-outcome";
 import { triggerN8NWebhook } from "@/lib/n8n";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 function isStageOnlyUpdate(body: Record<string, unknown>) {
   const keys = Object.keys(body);
-  return keys.length === 1 && keys[0] === "stage";
+  return (
+    keys.length >= 1 &&
+    keys.length <= 3 &&
+    keys.every((k) =>
+      ["stage", "loss_reason", "loss_reason_notes"].includes(k)
+    ) &&
+    keys.includes("stage")
+  );
 }
 
 export async function GET(_req: NextRequest, context: RouteContext) {
@@ -71,7 +79,19 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       if (!parsed.success) {
         return NextResponse.json({ error: "Validation failed" }, { status: 400 });
       }
-      updates = { stage: parsed.data.stage };
+      updates = {
+        stage: parsed.data.stage,
+        ...(parsed.data.loss_reason !== undefined
+          ? {
+              loss_reason: parsed.data.loss_reason?.trim() || null,
+            }
+          : {}),
+        ...(parsed.data.loss_reason_notes !== undefined
+          ? {
+              loss_reason_notes: parsed.data.loss_reason_notes?.trim() || null,
+            }
+          : {}),
+      };
     } else {
       const parsed = opportunityPatchSchema.safeParse(body);
       if (!parsed.success) {
@@ -96,6 +116,24 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json(
         { error: "Opportunity not found" },
         { status: 404 }
+      );
+    }
+
+    const pipelineStages = await fetchPipelineStages(
+      supabase,
+      workspaceOwnerId!,
+      (before.pipeline_id as string | null)
+    );
+    const targetStageId = (updates.stage as string | undefined) ?? (before.stage as string);
+    const targetStageName =
+      (pipelineStages ?? []).find((s) => s.id === targetStageId)?.name ?? "";
+    const movingToLost =
+      updates.stage !== undefined &&
+      (isLostStageId(targetStageId) || isLostStageName(targetStageName));
+    if (movingToLost && !((updates.loss_reason as string | null) ?? (before.loss_reason as string | null))) {
+      return NextResponse.json(
+        { error: "Loss reason is required when closing an opportunity as lost." },
+        { status: 400 }
       );
     }
 
@@ -128,7 +166,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       );
     }
 
-    const pipelineStages = await fetchPipelineStages(
+    const pipelineStagesAfter = await fetchPipelineStages(
       supabase,
       workspaceOwnerId!,
       (data.pipeline_id as string | null) ?? (before.pipeline_id as string | null)
@@ -138,7 +176,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       supabase,
       before as Record<string, unknown>,
       data as Record<string, unknown>,
-      pipelineStages
+      pipelineStagesAfter
     );
 
     let enriched = withProjectStage;

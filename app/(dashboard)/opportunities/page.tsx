@@ -8,6 +8,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { PageHeader, DataTableShell } from "@/components/ui/page-shell";
 import { Card } from "@/components/ui/card";
 import { PipelineBoard } from "@/components/opportunities/pipeline-board";
+import { LossReasonModal } from "@/components/opportunities/loss-reason-modal";
 import { OpportunityListView } from "@/components/opportunities/opportunity-list-view";
 import { SavedFiltersBar } from "@/components/filters/saved-filters-bar";
 import { PipelineSettings } from "@/components/opportunities/pipeline-settings";
@@ -27,6 +28,7 @@ import {
   useDeleteOpportunity,
 } from "@/hooks/useOpportunities";
 import { DEFAULT_PIPELINE_STAGES } from "@/lib/constants/pipelines";
+import { isLostStageId, isLostStageName } from "@/lib/opportunities/stage-outcome";
 import { formatTagsForInput } from "@/lib/tags";
 import type { OpportunityFormInput, OpportunityWithContact } from "@/types";
 import { useWorkspaceCapabilities } from "@/hooks/useWorkspaceCapabilities";
@@ -58,6 +60,10 @@ export default function OpportunitiesPage() {
   const [searchFilter, setSearchFilter] = useState("");
   const [createdFrom, setCreatedFrom] = useState("");
   const [createdTo, setCreatedTo] = useState("");
+  const [pendingLostMove, setPendingLostMove] = useState<{
+    id: string;
+    stage: string;
+  } | null>(null);
 
   const selectedPipeline = pipelines.find((p) => p.id === selectedPipelineId);
 
@@ -163,8 +169,29 @@ export default function OpportunitiesPage() {
   }
 
   async function handleMoveStage(id: string, stage: string) {
+    const stageMeta = (
+      selectedPipeline?.stages as { id: string; name: string }[] | undefined
+    )?.find((s) => s.id === stage);
+    const stageName = stageMeta?.name ?? stage;
+    if (isLostStageId(stage) || isLostStageName(stageName)) {
+      setPendingLostMove({ id, stage });
+      return;
+    }
     try {
       await moveStage.mutateAsync({ id, stage });
+    } catch (err) {
+      alert(apiErrorMessage(err));
+    }
+  }
+
+  async function confirmLostMove(payload: {
+    loss_reason: string;
+    loss_reason_notes?: string;
+  }) {
+    if (!pendingLostMove) return;
+    try {
+      await moveStage.mutateAsync({ ...pendingLostMove, ...payload });
+      setPendingLostMove(null);
     } catch (err) {
       alert(apiErrorMessage(err));
     }
@@ -415,6 +442,9 @@ export default function OpportunitiesPage() {
                       probability: editingOpportunity.probability,
                       notes: editingOpportunity.notes,
                       tags: formatTagsForInput(editingOpportunity.tags),
+                      loss_reason: editingOpportunity.loss_reason ?? undefined,
+                      loss_reason_notes:
+                        editingOpportunity.loss_reason_notes ?? undefined,
                       custom_fields: editingOpportunity.custom_fields,
                       currency: editingOpportunity.currency,
                     }
@@ -462,6 +492,13 @@ export default function OpportunitiesPage() {
         loading={deleteOpportunity.isPending}
         onConfirm={confirmDelete}
         onCancel={() => setDeletingOpportunity(null)}
+      />
+
+      <LossReasonModal
+        open={!!pendingLostMove}
+        loading={moveStage.isPending}
+        onConfirm={(payload) => void confirmLostMove(payload)}
+        onCancel={() => setPendingLostMove(null)}
       />
 
       {pipelinesLoading || oppsLoading ? (

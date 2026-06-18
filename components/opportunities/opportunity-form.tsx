@@ -9,10 +9,13 @@ import { useCustomFields } from "@/hooks/useCustomFields";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import axios from "axios";
 import { normalizeCustomFieldValues } from "@/lib/custom-fields/normalize";
-import {
-  EntityCustomFieldsForm,
+import { EntityCustomFieldsForm,
   type CustomFieldValues,
 } from "@/components/custom-fields/entity-custom-fields-form";
+import { LossReasonFields } from "@/components/forms/loss-reason-fields";
+import { useLossReasonOptions } from "@/hooks/useLossReasonOptions";
+import { isLostStageId, isLostStageName } from "@/lib/opportunities/stage-outcome";
+import { useCrmLocale } from "@/components/crm/crm-locale-provider";
 import type { OpportunityFormInput, PipelineStage } from "@/types";
 
 interface OpportunityFormProps {
@@ -56,6 +59,13 @@ export function OpportunityForm({
   const [customFields, setCustomFields] = useState<CustomFieldValues>(
     (initial?.custom_fields as CustomFieldValues) ?? {}
   );
+  const [lossReason, setLossReason] = useState(initial?.loss_reason ?? "");
+  const [lossReasonNotes, setLossReasonNotes] = useState(
+    initial?.loss_reason_notes ?? ""
+  );
+
+  const { data: lossReasonOptions = [] } = useLossReasonOptions();
+  const { locale } = useCrmLocale();
 
   const { data: customFieldDefs = [], isLoading: customFieldsLoading } =
     useCustomFields("opportunity");
@@ -86,11 +96,19 @@ export function OpportunityForm({
     if (initial?.probability !== undefined) {
       setProbability(initial.probability?.toString() ?? "50");
     }
+    if (initial?.loss_reason !== undefined) setLossReason(initial.loss_reason ?? "");
+    if (initial?.loss_reason_notes !== undefined) {
+      setLossReasonNotes(initial.loss_reason_notes ?? "");
+    }
   }, [initial?.id, initial, defaultContactId, defaultStage, stages]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!contactId || !title.trim() || !stage) return;
+
+    const stageName = stages.find((s) => s.id === stage)?.name ?? "";
+    const isLost = isLostStageId(stage) || isLostStageName(stageName);
+    if (isLost && !lossReason.trim()) return;
 
     await onSubmit({
       contact_id: contactId,
@@ -104,8 +122,18 @@ export function OpportunityForm({
       tags: tags || undefined,
       owner_id: ownerId || undefined,
       custom_fields: customFields,
+      ...(isLost
+        ? {
+            loss_reason: lossReason.trim(),
+            loss_reason_notes: lossReasonNotes.trim() || undefined,
+          }
+        : {}),
     });
   }
+
+  const selectedStageName = stages.find((s) => s.id === stage)?.name ?? "";
+  const showLossFields =
+    isLostStageId(stage) || isLostStageName(selectedStageName);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -163,6 +191,18 @@ export function OpportunityForm({
           ))}
         </select>
       </div>
+
+      {showLossFields && (
+        <LossReasonFields
+          options={lossReasonOptions}
+          locale={locale}
+          reason={lossReason}
+          notes={lossReasonNotes}
+          onReasonChange={setLossReason}
+          onNotesChange={setLossReasonNotes}
+          required
+        />
+      )}
 
       {teamMembers.length > 0 && (
         <div>
