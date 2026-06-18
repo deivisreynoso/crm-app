@@ -92,6 +92,19 @@ APP_URL=$(read_env NEXT_PUBLIC_APP_URL)
 NEXTAUTH_URL=$(read_env NEXTAUTH_URL)
 NEXTAUTH_SECRET=$(read_env NEXTAUTH_SECRET)
 
+CLICKIN360_ORG_USER_ID=$(read_env CLICKIN360_ORG_USER_ID)
+WEBSITE_LEADS_USER_ID=$(read_env WEBSITE_LEADS_USER_ID)
+ORG_USER_ID="${CLICKIN360_ORG_USER_ID:-$WEBSITE_LEADS_USER_ID}"
+WEBCHAT_POLL_SECRET=$(read_env WEBCHAT_POLL_SECRET)
+WEBSITE_LEADS_API_SECRET=$(read_env WEBSITE_LEADS_API_SECRET)
+N8N_CRM_WEBHOOK_SECRET=$(read_env N8N_CRM_WEBHOOK_SECRET)
+LEAD_API_SECRET="${WEBSITE_LEADS_API_SECRET:-$N8N_CRM_WEBHOOK_SECRET}"
+
+IS_PROD=false
+if [[ -n "$APP_URL" ]] && [[ "$APP_URL" != *localhost* ]]; then
+  IS_PROD=true
+fi
+
 check_var "NEXT_PUBLIC_SUPABASE_URL" "$SUPABASE_URL" supabase_url
 check_var "NEXT_PUBLIC_SUPABASE_ANON_KEY" "$SUPABASE_ANON" jwt
 check_var "SUPABASE_SERVICE_ROLE_KEY" "$SUPABASE_SERVICE" jwt
@@ -100,6 +113,33 @@ if [[ -n "$APP_URL" ]]; then
   echo "✓ NEXT_PUBLIC_APP_URL — $(mask "$APP_URL")"
 else
   echo "⚠ NEXT_PUBLIC_APP_URL — not set (Docker build defaults to http://localhost:3000)"
+fi
+
+if [[ -n "$ORG_USER_ID" ]]; then
+  echo "✓ CLICKIN360_ORG_USER_ID — $(mask "$ORG_USER_ID")"
+elif [[ "$IS_PROD" == true ]]; then
+  echo "✗ CLICKIN360_ORG_USER_ID — missing (required since internal-tool hardening)"
+  errors=$((errors + 1))
+else
+  echo "⚠ CLICKIN360_ORG_USER_ID — not set (CRM workspace resolution will fail)"
+fi
+
+if [[ -n "$LEAD_API_SECRET" ]]; then
+  echo "✓ WEBSITE_LEADS_API_SECRET — $(mask "$LEAD_API_SECRET")"
+elif [[ "$IS_PROD" == true ]]; then
+  echo "✗ WEBSITE_LEADS_API_SECRET — missing (N8N + form lead ingress)"
+  errors=$((errors + 1))
+else
+  echo "⚠ WEBSITE_LEADS_API_SECRET — not set"
+fi
+
+if [[ -n "$WEBCHAT_POLL_SECRET" ]]; then
+  echo "✓ WEBCHAT_POLL_SECRET — $(mask "$WEBCHAT_POLL_SECRET")"
+elif [[ "$IS_PROD" == true ]]; then
+  echo "✗ WEBCHAT_POLL_SECRET — missing (webchat poll auth)"
+  errors=$((errors + 1))
+else
+  echo "⚠ WEBCHAT_POLL_SECRET — not set"
 fi
 
 if [[ -n "$NEXTAUTH_SECRET" ]]; then
@@ -112,10 +152,6 @@ fi
 MAILGUN_KEY=$(read_env MAILGUN_API_KEY)
 MAILGUN_DOMAIN=$(read_env MAILGUN_DOMAIN)
 MAILGUN_FROM=$(read_env MAILGUN_FROM)
-IS_PROD=false
-if [[ -n "$APP_URL" ]] && [[ "$APP_URL" != *localhost* ]]; then
-  IS_PROD=true
-fi
 
 if [[ -n "$MAILGUN_KEY" && -n "$MAILGUN_DOMAIN" && -n "$MAILGUN_FROM" ]]; then
   echo "✓ Mailgun — configured ($(mask "$MAILGUN_DOMAIN"))"
@@ -132,7 +168,10 @@ echo "Run builds with:  docker compose --env-file $ENV_FILE build app"
 echo ""
 
 if [[ "$CHECK_CONTAINER" == true ]]; then
-  CONTAINER=$(docker ps --format '{{.Names}}' 2>/dev/null | grep -E 'crm-app.*app' | head -1 || true)
+  CONTAINER=$(docker ps --format '{{.Names}}' 2>/dev/null | grep -E '^crm-app$' | head -1 || true)
+  if [[ -z "$CONTAINER" ]]; then
+    CONTAINER=$(docker ps --format '{{.Names}}' 2>/dev/null | grep -E 'crm-app' | head -1 || true)
+  fi
   if [[ -z "$CONTAINER" ]]; then
     echo "=== Container ==="
     echo "⚠ No running crm-app container found (skip container check or start the stack)."
@@ -141,6 +180,10 @@ if [[ "$CHECK_CONTAINER" == true ]]; then
     RUN_URL=$(docker exec "$CONTAINER" printenv NEXT_PUBLIC_SUPABASE_URL 2>/dev/null || true)
     RUN_ANON=$(docker exec "$CONTAINER" printenv NEXT_PUBLIC_SUPABASE_ANON_KEY 2>/dev/null || true)
     RUN_SERVICE=$(docker exec "$CONTAINER" printenv SUPABASE_SERVICE_ROLE_KEY 2>/dev/null || true)
+    RUN_ORG=$(docker exec "$CONTAINER" printenv CLICKIN360_ORG_USER_ID 2>/dev/null || true)
+    if [[ -z "$RUN_ORG" ]]; then
+      RUN_ORG=$(docker exec "$CONTAINER" printenv WEBSITE_LEADS_USER_ID 2>/dev/null || true)
+    fi
 
     if [[ -z "$RUN_URL" ]]; then
       echo "✗ NEXT_PUBLIC_SUPABASE_URL — empty inside container (rebuild + up with --env-file)"
@@ -169,6 +212,15 @@ if [[ "$CHECK_CONTAINER" == true ]]; then
       echo "✓ SUPABASE_SERVICE_ROLE_KEY — matches file"
     else
       echo "⚠ SUPABASE_SERVICE_ROLE_KEY — container differs from file"
+    fi
+
+    if [[ -z "$RUN_ORG" ]]; then
+      echo "✗ CLICKIN360_ORG_USER_ID — empty inside container"
+      errors=$((errors + 1))
+    elif [[ "$RUN_ORG" == "$ORG_USER_ID" ]]; then
+      echo "✓ CLICKIN360_ORG_USER_ID — matches file"
+    else
+      echo "⚠ CLICKIN360_ORG_USER_ID — container differs from file"
     fi
   fi
   echo ""

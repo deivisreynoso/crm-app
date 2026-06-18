@@ -7,6 +7,7 @@ const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 /** Session-authenticated CRM APIs that skip workspace role checks */
 const PUBLIC_API_PREFIXES = [
   "/api/auth/",
+  "/api/health",
   "/api/leads/",
   "/api/website/",
   "/api/team/invites/",

@@ -85,6 +85,16 @@ export async function middleware(req: NextRequest) {
       if (isWorkspaceAccessDeniedError(err)) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
+      if (
+        err instanceof Error &&
+        err.message.includes("CLICKIN360_ORG_USER_ID")
+      ) {
+        console.error("[middleware] missing CLICKIN360_ORG_USER_ID:", err.message);
+        return NextResponse.json(
+          { error: "Server misconfiguration: set CLICKIN360_ORG_USER_ID in .env.local" },
+          { status: 503 }
+        );
+      }
       throw err;
     }
 
