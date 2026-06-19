@@ -1,15 +1,14 @@
-import { timingSafeEqual } from "crypto";
-
-/** Constant-time string compare for shared API secrets. */
+/** Constant-time string compare for shared API secrets (Edge + Node). */
 export function secretsMatch(provided: string, expected: string): boolean {
-  try {
-    const a = Buffer.from(provided);
-    const b = Buffer.from(expected);
-    if (a.length !== b.length) return false;
-    return timingSafeEqual(a, b);
-  } catch {
-    return false;
+  const a = new TextEncoder().encode(provided);
+  const b = new TextEncoder().encode(expected);
+  if (a.length !== b.length) return false;
+
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a[i]! ^ b[i]!;
   }
+  return mismatch === 0;
 }
 
 export function matchesAnySecret(
