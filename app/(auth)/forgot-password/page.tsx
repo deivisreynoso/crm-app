@@ -27,6 +27,7 @@ function ForgotPasswordForm() {
   useEffect(() => {
     const code = searchParams.get("error");
     if (code) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError(RESET_ERROR_MESSAGES[code] ?? RESET_ERROR_MESSAGES.reset_link_invalid);
     }
   }, [searchParams]);

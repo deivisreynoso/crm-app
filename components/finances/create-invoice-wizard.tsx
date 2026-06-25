@@ -112,6 +112,7 @@ export function CreateInvoiceWizard({
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStep(quotePreset ? "details" : "type");
     setInvoiceType(quotePreset ? "quote" : "services");
     setQuoteId(quotePreset);

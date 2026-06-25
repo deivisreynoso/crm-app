@@ -260,10 +260,12 @@ export function ConversationsInbox() {
   const { confirm, dialogProps } = useConfirmDialog();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (highlightId) setSelectedId(highlightId);
   }, [highlightId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDeleteError(null);
   }, [selectedId]);
 

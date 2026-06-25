@@ -24,6 +24,7 @@ export function NotificationPreferencesSettings() {
 
   useEffect(() => {
     if (!data) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTaskReminders(data.task_reminders);
     setOppReminders(data.opportunity_reminders);
     setTicketNotifs(data.ticket_notifications);

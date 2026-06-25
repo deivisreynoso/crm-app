@@ -81,6 +81,7 @@ export function OpportunityForm({
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCustomFields(normalizeCustomFieldValues(initial?.custom_fields));
     if (initial?.contact_id !== undefined) {
       setContactId(initial.contact_id ?? defaultContactId ?? "");

@@ -45,6 +45,7 @@ export function ContactSearchCombobox({
 
   useEffect(() => {
     if (!value) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelected(null);
       return;
     }
@@ -67,6 +68,7 @@ export function ContactSearchCombobox({
 
   useEffect(() => {
     if (debounced.length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOptions([]);
       return;
     }

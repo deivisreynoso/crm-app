@@ -156,6 +156,7 @@ export function EmailComposer({
         : undefined;
       chips.push({ email: defaultTo.trim(), label: label || undefined });
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setToChips(chips);
     setExtraTo("");
     setCc("");

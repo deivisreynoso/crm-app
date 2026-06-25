@@ -107,6 +107,7 @@ export function ContactEmailPanel({
   useEffect(() => {
     if (!connected || !readAccess || !contactEmail) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void runSync({ silent: true });
     const intervalId = window.setInterval(() => {
       void runSync({ silent: true });
@@ -189,6 +190,7 @@ export function ContactEmailPanel({
               "Gmail can send email but cannot sync threads yet. Reconnect once to grant read access."}
           </p>
           {(needsReadReconnect || error?.includes("read access")) && (
+            // eslint-disable-next-line @next/next/no-html-link-for-pages
             <a href="/api/auth/google-gmail/reconnect">
               <Button type="button" size="sm" variant="outline">
                 Reconnect Gmail

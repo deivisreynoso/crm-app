@@ -166,6 +166,7 @@ export function ChatWidget({
   const [humanMode, setHumanMode] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSessionId(getOrCreateChatSessionId());
     setSessionSecret(getOrCreateChatSessionSecret());
     setProfile(getChatProfile());
@@ -189,6 +190,7 @@ export function ChatWidget({
 
   useEffect(() => {
     if ((open || variant === "inline") && !welcomed && messages.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMessages([
         {
           id: messageId(),

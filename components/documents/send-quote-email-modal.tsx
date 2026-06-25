@@ -59,6 +59,7 @@ export function SendQuoteEmailModal({
   useEffect(() => {
     if (!open) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTemplateId("");
     setError(null);
     setFullscreen(false);
@@ -214,6 +215,7 @@ export function SendQuoteEmailModal({
             Connect your Google Workspace or Gmail account to send this quote with a PDF
             attachment from your company address.
           </p>
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a href="/api/auth/google-gmail" className="inline-flex">
             <Button type="button" size="sm">
               Connect mailbox

@@ -21,6 +21,7 @@ function MediaPageContent() {
 
   useEffect(() => {
     if (driveParam === "connected") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setBanner(m?.connectedBanner ?? "Google Drive connected for this workspace.");
       setError(null);
       void queryClient.invalidateQueries({

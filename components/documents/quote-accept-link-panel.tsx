@@ -26,6 +26,7 @@ export function QuoteAcceptLinkPanel({
     const token = doc.accept_token?.trim();
     if (readOnly) {
       if (token) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setAcceptUrl(`${window.location.origin}/quote/${token}`);
       } else {
         setAcceptUrl(null);

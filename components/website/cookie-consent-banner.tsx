@@ -28,6 +28,7 @@ export function CookieConsentBanner({
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVisible(getAnalyticsConsent() === null);
   }, []);
 

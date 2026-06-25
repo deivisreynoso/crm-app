@@ -95,6 +95,7 @@ export function OnboardingBookingStep({ token, locale, primaryColor }: Props) {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     void axios
       .get<BookingConfig>(

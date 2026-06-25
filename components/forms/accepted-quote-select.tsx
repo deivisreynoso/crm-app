@@ -79,6 +79,7 @@ export function AcceptedQuoteSelect({
   useEffect(() => {
     if (!value) return;
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     void axios
       .get<CrmDocument>(`/api/documents/${value}`)

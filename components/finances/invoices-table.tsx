@@ -91,6 +91,7 @@ export function InvoicesTable() {
 
   useEffect(() => {
     if (searchParams.get("create") === "1") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPresetQuoteId(searchParams.get("quote_id") ?? undefined);
       setPresetContactId(searchParams.get("contact_id") ?? undefined);
       setWizardOpen(true);

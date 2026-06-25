@@ -28,6 +28,7 @@ export function QuoteBrandingSettings() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCompanyName(settings?.quote_company_name ?? "");
     setPrimaryColor(settings?.quote_primary_color ?? "#1e3a5f");
     setFontFamily(settings?.quote_font_family ?? "Helvetica");

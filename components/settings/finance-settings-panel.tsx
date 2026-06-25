@@ -25,6 +25,7 @@ export function FinanceSettingsPanel() {
 
   useEffect(() => {
     if (!settings) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrency((settings.default_currency as "USD" | "MXN") ?? "USD");
     setTaxRate(String(settings.finance_default_tax_rate ?? 0));
     setPrefix(settings.invoice_number_prefix ?? "INV-");

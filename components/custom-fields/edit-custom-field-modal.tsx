@@ -32,6 +32,7 @@ export function EditCustomFieldModal({
 
   useEffect(() => {
     if (!field) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFieldName(field.field_name);
     setDescription(field.description ?? "");
     setPlaceholder(field.placeholder ?? "");

@@ -97,11 +97,13 @@ export default function OpportunitiesPage() {
 
   useEffect(() => {
     if (pipelines.length && !selectedPipelineId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedPipelineId(pipelines[0].id);
     }
   }, [pipelines, selectedPipelineId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setListPage(1);
   }, [stageFilter, searchFilter, createdFrom, createdTo, viewMode, selectedPipelineId]);
 

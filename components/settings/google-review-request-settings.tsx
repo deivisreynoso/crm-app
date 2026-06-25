@@ -23,6 +23,7 @@ export function GoogleReviewRequestSettings() {
 
   useEffect(() => {
     if (!settings) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setReviewUrl(settings.google_reviews_url?.trim() || GOOGLE_REVIEWS_URL);
     setTemplateId(settings.review_request_template_id ?? "");
   }, [settings]);

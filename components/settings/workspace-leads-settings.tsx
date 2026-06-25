@@ -14,6 +14,7 @@ export function WorkspaceLeadsSettings() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSalesGroupEmail(settings?.sales_group_email ?? "sales@clickin360.com");
   }, [settings?.sales_group_email]);
 

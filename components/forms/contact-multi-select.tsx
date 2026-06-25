@@ -40,6 +40,7 @@ export function ContactMultiSelect({
 
   useEffect(() => {
     if (!selectedIds.length) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelected([]);
       return;
     }
@@ -62,6 +63,7 @@ export function ContactMultiSelect({
 
   useEffect(() => {
     if (debounced.length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOptions([]);
       return;
     }

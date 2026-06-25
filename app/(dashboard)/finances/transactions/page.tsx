@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { TransactionsTab } from "@/components/finances/transactions-tab";
 
@@ -17,9 +18,9 @@ function TransactionsPageContent() {
       {type === "expense" && (
         <p className="text-sm text-body-muted">
           Showing expenses only. Use{" "}
-          <a href="/finances/transactions" className="text-[var(--secondary)] hover:underline">
+          <Link href="/finances/transactions" className="text-[var(--secondary)] hover:underline">
             all transactions
-          </a>{" "}
+          </Link>{" "}
           for income and expenses together.
         </p>
       )}

@@ -43,7 +43,7 @@ async function resolveCompanyName(
   workspaceOwnerId: string,
   contact: { company?: string | null; company_id?: string | null }
 ) {
-  let companyName = contact.company ?? undefined;
+  const companyName = contact.company ?? undefined;
   if (!contact.company_id) return companyName;
 
   const { data: company, error } = await supabase

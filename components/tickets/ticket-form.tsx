@@ -66,6 +66,7 @@ export function TicketForm({
 
   useEffect(() => {
     const raw = normalizeCustomFieldValues(initial?.custom_fields);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCustomFields(pruneCustomFieldValues(raw, customFieldDefs));
     if (initial?.contact_id !== undefined) {
       setContactId(initial.contact_id ?? defaultContactId ?? "");

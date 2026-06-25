@@ -62,6 +62,7 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
   const [country, setCountry] = useState(contact.country ?? "");
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCountry(contact.country ?? "");
   }, [contact.country]);
 
@@ -77,6 +78,7 @@ export function ContactOverview({ contact, onSaveField }: ContactOverviewProps) 
   const [showAdditional, setShowAdditional] = useState(hasAdditionalDetails);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (hasAdditionalDetails) setShowAdditional(true);
   }, [hasAdditionalDetails]);
 

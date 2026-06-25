@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import axios from "axios";
@@ -76,17 +76,17 @@ export function InvoiceEditor({ invoiceId }: Props) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
 
-  const loadedRef = useMemo(() => ({ id: "" }), []);
+  const loadedRef = useRef({ id: "" });
   useEffect(() => {
-    if (!invoice || loadedRef.id === invoice.id) return;
-    loadedRef.id = invoice.id;
+    if (!invoice || loadedRef.current.id === invoice.id) return;
+    loadedRef.current.id = invoice.id;
     setContactId(invoice.contact_id);
     setDueDate(invoice.due_date?.slice(0, 10) ?? "");
     setNotes(invoice.notes ?? "");
     setFooterText(invoice.footer_text ?? "");
     setTaxRate(String(invoice.tax_rate ?? 0));
     setLines(linesFromInvoice(invoice.line_items ?? []));
-  }, [invoice, loadedRef]);
+  }, [invoice]);
 
   const totals = useMemo(
     () => recalc(lines, Number(taxRate) || 0),
@@ -146,6 +146,7 @@ export function InvoiceEditor({ invoiceId }: Props) {
 
   useEffect(() => {
     if (!pdfPanelOpen || !invoice) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchPdfUrl();
   }, [pdfPanelOpen, invoiceId, invoice?.updated_at]);
 
