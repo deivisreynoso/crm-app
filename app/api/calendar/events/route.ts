@@ -20,6 +20,7 @@ import {
   resolveAttendeeEmails,
   upsertCalendarEventAttendees,
 } from "@/lib/calendar/event-attendees";
+import { syncEventToAdditionalUsers } from "@/lib/calendar/sync-additional-users";
 import { applyCalendarScope } from "@/lib/api/data-scope";
 
 function emptyToNull(value: string | undefined): string | null {
@@ -230,6 +231,28 @@ export async function POST(req: NextRequest) {
       meetLink = createdGoogle.meetLink;
     } catch (syncErr) {
       console.error("Google Calendar sync on create:", syncErr);
+    }
+
+    // Sync to additional team members who have Google Calendar connected.
+    // Runs after the primary event so we can include the meet link in the location.
+    if (eventId && parsed.data.additional_users?.length) {
+      try {
+        await syncEventToAdditionalUsers(
+          supabase,
+          eventId,
+          parsed.data.additional_users,
+          googleSyncUserId,
+          {
+            title: row.title,
+            description: row.description,
+            location: meetLink ?? row.location,
+            start_time: row.start_time,
+            end_time: row.end_time,
+          }
+        );
+      } catch (syncErr) {
+        console.error("Google Calendar sync to additional users on create:", syncErr);
+      }
     }
 
     if ((googleEventId || meetLink) && eventId) {
