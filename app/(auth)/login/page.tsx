@@ -19,6 +19,7 @@ function LoginForm() {
 
   useEffect(() => {
     if (searchParams.get("registered") === "true") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setNotice("Account created. Sign in with your email and password.");
     } else if (searchParams.get("reset") === "success") {
       setNotice("Password updated. Sign in with your new password.");

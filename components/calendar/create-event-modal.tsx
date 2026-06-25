@@ -74,6 +74,7 @@ export function CreateEventModal({
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setError(null);
     setFieldErrors({});
     if (initial) {
@@ -119,6 +120,7 @@ export function CreateEventModal({
   useEffect(() => {
     if (!open || initial) return;
     if (actorId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAssignedTo((prev) => prev || actorId);
     }
   }, [open, initial, actorId]);

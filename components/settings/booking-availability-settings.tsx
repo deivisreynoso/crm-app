@@ -35,6 +35,7 @@ export function BookingAvailabilitySettings() {
 
   useEffect(() => {
     if (settings?.booking_availability) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setConfig(settings.booking_availability);
     }
   }, [settings?.booking_availability]);

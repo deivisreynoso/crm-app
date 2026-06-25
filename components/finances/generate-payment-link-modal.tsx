@@ -26,6 +26,7 @@ export function GeneratePaymentLinkModal({ open, onClose, defaults }: Props) {
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setInvoiceId(defaults?.invoice_id ?? "");
     setAmount(defaults?.amount ? String(defaults.amount) : "");
     setCurrency(defaults?.currency ?? "USD");

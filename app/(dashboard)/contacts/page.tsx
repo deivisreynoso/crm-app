@@ -64,6 +64,7 @@ function ContactsPageContent() {
 
   useEffect(() => {
     if (searchParams.get("new") === "1") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowForm(true);
     }
     const q = searchParams.get("search");

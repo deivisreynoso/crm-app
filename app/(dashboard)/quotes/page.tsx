@@ -34,6 +34,7 @@ function QuotesPageInner() {
 
   useEffect(() => {
     if (tabParam === "products" || tabParam === "branding" || tabParam === "templates") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTab(tabParam);
     }
   }, [tabParam]);

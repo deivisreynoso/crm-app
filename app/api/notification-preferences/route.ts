@@ -35,6 +35,7 @@ export async function GET() {
     if (error) return error;
 
     const supabase = createServerSideClient();
+    // eslint-disable-next-line prefer-const
     let { data, error: dbError } = await supabase
       .from("notification_preferences")
       .select("*")

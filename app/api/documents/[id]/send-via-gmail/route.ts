@@ -139,7 +139,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
       contactRow = contact;
     }
 
-    let contactLocale: string | null = contactRow?.preferred_language ?? null;
+    const contactLocale: string | null = contactRow?.preferred_language ?? null;
 
     const { data: settings } = await supabase
       .from("user_settings")

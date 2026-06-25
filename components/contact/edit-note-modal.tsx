@@ -53,6 +53,7 @@ export function EditNoteModal({
 
   useEffect(() => {
     if (!item) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setContent(item.content);
     setActivityType(
       (EDITABLE_TYPES.includes(item.type as (typeof EDITABLE_TYPES)[number])

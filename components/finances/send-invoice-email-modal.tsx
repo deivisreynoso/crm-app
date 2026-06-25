@@ -35,6 +35,7 @@ export function SendInvoiceEmailModal({ invoice, open, onClose, onSent }: Props)
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDefaultTo(contact?.email ?? "");
     setDefaultSubject(`Invoice ${invoice.invoice_number}`);
     setDefaultBody(
@@ -98,6 +99,7 @@ export function SendInvoiceEmailModal({ invoice, open, onClose, onSent }: Props)
       ) : !connected ? (
         <div className="space-y-3 text-sm">
           <p className="text-body-muted">Connect Gmail to send invoices with PDF attachments.</p>
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a href="/api/auth/google-gmail" className="inline-flex">
             <Button type="button" size="sm">
               Connect mailbox

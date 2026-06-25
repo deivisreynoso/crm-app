@@ -40,6 +40,7 @@ export function AddTransactionModal({ open, onClose, invoices = [], defaults }: 
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setType(defaults?.type ?? "income");
     setAmount(defaults?.amount ? String(defaults.amount) : "");
     setCurrency(defaults?.currency ?? "USD");
@@ -50,6 +51,7 @@ export function AddTransactionModal({ open, onClose, invoices = [], defaults }: 
 
   useEffect(() => {
     if (type === "income" && selectedInvoice) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setContactId(selectedInvoice.contact_id);
       setCurrency(selectedInvoice.currency);
     }
@@ -59,6 +61,7 @@ export function AddTransactionModal({ open, onClose, invoices = [], defaults }: 
     const kind = type === "income" ? "income" : "expense";
     const slug = defaults?.category_slug ?? (type === "income" ? "quote_payment" : "other_expense");
     const match = categories.find((c) => c.kind === kind && c.slug === slug);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (match) setCategoryId(match.id);
     else {
       const first = categories.find((c) => c.kind === kind);

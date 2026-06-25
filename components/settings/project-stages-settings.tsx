@@ -11,7 +11,7 @@ import {
 } from "@/lib/project-stages/defaults";
 import { DELIVERY_PROJECT_STAGES } from "@/lib/project-stages/constants";
 
-function useAutomationsProjectSettings() {
+function fetchAutomationsProjectSettings() {
   return axios
     .get<{
       project_stages_settings: ProjectStagesSettings;
@@ -29,7 +29,7 @@ export function ProjectStagesSettingsPanel() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    void useAutomationsProjectSettings()
+    void fetchAutomationsProjectSettings()
       .then((data) => {
         setSettings(
           data.project_stages_settings ?? data.default_project_stages_settings

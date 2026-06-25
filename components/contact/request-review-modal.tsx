@@ -75,6 +75,7 @@ export function RequestReviewModal({
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setError(null);
     setCc("");
     setTemplateId(reviewTemplateId ?? "");

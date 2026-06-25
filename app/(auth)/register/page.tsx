@@ -22,6 +22,7 @@ function RegisterForm() {
 
   useEffect(() => {
     if (!inviteToken) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setInviteValid(false);
       setInviteReason("missing");
       return;

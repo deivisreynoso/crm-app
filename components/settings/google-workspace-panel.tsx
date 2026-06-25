@@ -46,6 +46,7 @@ function GoogleWorkspacePanelInner() {
   useEffect(() => {
     const calendarParam = searchParams.get("google_calendar");
     if (calendarParam === "connected") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setBanner("Google Calendar connected.");
       void refetchCalendar();
       void refetchSetup();

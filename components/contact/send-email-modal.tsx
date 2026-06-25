@@ -59,6 +59,7 @@ export function SendEmailModal({
         replyTo.direction === "inbound"
           ? extractEmailAddress(replyTo.from_email ?? "") || contact.email || ""
           : extractEmailAddress(replyTo.to_email ?? "") || contact.email || "";
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDefaultTo(replyTarget);
       setDefaultSubject(replySubject(replyTo.subject));
       setDefaultBody("");

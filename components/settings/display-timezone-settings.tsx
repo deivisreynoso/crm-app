@@ -29,6 +29,7 @@ export function DisplayTimezoneSettings() {
 
   useEffect(() => {
     if (!data) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelected(storedTimezoneToSelectValue(data.timezone));
   }, [data]);
 

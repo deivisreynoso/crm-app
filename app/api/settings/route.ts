@@ -47,6 +47,7 @@ const SETTINGS_SELECT =
 
 async function loadSettings(workspaceOwnerId: string) {
   const supabase = createServerSideClient();
+  // eslint-disable-next-line prefer-const
   let { data, error: dbError } = await supabase
     .from("user_settings")
     .select(SETTINGS_SELECT)

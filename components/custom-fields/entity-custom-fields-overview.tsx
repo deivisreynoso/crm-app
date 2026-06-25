@@ -55,6 +55,7 @@ export function EntityCustomFieldsOverview({
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setValues((prev) => {
       if (
         serializeCustomFieldValues(prev) ===

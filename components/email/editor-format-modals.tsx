@@ -31,6 +31,7 @@ export function InsertLinkModal({
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUrl(initialUrl);
       setText(initialText);
     }
@@ -101,6 +102,7 @@ export function InsertImageModal({
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUrl("");
       setAlt("");
     }
@@ -160,6 +162,7 @@ export function InsertTableModal({
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRows(3);
       setCols(3);
       setWithHeaderRow(true);

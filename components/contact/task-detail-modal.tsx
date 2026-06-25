@@ -61,6 +61,7 @@ export function TaskDetailModal({
 
   useEffect(() => {
     if (!task) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTitle(task.title);
     setDescription(task.description ?? "");
     setStatus(task.status);

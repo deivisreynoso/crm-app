@@ -23,7 +23,7 @@ export interface User {
     source?: string;
     status: 'lead' | 'active' | 'inactive' | 'prospect';
     tags?: string[];
-    custom_fields?: Record<string, any>;
+    custom_fields?: Record<string, unknown>;
     review_request_opt_out?: boolean;
     notes?: string;
     preferred_language?: string;
@@ -139,7 +139,7 @@ export interface User {
     owner_id?: string;
     notes?: string;
     tags?: string[];
-    custom_fields?: Record<string, any>;
+    custom_fields?: Record<string, unknown>;
     project_stage?: string | null;
     project_stage_updated_at?: string | null;
     project_completed_at?: string | null;
@@ -698,5 +698,5 @@ export interface User {
   export interface ApiError {
     error: string;
     status: number;
-    details?: any;
+    details?: unknown;
   }

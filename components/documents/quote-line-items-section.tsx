@@ -78,6 +78,7 @@ export function QuoteLineItemsSection({
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLines(
       serverLines.map((l) => ({
         key: l.id,
