@@ -22,6 +22,12 @@ import {
   resolveAttendeeEmails,
   upsertCalendarEventAttendees,
 } from "@/lib/calendar/event-attendees";
+import {
+  readAttendeeGoogleEventIds,
+  reconcileAdditionalUserCalendars,
+  updateAdditionalUserCalendars,
+  deleteAdditionalUserCalendars,
+} from "@/lib/calendar/sync-additional-users";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -133,7 +139,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       .eq("user_id", workspaceOwnerId!)
       .maybeSingle();
 
+    let previousAttendeeGoogleEventIds: Map<string, string> | null = null;
     if (d.additional_users !== undefined || d.additional_contacts !== undefined) {
+      // Save existing google_event_ids before upsert wipes attendee rows
+      previousAttendeeGoogleEventIds = await readAttendeeGoogleEventIds(supabase, id);
       await upsertCalendarEventAttendees(
         supabase,
         id,
@@ -244,6 +253,29 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           end_time: String(eventRow.end_time),
           attendees: googleAttendees.length ? googleAttendees : undefined,
         });
+
+        const additionalEventDetails = {
+          title: String(eventRow.title),
+          description: (eventRow.description as string | null) ?? null,
+          location: (eventRow.location as string | null) ?? null,
+          start_time: String(eventRow.start_time),
+          end_time: String(eventRow.end_time),
+        };
+
+        if (previousAttendeeGoogleEventIds !== null) {
+          // Attendees changed: reconcile creates/updates/deletes per-user
+          await reconcileAdditionalUserCalendars(
+            supabase,
+            id,
+            d.additional_users ?? [],
+            previousAttendeeGoogleEventIds,
+            syncUserId,
+            additionalEventDetails
+          );
+        } else {
+          // Attendees unchanged: push event detail updates to all existing copies
+          await updateAdditionalUserCalendars(supabase, id, additionalEventDetails);
+        }
       } catch (syncErr) {
         console.error("Google Calendar sync on update:", syncErr);
       }
@@ -277,6 +309,13 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
       .eq("id", id)
       .eq("user_id", workspaceOwnerId!)
       .maybeSingle();
+
+    // Delete additional team members' calendar copies before the CASCADE wipes attendee rows
+    try {
+      await deleteAdditionalUserCalendars(supabase, id);
+    } catch (syncErr) {
+      console.error("Google Calendar sync on delete (additional users):", syncErr);
+    }
 
     if (existing?.google_event_id) {
       try {
